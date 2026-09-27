@@ -609,6 +609,11 @@ header.app-header .app-tagline {
   display: none;
 }
 
+/* HDD欄自体の非表示(showHddSlotPref)。.fd-slot の display: flex より後に置く必要がある。 */
+.fd-slot.hidden {
+  display: none;
+}
+
 .fd-slot .icon-btn:hover:not(:disabled) {
   background: var(--footer-btn-bg-hover);
 }
