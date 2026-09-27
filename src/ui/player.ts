@@ -623,7 +623,9 @@ function rescale(
   const debuggerDockWidth = debuggerDocked
     ? Math.min(560, Math.max(460, window.innerWidth * 0.45)) + gap
     : 0;
-  const appMaxWidth = Math.min(window.innerWidth - appPaddingH, 1280);
+  // 整数倍±16px以内なら吸着・それ以外は端数倍(pickUpscale)になったため、
+  // 1280px のような固定上限はもう不要。ウィンドウ幅とデバッガドック幅だけで決める。
+  const appMaxWidth = window.innerWidth - appPaddingH;
   const maxWidth = Math.max(1, appMaxWidth - debuggerDockWidth);
 
   const progressActive = chrome.progressWrap.classList.contains('active');
@@ -646,7 +648,8 @@ function rescale(
     gapsInApp;
 
   // reservedHeight の再計測誤差やスクロールバー分の余白として少し余裕を持たせる。
-  const maxHeight = Math.min(window.innerHeight - reservedHeight - 4, 960);
+  // 960px のような固定上限は、整数倍吸着/端数倍表示(pickUpscale)導入後は不要。
+  const maxHeight = window.innerHeight - reservedHeight - 4;
   const native = nativeSize(canvas);
   // 4:3モードでは実解像度(native)そのものではなく、そこから拡大方向で導いた4:3の
   // 「目標サイズ」を基準にフィット計算する(src/ui/aspect.ts の getTargetSize 参照)。
