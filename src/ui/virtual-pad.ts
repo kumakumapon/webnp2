@@ -398,7 +398,7 @@ export function createVirtualPad(overlay: HTMLElement, input: SharedKeyInput): V
   window.addEventListener('pagehide', releaseAll);
 
   return {
-    setVisible(visible) { overlay.classList.toggle('hidden', !visible); if (visible) refreshLayout(); else releaseAll(); },
+    setVisible(visible) { overlay.classList.toggle('hidden', !visible); document.body.classList.toggle('vpad-shown', visible); if (visible) refreshLayout(); else releaseAll(); },
     isVisible: () => !overlay.classList.contains('hidden'),
     setProfile(next) { profile = next; build(); },
     refreshLayout,

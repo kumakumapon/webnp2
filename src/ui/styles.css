@@ -1,8 +1,8 @@
 :root {
   color-scheme: light;
-  --page-bg: #101010;
-  --page-text-dim: #a8a8a8;
-  --page-danger: #ff8a80;
+  --page-bg: #f3ead8;
+  --page-text-dim: #6b6152;
+  --page-danger: #c62828;
   --bg: #fafafa;
   --bg-panel: #ffffff;
   --border: #d5d5d5;
@@ -30,6 +30,16 @@
   --footer-disabled-bg: #333333;
   --footer-disabled-text: #6c6c6c;
   --header-tagline-text: #a8a8a8;
+}
+
+/* バーチャルパッドは白半透明で描画されるため、ベージュ背景では視認できない。
+   パッド表示中だけページ背景を旧来の暗色へ戻す。html は --page-bg を直接参照するため、
+   body のクラスだけでなく html 側にも同じ変数を効かせる必要がある */
+html:has(body.vpad-shown),
+body.vpad-shown {
+  --page-bg: #101010;
+  --page-text-dim: #a8a8a8;
+  --page-danger: #ff8a80;
 }
 
 * {
@@ -113,9 +123,11 @@ header.app-header .app-tagline {
   /* 実行画面は矩形。角丸だとキャンバス四隅のドットが欠けて見える */
   overflow: hidden;
   background: var(--header-bg);
+  /* ページ背景をベージュにしたため、暗背景前提の大きな影(0 18px 40px)だと
+     スマホ幅で下に帯状に伸びて見える。短く薄くした */
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.35),
-    0 4px 14px rgba(0, 0, 0, 0.25);
+    0 6px 16px rgba(0, 0, 0, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .stage {
