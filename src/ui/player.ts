@@ -2544,12 +2544,6 @@ export function buildPlayerUI(
     setTimeout(() => rescale(canvas, stage, card, rescaleChrome, aspectMode, sharpView), 150);
   };
 
-  // updateHddSlotVisibility()はトグルボタンのクリック時とupdateSlots()内でしか呼ばれず、
-  // 外部からupdateSlots()が一度も呼ばれない起動直後は.hiddenクラスが付かないまま
-  // HDD欄が表示され続けてしまう。scheduleRescale()が定義済みのここで初回適用する
-  // (これより前だとscheduleRescaleがTDZで参照できず例外になる)。
-  updateHddSlotVisibility();
-
   // 進捗バーの出没やステータス文の折り返し、スクロールバーの出現などで
   // 「スケール計算時と表示時で空き寸法が食い違う」レースが起きるため、
   // 周辺クロームと documentElement のサイズ変化すべてに追従して再計算する。
@@ -2866,6 +2860,13 @@ export function buildPlayerUI(
       muteBanner.addEventListener('transitionend', onEnd);
     },
   };
+
+  // updateHddSlotVisibility()はトグルボタンのクリック時とupdateSlots()内でしか呼ばれず、
+  // 外部からupdateSlots()が一度も呼ばれない起動直後は.hiddenクラスが付かないまま
+  // HDD欄が表示され続けてしまう。ここで初回適用する
+  // (これより前だとshowHddSlotPref参照時点でslotMountedがまだ宣言されておらず、
+  // TDZ(ReferenceError)でbuildPlayerUI()全体が中断してしまうため)。
+  updateHddSlotVisibility();
 
   return ui;
 }
