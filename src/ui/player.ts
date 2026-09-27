@@ -528,6 +528,13 @@ interface RescaleChrome {
 const DEVICE_SNAP_TOLERANCE = 0.08;
 
 /**
+ * 1倍以上のスケールを整数倍へ吸着させる際に許容する、目標サイズ基準でのはみ出し/
+ * 不足の最大量(px)。近傍の整数倍との差がこれ以内なら吸着し、それ以外は端数倍のまま
+ * (シャープ・バイリニア表示)にする。
+ */
+const INTEGER_SNAP_PX = 16;
+
+/**
  * 1倍未満の端数スケールを、可能なら「物理ピクセルで整数倍」へ寄せる。
  *
  * CSSピクセル基準の端数倍 x image-rendering:pixelated は、最近傍で
@@ -548,6 +555,27 @@ export function fitSubScale(rawScale: number, dpr: number): { scale: number; smo
     return { scale: snapped / ratio, smooth: false };
   }
   return { scale: rawScale, smooth: true };
+}
+
+/**
+ * 1倍以上のスケールを決める。
+ *
+ * 整数倍(n = round(fit))の近傍なら吸着してドットをそのまま最近傍表示する。
+ * 「近傍」は目標サイズ(targetWidth/targetHeight)基準の絶対px差で判定し、
+ * INTEGER_SNAP_PX 以内(切り上げ方向のはみ出しも含む)なら吸着する。
+ * それ以外は縦横比を保った端数倍のまま使い、シャープ・バイリニア表示(補間)に委ねる。
+ */
+export function pickUpscale(
+  fit: number,
+  targetWidth: number,
+  targetHeight: number,
+): { scale: number; smooth: boolean } {
+  const n = Math.max(1, Math.round(fit));
+  const diff = Math.abs(fit - n);
+  if (diff * targetWidth <= INTEGER_SNAP_PX && diff * targetHeight <= INTEGER_SNAP_PX) {
+    return { scale: n, smooth: false };
+  }
+  return { scale: fit, smooth: true };
 }
 
 function rescale(
@@ -611,11 +639,13 @@ function rescale(
     || document.body.classList.contains('vpad-sides-active')
     || document.body.classList.contains('input-panel-open');
   const subScale = heightConstrained ? Math.max(0.3, fit) : Math.max(0.3, Math.min(1, widthFit));
-  // 1倍以上は従来どおりCSS整数倍(DPRが整数の環境ではそのまま物理整数倍)。
-  // 1倍未満だけ物理ピクセルへのスナップ/補間切替を効かせる。
+  // 1倍以上は整数倍の近傍なら吸着し、それ以外は端数倍のままシャープ・バイリニア表示に委ねる
+  // (pickUpscale)。1倍未満は従来どおり物理ピクセルへのスナップ/補間切替を効かせる
+  // (fitSubScale)。
+  const up = pickUpscale(fit, target.width, target.height);
   const sub = fitSubScale(subScale, window.devicePixelRatio);
-  const scale = fit >= 1 ? Math.floor(fit) : sub.scale;
-  const smooth = fit < 1 && sub.smooth;
+  const scale = fit >= 1 ? up.scale : sub.scale;
+  const smooth = fit >= 1 ? up.smooth : sub.smooth;
   canvas.classList.toggle('smooth-scaled', smooth);
   const w = Math.round(target.width * scale);
   const h = Math.round(target.height * scale);

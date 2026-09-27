@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitSubScale } from '../src/ui/player.ts';
+import { fitSubScale, pickUpscale } from '../src/ui/player.ts';
 
 /**
  * 1倍未満スケールの決め方。
@@ -49,5 +49,51 @@ describe('fitSubScale', () => {
         expect(fitSubScale(raw, dpr).scale).toBeLessThanOrEqual(raw + 1e-9);
       }
     }
+  });
+});
+
+/**
+ * 1倍以上スケールの決め方 (pickUpscale)。
+ * 狙いは「整数倍の近く(目標サイズ基準で16px以内)なら吸着してドットのまま、
+ * それ以外は縦横比を保った端数倍でシャープ・バイリニア表示に委ねる」。
+ */
+describe('pickUpscale', () => {
+  it('1673x1232ウィンドウ相当の1.917倍(640x480)は端数のまま補間', () => {
+    // n=2 との差0.083 * 640 ≒ 53px > 16px なので吸着しない。
+    const r = pickUpscale(1.917, 640, 480);
+    expect(r.smooth).toBe(true);
+    expect(r.scale).toBe(1.917);
+  });
+
+  it('1.98倍(640x480, 差12.8px)は2倍に吸着する', () => {
+    const r = pickUpscale(1.98, 640, 480);
+    expect(r.smooth).toBe(false);
+    expect(r.scale).toBe(2);
+  });
+
+  it('2.03倍(低解像度512x400画面, 差約15.4px)は2倍に吸着する(切り上げ方向も許す)', () => {
+    const r = pickUpscale(2.03, 512, 400);
+    expect(r.smooth).toBe(false);
+    expect(r.scale).toBe(2);
+  });
+
+  it('ちょうど1.0倍はそのまま1倍', () => {
+    expect(pickUpscale(1.0, 640, 480)).toEqual({ scale: 1, smooth: false });
+  });
+
+  it('ちょうど2.0倍はそのまま2倍', () => {
+    expect(pickUpscale(2.0, 640, 480)).toEqual({ scale: 2, smooth: false });
+  });
+
+  it('1.5倍(640x480)は中途半端で端数のまま補間', () => {
+    const r = pickUpscale(1.5, 640, 480);
+    expect(r.smooth).toBe(true);
+    expect(r.scale).toBe(1.5);
+  });
+
+  it('ドット等倍640x400で1.975倍(差16px/10px)は2倍に吸着する', () => {
+    const r = pickUpscale(1.975, 640, 400);
+    expect(r.smooth).toBe(false);
+    expect(r.scale).toBe(2);
   });
 });
