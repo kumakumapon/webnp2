@@ -32,6 +32,8 @@ interface Dict {
   toolbarMute(): string;
   /** ツールバー「…」内、FDDシーク音ON/OFFトグル。 */
   toolbarFddSeekSound(): string;
+  /** ツールバー「…」内、HDD欄(FDD欄の下)の表示ON/OFFトグル。 */
+  toolbarToggleHddSlot(): string;
   /** トグル項目の右端に出すON表示。 */
   toggleOn(): string;
   /** トグル項目の右端に出すOFF表示。 */
@@ -475,6 +477,7 @@ const STRINGS: Record<Lang, Dict> = {
     toolbarAspectNative: () => 'ドット等倍',
     toolbarMute: () => 'ミュート',
     toolbarFddSeekSound: () => 'FDDシーク音',
+    toolbarToggleHddSlot: () => 'HDD欄を表示',
     toggleOn: () => 'ON',
     toggleOff: () => 'OFF',
     overlayNote1: () => '音声再生の制限上、クリック操作で起動します。',
@@ -837,6 +840,7 @@ const STRINGS: Record<Lang, Dict> = {
     toolbarAspectNative: () => 'Pixel-perfect',
     toolbarMute: () => 'Mute',
     toolbarFddSeekSound: () => 'FDD Seek Sound',
+    toolbarToggleHddSlot: () => 'Show HDD slot',
     toggleOn: () => 'ON',
     toggleOff: () => 'OFF',
     overlayNote1: () => 'Audio requires a user gesture, so click to start.',

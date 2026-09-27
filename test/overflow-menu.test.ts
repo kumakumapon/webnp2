@@ -43,7 +43,7 @@ describe('グループ定義', () => {
 
   it('オーバーフローはdisplay/input/sound/disk/stateの5グループ', () => {
     expect(OVERFLOW_GROUP_ORDER).toEqual(['display', 'input', 'sound', 'disk', 'state']);
-    expect(OVERFLOW_GROUPS.display).toEqual(['aspect']);
+    expect(OVERFLOW_GROUPS.display).toEqual(['aspect', 'showHddSlot']);
     expect(OVERFLOW_GROUPS.input).toEqual(['mouseCapture', 'mouseResync', 'gamepad', 'pasteText']);
     expect(OVERFLOW_GROUPS.sound).toEqual(['mute', 'fddSeekSound']);
     expect(OVERFLOW_GROUPS.disk).toEqual(['diskLibrary', 'fileManager']);

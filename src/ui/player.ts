@@ -27,6 +27,7 @@ import {
   TOOLBAR_END_ACTIONS,
   type ToolbarActionId,
 } from './overflow-menu.ts';
+import { shouldShowHddSlot } from './hdd-visibility.ts';
 import { bindStartupOverlayButtons } from './startup-overlay.ts';
 import { createPauseUiUpdater } from './pause-ui.ts';
 import { isAudioMuted, setAudioMuted } from '../core/audio.ts';
@@ -386,6 +387,28 @@ function saveAspectMode(mode: AspectMode): void {
   }
 }
 
+// HDD欄(fd-slotsの3行目)の表示希望の永続化キー。WebX68k(webx68k.showHdd)と同じ流儀。
+// 実際に行を表示するかどうかは、この希望とHDDの中身の有無(shouldShowHddSlot()参照)から
+// player.ts側で都度計算する(この値だけでは決まらない)。
+const SHOW_HDD_SLOT_STORAGE_KEY = 'webnp2.showHddSlot';
+
+/** HDD欄の表示希望の保存値。既定はfalse(非表示)。 */
+function loadShowHddSlotPreference(): boolean {
+  try {
+    return localStorage.getItem(SHOW_HDD_SLOT_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveShowHddSlotPreference(show: boolean): void {
+  try {
+    localStorage.setItem(SHOW_HDD_SLOT_STORAGE_KEY, show ? 'true' : 'false');
+  } catch {
+    // localStorageが使えない環境ではメモリ上の切替のみ有効。
+  }
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   attrs: Record<string, string> = {},
@@ -474,6 +497,8 @@ const ICONS = {
     'M5 4h11l3 3v13H5z M8 9h7v4H8z M14 15v3.2a1.8 1.8 0 1 1-1-1.6V13',
   // ブラウン管モニタ風(横長の枠+台座)＝4:3表示/ドット等倍の切替。
   aspect: 'M4 5h16v11H4z M9 20h6 M12 16v4',
+  // 2段の皿(HDDの意匠)＝HDD欄の表示/非表示切替。移植元WebX68k(btn-toggle-hdd)と同じ意匠。
+  hddToggle: 'M4 5h16v6H4z M4 13h16v6H4z M7 8h.01 M7 16h.01',
 };
 
 function iconButton(icon: string, label: string, extraClass = ''): HTMLButtonElement {
@@ -764,6 +789,12 @@ export function buildPlayerUI(
     stage.classList.toggle('aspect-4-3', is43);
   }
   updateAspectControl();
+  // HDD欄(fd-slotsの3行目)の表示切替。初期値は非表示で、中身がセット済み(起動前の
+  // ペンディング・URLパラメータ経由を含む)なら希望に関わらず表示する
+  // (判定はsrc/ui/hdd-visibility.tsのshouldShowHddSlot()、移植元WebX68k commit 参照)。
+  const btnShowHddSlot = iconButton(ICONS.hddToggle, t('toolbarToggleHddSlot'));
+  btnShowHddSlot.setAttribute('aria-pressed', 'false');
+  let showHddSlotPref = loadShowHddSlotPreference();
   const btnPause = iconButton(ICONS.pause, t('toolbarPause'));
   const btnMachineReset = iconButton(ICONS.machineReset, t('toolbarMachineReset'));
   const btnSaveState = iconButton(ICONS.saveState, t('toolbarSaveState'));
@@ -819,6 +850,7 @@ export function buildPlayerUI(
   // 二重管理にならない。
   const actionButtons: Record<ToolbarActionId, HTMLButtonElement | HTMLAnchorElement> = {
     aspect: btnAspect,
+    showHddSlot: btnShowHddSlot,
     pause: btnPause,
     machineReset: btnMachineReset,
     saveState: btnSaveState,
@@ -959,6 +991,35 @@ export function buildPlayerUI(
   ]);
 
   const fdSlots = el('div', { class: 'fd-slots' }, [fdSlot1, fdSlot2, hddSlot]);
+
+  /**
+   * HDD欄(hddSlot)の見た目上の表示/非表示を、利用者の希望(showHddSlotPref)とHDDの
+   * 中身の有無(slotMounted.hdd。マウント済み/起動前ペンディング・URLパラメータ経由を
+   * 含む、updateSlots()参照)から再計算する。行のfd-slotsはconsole-footer(footerBar)の
+   * 一部としてResizeObserverの監視対象になっているため、表示/非表示の切替そのもので
+   * 画面がその分だけ広く/狭く使えるようになるが、即座に反映されるようscheduleRescale()も
+   * 明示的に呼ぶ(親からの指示書のとおり)。
+   */
+  function updateHddSlotVisibility(): void {
+    hddSlot.classList.toggle('hidden', !shouldShowHddSlot(showHddSlotPref, Boolean(slotMounted.hdd)));
+    scheduleRescale();
+  }
+
+  /** HDD欄表示トグルボタン自体の見た目(aria-pressed/タイトル)を、利用者の素の希望に合わせる。
+   * 実際に行が見えているか(shouldShowHddSlot込みの結果)ではなく、素の希望を反映する
+   * (中身があって強制表示されている間もボタンはOFF表示のままにして、押せば消せることを示す)。 */
+  function updateShowHddSlotControl(): void {
+    btnShowHddSlot.classList.toggle('active', showHddSlotPref);
+    btnShowHddSlot.setAttribute('aria-pressed', showHddSlotPref ? 'true' : 'false');
+  }
+  updateShowHddSlotControl();
+
+  btnShowHddSlot.addEventListener('click', () => {
+    showHddSlotPref = !showHddSlotPref;
+    saveShowHddSlotPreference(showHddSlotPref);
+    updateShowHddSlotControl();
+    updateHddSlotVisibility();
+  });
 
   // FDD1/FDD2スロット行へのD&Dで該当ドライブに直接挿入する(挿入ボタンのドロップ版)。
   const wireSlotDrop = (slotEl: HTMLElement, drive: 1 | 2): void => {
@@ -1915,6 +1976,7 @@ export function buildPlayerUI(
     [btnMute, () => (isAudioMuted() ? t('toggleOn') : t('toggleOff'))],
     [btnFddSeekSound, () => (seekSoundOn ? t('toggleOn') : t('toggleOff'))],
     [btnAspect, () => (aspectMode === '4:3' ? t('toolbarAspect43') : t('toolbarAspectNative'))],
+    [btnShowHddSlot, () => (showHddSlotPref ? t('toggleOn') : t('toggleOff'))],
   ]);
 
   let overflowMenuState: OverflowMenuState = CLOSED_OVERFLOW_MENU_STATE;
@@ -2639,6 +2701,9 @@ export function buildPlayerUI(
       // 起動前にセットしたHDDはコア未マウントでもダウンロード/取り外しできる。
       hddDlBtn.disabled = !slots.hdd || (!toolbarEnabled && !slots.hddPending);
       hddEjectBtn.classList.toggle('hidden', !slots.hddPending);
+      // HDDがセットされた(D&D/ライブラリ/起動前ペンディング/URLパラメータ経由の起動時
+      // マウントいずれも、ここでslotMounted.hddが真になる)ら、トグルOFFのままでもHDD欄を表示する。
+      updateHddSlotVisibility();
     },
     setPendingBootMode(hasPending: boolean) {
       pendingBootMode = hasPending;
@@ -2680,6 +2745,8 @@ export function buildPlayerUI(
       btnToolbarOverflow.setAttribute('aria-label', t('toolbarMore'));
       btnAspect.title = t('toolbarAspect');
       btnAspect.setAttribute('aria-label', t('toolbarAspect'));
+      btnShowHddSlot.title = t('toolbarToggleHddSlot');
+      btnShowHddSlot.setAttribute('aria-label', t('toolbarToggleHddSlot'));
       btnMute.title = t('toolbarMute');
       btnMute.setAttribute('aria-label', t('toolbarMute'));
       btnFddSeekSound.title = t('toolbarFddSeekSound');
