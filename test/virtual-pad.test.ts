@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   hitTestVpad, layoutVpad, layoutVpadSides, placementForViewport, stickDirsFromPoint, stickKnobOffset,
-  STICK_DEADZONE_RATIO, STICK_MAX_RADIUS_RATIO, vpadWidgetsFor, type VpadWidget,
+  STICK_DEADZONE_RATIO, STICK_KNOB_RATIO, STICK_MAX_RADIUS_RATIO, vpadWidgetsFor, type VpadWidget,
 } from '../src/ui/virtual-pad.ts';
 
 const ids = new Set(['dpad-up', 'dpad-down', 'dpad-left', 'dpad-right', 'btn-a', 'btn-b']);
@@ -86,6 +86,9 @@ describe('スティックの8方向判定', () => {
   it('ノブの移動量を最大半径に制限する', () => {
     const offset = stickKnobOffset(rect, 500, 100);
     expect(Math.hypot(offset.x, offset.y)).toBeCloseTo(rect.w * STICK_MAX_RADIUS_RATIO);
+  });
+  it('ノブ外縁が外周を超えない', () => {
+    expect(STICK_MAX_RADIUS_RATIO + STICK_KNOB_RATIO / 2).toBeLessThanOrEqual(0.5);
   });
 });
 

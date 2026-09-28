@@ -2154,6 +2154,7 @@ body.input-panel-open .fd-slots {
 .vpad-stick, .vpad-button { position: absolute; box-sizing: border-box; border-radius: 50%; pointer-events: auto; }
 .vpad-stick { background: var(--vpad-fill); border: 2px solid var(--vpad-line); }
 .vpad-stick-knob {
+  /* width/height(47%) は virtual-pad.ts の STICK_KNOB_RATIO と一致させる */
   position: absolute; left: 50%; top: 50%; width: 47%; height: 47%; margin: -23.5%;
   border-radius: 50%; box-sizing: border-box; background: var(--vpad-knob);
   border: 2px solid var(--vpad-knob-line); transform: translate(0, 0); pointer-events: none;

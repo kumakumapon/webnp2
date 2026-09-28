@@ -120,7 +120,10 @@ const BUTTON_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 const SIX_BUTTON_MARKERS = new Set(['btn-c', 'btn-d', 'btn-e', 'btn-f']);
 
 export const STICK_DEADZONE_RATIO = 0.18;
-export const STICK_MAX_RADIUS_RATIO = 0.5;
+// styles.css の .vpad-stick-knob の width/height(47%) と一致させること
+export const STICK_KNOB_RATIO = 0.47;
+// ノブ外縁が外周に内接するように、中心の可動半径をノブ半径ぶん内側に制限する
+export const STICK_MAX_RADIUS_RATIO = (1 - STICK_KNOB_RATIO) / 2;
 
 export function placementForViewport(width: number, height: number): Exclude<VpadPlacement, 'overlay'> {
   return width > height ? 'sides' : 'panel';
