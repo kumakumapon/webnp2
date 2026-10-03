@@ -14,10 +14,12 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 ## 今すぐ試す
 
 - **公開ページ**: <https://kumakumapon.github.io/webnp2/>
+- **MS-DOS 2.0 PC-98 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
 - **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
-ROM・市販ソフトのイメージは同梱していません。手元の HDD/FD イメージは
+ROM・再配布できない市販ソフトのイメージは同梱していません。
+FreeDOS(98) と MIT License の MS-DOS 2.0 PC-98 移植版を同梱しています。手元の HDD/FD イメージは
 画面へのドラッグ&ドロップで読み込めます。
 
 ## 自分のリポジトリの GitHub Pages にデプロイする
@@ -86,7 +88,8 @@ https://.../?hdd=<HDDイメージURL>&fd1=<FD1イメージURL>&fd2=<FD2イメー
 `hdd`/`fd1`/`fd2`/`freedos` のいずれも指定しない場合、起動オーバーレイに
 「そのまま起動」（イメージ無しの状態で開始し、以降は画面へのドラッグ&ドロップで
 HDD/FDイメージを読み込める）と「FreeDOS(98) で起動」（後述の同梱起動FDで起動する）の
-2択が表示されます。ディスクライブラリに保存済みイメージがあれば、3つ目の
+ほか、「MS-DOS 2.0 で起動」（同梱のPC-98移植版を `fd1` 指定の自動起動URLで開く）の
+3択が表示されます。ディスクライブラリに保存済みイメージがあれば、4つ目の
 「保存済みディスクから起動」も表示されます。URLパラメータでディスクを1つでも指定した場合は、従来通り単一の
 「クリックして起動」ボタンになります。
 起動するのは表示されたボタンを押した場合だけです。オーバーレイの余白をクリックしても
@@ -248,6 +251,33 @@ IndexedDBに永続化されるため、FreeDOS(98) 上での作業（フォー�
 ファイル保存など）は次回訪問時にも引き継がれ、「初期状態に戻す」で
 配布時のイメージに戻せます。
 
+### 同梱の MS-DOS 2.0 PC-98 起動FD
+
+起動画面の **「MS-DOS 2.0 で起動」** を選ぶか、
+[MS-DOS 2.0 デモ](https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1) を開きます。
+この GitHub Pages から起動FDを取得するため、外部のイメージ配信元や中継サービスは不要です。
+既存の `fd1`・`run=1` を使うため、自分のディスクURLを指定する方法もそのまま使えます。
+
+[kumakumapon/MS-DOS](https://github.com/kumakumapon/MS-DOS) の
+commit `35cb651ae720ddb4de8ae6b7f335628a0c5ac001` からビルドした起動FDです。
+Microsoft MS-DOS 2.00 の元のカーネル・Command 2.02 と、移植版の PC-98 OEM BIOS / IPL を
+格納しています。FreeDOS(98) のカーネルは使用しません。**MIT License** で配布しており、
+全文は [public/msdos2/LICENSE.txt](public/msdos2/LICENSE.txt) とディスク内の `DOSLIC.TXT` にあります。
+Microsoft の公式移植・サポート・推奨を示すものではありません。
+
+起動後は `MS-DOS version 2.00` と `A>` が表示されます。
+`VER`・`DIR`・`ECHO`・`TYPE`・`COPY` を試せます。
+対応は WebNP2、386 以上、1232 KiB FAT12 の **A: のみ**です。
+HDD・2台目のFD・実機や、`FORMAT` / `SYS` による起動ディスクの作り直しは対象外です。
+IBM PC の BIOS・画面・ハードウェアを直接操作するソフトは PC-98 では動きません。
+日本語入力用 FEP は含みません。
+
+書き込みは IndexedDB に保存され、同じ起動URLで再開できます。
+既存の **「初期状態に戻す」** で配布時のディスクに戻せます（変更内容は削除されます）。
+ファイル名にイメージのハッシュを含めているため、将来の更新版とは保存データを分離できます。
+詳細は [移植の説明](https://github.com/kumakumapon/MS-DOS/blob/35cb651ae720ddb4de8ae6b7f335628a0c5ac001/docs/pc98-webnp2.md)、
+出典・ファイルのチェックサムは [manifest.json](public/msdos2/manifest.json) を参照してください。
+
 ## MCPサーバー (AIエージェントからWebNP2を操作する)
 
 ローカルで動かすMCPサーバー経由で、Claude Code などのAIエージェントから
@@ -304,6 +334,28 @@ npm run dev            # 別ターミナルで起動しておく
 npm run capture-help
 ```
 
+### MS-DOS 2.0 起動FDの更新
+
+クリーンな `kumakumapon/MS-DOS` のチェックアウトで、
+[ビルド手順](https://github.com/kumakumapon/MS-DOS/blob/main/docs/pc98-webnp2.md) に従い
+PC-98 版をビルドします。続いて、このリポジトリでイメージ・manifest・ライセンスを取り込みます。
+
+```sh
+python3 scripts/update-msdos2.py /path/to/MS-DOS
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+# 別ターミナルで実行（Chromium が必要）:
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos2.mjs http://127.0.0.1:4173/
+```
+
+取り込みスクリプトは `ports/pc98/build/` を読み、イメージと元のカーネル・シェル・
+ライセンスのチェックサムを検証して出典コミットを記録します。`public/msdos2/` の
+新しいファイルをコミットし、README・使い方ページのイメージURLも更新してください。
+起動ボタンは manifest のファイル名を参照します。以前のファイル名は保存データ・
+共有URLのために残します。Pages は通常のビルドで同梱物を公開するため、
+デプロイごとに MS-DOS をアセンブルする必要はありません。
+
 ### コア (public/core/) の更新
 
 `public/core/` には [NP2kai-wasm](../NP2kai) のビルド成果物
@@ -330,7 +382,7 @@ scripts/update-core.sh
 - `public/core/` に含まれる NP2kai-wasm のビルド成果物 (`emnp21kai_sdl2.js` /
   `emnp21kai_sdl2.wasm` / `font.bmp`) は NP2kai (BSDライセンス系) のビルド成果物であり、
   ライセンス文は `public/core/LICENSE.NP2kai` を参照してください。
-- **PC-98 の ROM イメージ・市販ソフトウェアのディスクイメージは一切同梱していません。**
+- **PC-98 の ROM イメージ・再配布できない市販ソフトウェアのディスクイメージは同梱していません。**
   `font.bmp` は東雲フォント由来のフォントデータで、著作権上の問題がある PC-98 実機 ROM
   とは別物です。
 - ROM無し起動は、NP2kai 組み込みの BIOS 互換ルーチン(上流 NP2/NP2kai から無改変で継承した
@@ -339,6 +391,8 @@ scripts/update-core.sh
   おり、一部ソフトウェアはこの文字列を NEC 機種判定に用います。これは本リポジトリが追加した
   処理ではなく、ソフトウェア互換性のための上流由来の動作をそのまま継承したものです。この
   文字列は配布 wasm ビルドにも含まれます(NP2kai の `bios/bios.c` 由来)。
+- `public/msdos2/` は MIT License の MS-DOS 2.0 PC-98 起動FD・ライセンス全文・
+  出典とチェックサムを格納しています。詳しくは前述の説明を参照してください。
 - `public/freedos/fd98_2hd.xdf` は前述の FreeDOS(98) 起動FDで、GPLv2以降の下で配布しています。
   ソースは [lpproj/fdkernel](https://github.com/lpproj/fdkernel) および
   [lpproj/freecom_dbcs2](https://github.com/lpproj/freecom_dbcs2) から入手可能です。

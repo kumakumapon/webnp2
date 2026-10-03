@@ -15,10 +15,12 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 ## Try it now
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
+- **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
-No ROMs or commercial software images are bundled. You can load your own
+No ROMs or proprietary commercial software images are bundled.
+FreeDOS(98) and the MIT-licensed MS-DOS 2.0 PC-98 port are included. You can load your own
 HDD/FD images by dragging and dropping them onto the screen.
 
 ## Deploy to your own GitHub Pages
@@ -87,9 +89,10 @@ https://.../?hdd=<HDD image URL>&fd1=<FD1 image URL>&fd2=<FD2 image URL>&run=1&c
 | `perf` | `1` shows a performance overlay (FPS / main-thread busy / audio supply) | For diagnosing slowdowns |
 
 If no `hdd`/`fd1`/`fd2`/`freedos` parameters are given, the start overlay offers
-two choices: "Start As-Is" (no image loaded — drag and drop an HDD/FD image
+three choices: "Start As-Is" (no image loaded — drag and drop an HDD/FD image
 onto the screen afterward) or "Start with FreeDOS(98)" (boots the bundled
-FreeDOS(98) floppy described below). If the Disk Library is not empty, a third
+FreeDOS(98) floppy described below), or "Start with MS-DOS 2.0" (opens the
+bundled PC-98 port through the `fd1` auto-boot URL). If the Disk Library is not empty, a fourth
 "Boot from Saved Disk" button is also shown. If any disk is specified via URL
 parameters, the overlay instead shows the single traditional "Click to Start"
 button. Only the displayed buttons start the emulator; clicking empty overlay
@@ -279,6 +282,34 @@ inside FreeDOS(98) (formatting, saving files, etc.) carry over between
 visits, and "Reset to initial state" restores the pristine distributed
 image.
 
+### Bundled MS-DOS 2.0 PC-98 boot floppy
+
+Select **Start with MS-DOS 2.0** on the start overlay, or open the
+[MS-DOS 2.0 demo](https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1). The image is served by this GitHub Pages site;
+no external image host or relay is needed. This uses the existing `fd1` and
+`run=1` parameters, so explicit disk URLs continue to work as before.
+
+The boot floppy comes from [kumakumapon/MS-DOS](https://github.com/kumakumapon/MS-DOS),
+commit `35cb651ae720ddb4de8ae6b7f335628a0c5ac001`. It contains the original
+Microsoft MS-DOS 2.00 kernel and Command 2.02 plus the port's PC-98 OEM BIOS/IPL,
+not the FreeDOS(98) kernel. It is distributed under the **MIT License**;
+see [public/msdos2/LICENSE.txt](public/msdos2/LICENSE.txt), also included inside
+the disk as `DOSLIC.TXT`. This is an unofficial port and does not imply
+Microsoft support or endorsement.
+
+The screen shows `MS-DOS version 2.00` and `A>`. Try `VER`, `DIR`, `ECHO`, `TYPE`,
+and `COPY`. Support is limited to drive **A:** on WebNP2 (386 or later, 1232 KiB
+FAT12 floppy); HDDs, a second floppy, physical machines, and recreating boot disks
+with `FORMAT`/`SYS` are unsupported. Software using IBM PC BIOS/video/hardware
+directly cannot run on PC-98. No Japanese input FEP is bundled.
+
+Disk edits persist in IndexedDB when you revisit the same boot URL. The existing
+**Reset to initial state** action restores the distributed disk and deletes your
+changes. The filename contains the image's content hash so future versions get
+separate saved disks. Full source/limits are in
+[the port documentation](https://github.com/kumakumapon/MS-DOS/blob/35cb651ae720ddb4de8ae6b7f335628a0c5ac001/docs/pc98-webnp2.md);
+[manifest.json](public/msdos2/manifest.json) records provenance and file checksums.
+
 ## MCP server (control WebNP2 from AI agents)
 
 WebNP2 can be driven by AI agents (Claude Code etc.) through a local MCP
@@ -339,6 +370,28 @@ npm run dev            # in another terminal
 npm run capture-help
 ```
 
+### Updating the MS-DOS 2.0 floppy
+
+Build the PC-98 port in a clean `kumakumapon/MS-DOS` checkout using its
+[build instructions](https://github.com/kumakumapon/MS-DOS/blob/main/docs/pc98-webnp2.md).
+Then import the image, manifest, and license into this repository:
+
+```sh
+python3 scripts/update-msdos2.py /path/to/MS-DOS
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+# In another terminal (Chromium must be installed):
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos2.mjs http://127.0.0.1:4173/
+```
+
+The importer reads `ports/pc98/build/`, verifies the image checksum and original
+kernel/shell/license hashes, and records the source commit. Commit the new
+`public/msdos2/` files and update the image URL in the READMEs/help page. The
+player reads the image filename from the manifest. Keep old image filenames
+available for existing saved disks and shared links. Pages publishes the tracked
+files with the normal build; assembling MS-DOS during each deployment is unnecessary.
+
 ### Updating the core (public/core/)
 
 `public/core/` holds the build output of
@@ -370,7 +423,7 @@ excluded via `.gitignore` and never committed.
   (`emnp21kai_sdl2.js` / `emnp21kai_sdl2.wasm` / `font.bmp`) are build
   output of NP2kai, which is BSD-family licensed; see
   `public/core/LICENSE.NP2kai` for the full license text.
-- **No PC-98 ROM images or commercial software disk images are bundled with
+- **No PC-98 ROM images or proprietary commercial software disk images are bundled with
   this repository.** `font.bmp` is font data derived from the Shinonome
   font project and is unrelated to, and does not raise the same copyright
   concerns as, real PC-98 ROM images.
@@ -383,6 +436,8 @@ excluded via `.gitignore` and never committed.
   for software compatibility, not something added by this repository, and
   the string is present in the bundled wasm build (see NP2kai's
   `bios/bios.c`).
+- `public/msdos2/` contains the MS-DOS 2.0 PC-98 boot floppy under the MIT
+  License, the full license notice, and provenance/checksums; see the section above.
 - `public/freedos/fd98_2hd.xdf` is the FreeDOS(98) boot floppy described
   above, licensed under GPLv2+; source is available from
   [lpproj/fdkernel](https://github.com/lpproj/fdkernel) and

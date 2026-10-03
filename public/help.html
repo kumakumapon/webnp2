@@ -274,7 +274,7 @@
               続きから再開できることを目指しています。
             </p>
             <p>
-              <strong>ROM・市販ソフトウェアのディスクイメージは一切同梱していません。</strong>
+              <strong>ROM・再配布できない市販ソフトウェアのディスクイメージは同梱していません。</strong>
               手元のHDD/FDイメージを画面へドラッグ&ドロップして読み込ませて使います。
             </p>
             <p>
@@ -291,7 +291,7 @@
               resume right where you left off.
             </p>
             <p>
-              <strong>No ROM images or commercial software disk images are bundled.</strong>
+              <strong>No ROM images or proprietary commercial software disk images are bundled.</strong>
               You load your own HDD/FD images by dragging and dropping them onto the screen.
             </p>
             <p>
@@ -309,7 +309,8 @@
               ページを開くと起動オーバーレイが表示されます。URLでディスクイメージを
               指定していない場合は「そのまま起動」（イメージ無しで開始し、後から
               ドラッグ&ドロップで読み込む）と「FreeDOS(98) で起動」（同梱の起動FDで
-              すぐに試す）の2択が、URLでディスクを指定している場合は単一の
+              すぐに試す）、または「MS-DOS 2.0 で起動」（MIT License のPC-98移植版）の
+              3択が、URLでディスクを指定している場合は単一の
               「クリックして起動」ボタンが表示されます。ライブラリに保存済みの
               イメージがあれば「保存済みディスクから起動」も表示されます。
               起動するのはこれらのボタンを押した場合だけで、余白をクリックしても起動しません。
@@ -320,6 +321,13 @@
               何を打てばいいのか・どんなコマンドが使えるのかは
               <a href="./freedos.html">FreeDOS(98) の使い方</a> にまとめてあります。
             </div>
+            <div class="note-box">
+              <a href="./?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&amp;run=1&amp;lang=ja">MS-DOS 2.0 を起動</a>すると
+              <code>A&gt;</code> で <code>VER</code>・<code>DIR</code>・<code>ECHO</code>・<code>TYPE</code>・
+              <code>COPY</code> を使えます。A: のみ対応で、HDD・2台目のFD・日本語FEPは含みません。
+              <a href="./msdos2/README.txt">出典・対応範囲</a> /
+              <a href="./msdos2/LICENSE.txt">MIT License</a>
+            </div>
             <p>
               ブラウザの音声再生制限により、音声はクリック操作(または自動起動時は
               最初のクリック/キー入力)まではミュートになります。
@@ -329,9 +337,10 @@
             <h2>Starting the emulator</h2>
             <p>
               A start overlay appears when you open the page. If no disk image is
-              specified via URL, you get two choices: "Start As-Is" (start with no
+              specified via URL, you get three choices: "Start As-Is" (start with no
               image loaded, then drag & drop one afterward) or "Start with
-              FreeDOS(98)" (try it immediately with the bundled boot floppy). If a
+              FreeDOS(98)" (try it immediately with the bundled boot floppy), or
+              "Start with MS-DOS 2.0" (the MIT-licensed PC-98 port). If a
               disk is specified via URL, a single "Click to Start" button is shown
               instead. If saved images exist in the library, a "Boot from Saved
               Disk" button also appears.
@@ -342,6 +351,14 @@
               "Start with FreeDOS(98)" boots into a DOS command line. For what to type and
               which commands are available, see
               <a href="./freedos.html">Using FreeDOS(98)</a>.
+            </div>
+            <div class="note-box">
+              <a href="./?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&amp;run=1&amp;lang=en">Boot MS-DOS 2.0</a>
+              and try <code>VER</code>, <code>DIR</code>, <code>ECHO</code>, <code>TYPE</code>, or
+              <code>COPY</code> at <code>A&gt;</code>. Only drive A: is supported; no HDD,
+              second floppy, or Japanese input FEP is included.
+              <a href="./msdos2/README.txt">Source and limits</a> /
+              <a href="./msdos2/LICENSE.txt">MIT License</a>
             </div>
             <p>
               Due to browser autoplay restrictions, audio stays muted until you

@@ -293,7 +293,7 @@ header.app-header .app-tagline {
   background: var(--accent);
 }
 
-/* ディスク未指定時の「そのまま起動」/「FreeDOS(98) で起動」2択ボタンの横並びラッパー。 */
+/* 起動時の選択ボタン。狭い画面では折り返す。 */
 .overlay-choices {
   display: flex;
   flex-direction: row;
@@ -309,6 +309,16 @@ header.app-header .app-tagline {
 
 .overlay .start-btn-freedos:hover {
   background: #4f8a3c;
+}
+
+.overlay .start-btn-msdos2 {
+  text-decoration: none;
+  border-color: #70a9df;
+  background: #28527a;
+}
+
+.overlay .start-btn-msdos2:hover {
+  background: #3672aa;
 }
 
 .overlay .overlay-note {

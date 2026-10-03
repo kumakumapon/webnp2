@@ -1,0 +1,35 @@
+{
+  "image": "msdos2-pc98-06c61f748971.xdf",
+  "sha256": "06c61f74897107c937abba509cb286cb2dc1fbf23c516cbfab082887c1b0cd84",
+  "files": [
+    {
+      "name": "IO.SYS",
+      "size": 5444,
+      "sha256": "cc027d40dbc6d99660f47afb6249cc93a48c8d68af94ead668a10b29709972d8"
+    },
+    {
+      "name": "MSDOS.SYS",
+      "size": 16690,
+      "sha256": "1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1"
+    },
+    {
+      "name": "COMMAND.COM",
+      "size": 15480,
+      "sha256": "4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a"
+    },
+    {
+      "name": "AUTOEXEC.BAT",
+      "size": 42,
+      "sha256": "30871d33fafb959a15862e07be095d6e4e28de0b3cae68d09bb5fc1514d14499"
+    },
+    {
+      "name": "DOSLIC.TXT",
+      "size": 1074,
+      "sha256": "b5179f780ec212a434efcc989a2295a140deb0bdb17182d2bf9c5f6f1f1a01c4"
+    }
+  ],
+  "source_repository": "https://github.com/kumakumapon/MS-DOS",
+  "source_commit": "35cb651ae720ddb4de8ae6b7f335628a0c5ac001",
+  "source_path": "ports/pc98",
+  "license": "MIT"
+}
