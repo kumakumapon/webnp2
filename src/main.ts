@@ -140,7 +140,7 @@ const FREEDOS_SOURCE_KEY = 'freedos:fd98_2hd';
 const diskSpecified = Boolean(hddUrl || fd1Url || fd2Url || freedosParam);
 
 // フッターに載せる本リポジトリのGitHubリンク先。
-const WEBNP2_REPO_URL = 'https://github.com/uraraworks/WebNP2';
+const WEBNP2_REPO_URL = 'https://github.com/kumakumapon/webnp2';
 // フッターの著作権表示リンク先。
 const URARA_WORKS_URL = 'https://www.urara-works.jp/';
 // 拡張メモリ(MB)。DOS用途では1MBで十分なので既定は1。?mem=N で変更可能。
