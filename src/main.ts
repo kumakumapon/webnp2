@@ -15,6 +15,7 @@ import type { WebNP2, DiskSlot } from './api/webnp2.ts';
 import { createDebugger, createWebNP2, type DebuggerController } from '../packages/embed/src/index.ts';
 import { Bridge } from './api/bridge.ts';
 import { WEBNP2_VERSION_FOOTER } from './version.ts';
+import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -123,7 +124,7 @@ if (aspectParamRaw !== null && aspectModeParam === null) {
 }
 
 // 同梱FreeDOS(98)起動FDイメージの配置場所と、IndexedDB永続化用の固定sourceKey。
-// URL由来ではなく固定キーにすることで、オーバーレイ2択/?freedos=1/FDD1挿入ボタンの
+// URL由来ではなく固定キーにすることで、オーバーレイの選択/?freedos=1/FDD1挿入ボタンの
 // どの経路から使っても同じ保存データ(前回の続き)を共有できる。
 const FREEDOS_IMAGE_URL = './freedos/fd98_2hd.xdf';
 
@@ -135,7 +136,7 @@ const pasteParam = params.get('paste');
 const FREEDOS_SOURCE_KEY = 'freedos:fd98_2hd';
 
 // URLでディスクが1つも指定されていない場合、オーバーレイに
-// 「そのまま起動」/「FreeDOS(98) で起動」の2択を出す(freedos=1指定済みの場合は
+// OS選択を表示する(freedos=1指定済みの場合は
 // 既に起動対象が確定しているので、従来通り単一ボタンにする)。
 const diskSpecified = Boolean(hddUrl || fd1Url || fd2Url || freedosParam);
 
@@ -1980,6 +1981,7 @@ function init(): void {
     },
     {
       offerFreeDosChoice: !diskSpecified,
+      msDosBootUrl: !diskSpecified ? MSDOS2_BOOT_URL : undefined,
       trackingEnabled: params.get('mousetrack') !== '0',
       aspectModeParam,
     },

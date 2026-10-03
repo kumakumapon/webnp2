@@ -212,6 +212,8 @@ export interface PlayerCallbacks {
 export interface PlayerOptions {
   /** true: URLでディスク未指定のためオーバーレイに「そのまま起動」/「FreeDOS(98)で起動」の2択を出す。 */
   offerFreeDosChoice: boolean;
+  /** Optional standalone-player link to the bundled MS-DOS 2.0 boot disk. */
+  msDosBootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
   /**
@@ -708,7 +710,7 @@ export function buildPlayerUI(
     el('br'),
     overlayNoteLine2,
   ]);
-  // ディスク未指定時は「そのまま起動」/「FreeDOS(98) で起動」の2択、指定時は従来の単一ボタン。
+  // ディスク未指定時は同梱OSの選択肢、指定時は従来の単一ボタン。
   // 起動前にディスクをセットすると「そのまま起動」では意味が通らなくなるため、
   // セット済みかどうかで起動ボタンの文言を切り替える。
   let pendingBootMode = false;
@@ -720,12 +722,18 @@ export function buildPlayerUI(
   const freeDosBtn = options.offerFreeDosChoice
     ? el('button', { class: 'start-btn start-btn-freedos', type: 'button' }, [t('startBtnFreeDos')])
     : undefined;
+  // Use the existing fd1/run URL flow; embedded players need not offer this link.
+  const msDosHref = () => `${options.msDosBootUrl}&lang=${getLang()}`;
+  const msDosBtn = options.msDosBootUrl
+    ? el('a', { class: 'start-btn start-btn-msdos2', href: msDosHref() }, [t('startBtnMsDos2')])
+    : undefined;
   // ライブラリが空の場合もあるため既定は非表示。起動可否は非同期チェック後に表示する。
   const libraryStartBtn = el('button', { class: 'start-btn start-btn-library hidden', type: 'button' }, [
     t('overlayLibraryBtn'),
   ]);
   const overlayButtonList: HTMLElement[] = [startBtn];
   if (freeDosBtn) overlayButtonList.push(freeDosBtn);
+  if (msDosBtn) overlayButtonList.push(msDosBtn);
   overlayButtonList.push(libraryStartBtn);
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
   const overlay = el('div', { class: 'overlay' }, [overlayButtons, overlayNote]);
@@ -2717,6 +2725,10 @@ export function buildPlayerUI(
       overlayNoteLine2.textContent = t('overlayNote2');
       startBtn.textContent = startBtnLabel();
       if (freeDosBtn) freeDosBtn.textContent = t('startBtnFreeDos');
+      if (msDosBtn) {
+        msDosBtn.textContent = t('startBtnMsDos2');
+        msDosBtn.setAttribute('href', msDosHref());
+      }
       pauseOverlayText.textContent = t('pauseOverlayLabel');
       // 言語切替では状態(corePaused/pausedByUser)自体は変わらないため、そのままだと
       // pauseUi.update()がキャッシュヒットして表示(ボタンのtitle等)が古い言語のまま残る。
