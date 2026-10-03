@@ -2,6 +2,9 @@
 
 [English](README.md)
 
+このリポジトリは [uraraworks/WebNP2](https://github.com/uraraworks/WebNP2) の fork です。
+以下の公開ページ・Release のリンクは `kumakumapon/webnp2` を指します。
+
 PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビルド (NP2kai-wasm) を
 ブラウザ上で動かすための Web プレイヤーです。「URL を開くだけで起動・プレイ・セーブの持ち越し」
 ができる体験を目指しています。
@@ -10,20 +13,53 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 
 ## 今すぐ試す
 
-- **公開ページ**: <https://uraraworks.github.io/WebNP2/>
-- **FreeDOS(98) 自動起動デモ**: <https://uraraworks.github.io/WebNP2/?freedos=1&run=1>
+- **公開ページ**: <https://kumakumapon.github.io/webnp2/>
+- **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
 ROM・市販ソフトのイメージは同梱していません。手元の HDD/FD イメージは
 画面へのドラッグ&ドロップで読み込めます。
 
+## 自分のリポジトリの GitHub Pages にデプロイする
+
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) は、このリポジトリを
+ビルドし、`dist/` を **このリポジトリ自身の GitHub Pages** に公開します。
+認証には `GITHUB_TOKEN` を使うため、上流リポジトリへのデプロイや外部トークンは不要です。
+
+1. `kumakumapon/webnp2` の **Actions** を開き、fork のワークフロー有効化を
+   求められた場合は有効にします。
+2. **Settings → Pages → Build and deployment** の **Source** を
+   **GitHub Actions** に設定し、保存ボタンがある場合は保存します。
+3. 変更を `master` にマージすると自動デプロイされます。手動の場合は
+   **Actions → Deploy to GitHub Pages → Run workflow** で `master` を選びます。
+4. `build`・`deploy` の両ジョブが完了すると、`github-pages` 環境とデプロイジョブに
+   公開URLが表示されます: <https://kumakumapon.github.io/webnp2/>。
+
+公開URLは初回デプロイ成功後に利用できます。Vite は相対アセットパス (`base: './'`) を
+使うため、小文字の `/webnp2/` 配下でもビルド設定の変更は不要です。
+さらに fork する場合のURLは `https://<所有者>.github.io/<リポジトリ名>/` です。
+ドキュメント・HTML内の公開ページとリポジトリのリンク、および `src/main.ts` の
+`WEBNP2_REPO_URL` も更新してください。既定ブランチを変更する場合は、ワークフローの
+`on.push.branches` も変更してください。
+
+中継サービスを使う場合のみ、**Settings → Secrets and variables → Actions → Variables →
+New repository variable** で `DISK_PROXY_URL` に自前の中継URL（末尾の `/` なし）を
+設定します。ビルド時に `VITE_DISK_PROXY` として渡されます。未設定なら直接取得のみで、
+Google Drive の共有リンクには中継が必要です。
+
+MCP の Release は Pages とは別です。このリポジトリのダウンロードリンクを利用可能に
+するには、`mcp-*` タグ（例: `mcp-2026-10-03`）を push して **Release MCP server** を
+実行してください。`webnp2-mcp.mjs` を含む Release ができるまでは、
+[mcp/README.md](mcp/README.md) のリポジトリから直接動かす手順を使えます。
+Release もワークフローを実行したリポジトリに作成されます。
+
 ## 使い方
 
 WebNP2 のユニークな特徴を紹介する紹介ページは
-<https://uraraworks.github.io/WebNP2/about.html?lang=ja> にあります。
+<https://kumakumapon.github.io/webnp2/about.html?lang=ja> にあります。
 
 プレイヤー向けの使い方ページ（スクリーンショット付き）は
-<https://uraraworks.github.io/WebNP2/help.html?lang=ja> にあります。
+<https://kumakumapon.github.io/webnp2/help.html?lang=ja> にあります。
 プレイヤーの **「…」→「使い方」** からも開けます。
 
 ### URL パラメータ
@@ -70,8 +106,9 @@ Dropbox の共有リンクは、「リンクをコピー」で得たURLを**そ�
 下記の中継へ自動でフォールバックします）。
 
 Google Drive は直接fetchではCORSに対応していないため取得に失敗しますが、
-公開ページでは**中継サービス経由で自動的に再取得**されます（直接fetchが失敗した場合のみ
-中継を試みます）。fork して自分でホストする場合は後述の `VITE_DISK_PROXY` の設定が必要です。
+`VITE_DISK_PROXY` を設定したビルドでは**中継サービス経由で自動的に再取得**されます
+（直接fetchが失敗した場合のみ中継を試みます）。このリポジトリでは既定で中継を設定していません。
+Pages では前述の `DISK_PROXY_URL`、ローカルビルドでは後述の `VITE_DISK_PROXY` を設定してください。
 **OneDrive（`1drv.ms` / `onedrive.live.com` / `sharepoint.com`）の共有リンクは仕様上
 ご利用いただけません**（中継を挟んでも取得できないことが確認済みです）。Dropboxか
 Google Driveをお使いください。
@@ -223,12 +260,12 @@ WebNP2 を操作できます（テキスト画面の読み取り・キー入力�
 （git clone も npm install も不要。Node.js 18 以上があれば動きます）:
 
 ```sh
-curl -fLO https://github.com/uraraworks/WebNP2/releases/latest/download/webnp2-mcp.mjs
+curl -fLO https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
 claude mcp add webnp2 -- node "$PWD/webnp2-mcp.mjs"
 ```
 
 あとはブラウザで
-`https://uraraworks.github.io/WebNP2/?freedos=1&run=1&bridge=1`
+`https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
 を開けば繋がります。詳しい手順と提供ツール一覧は
 [mcp/README.md](mcp/README.md) を参照してください。
 お使いのAIエージェントに このファイルを示して

@@ -3,7 +3,7 @@ name: Release MCP server
 # `mcp-YYYY-MM-DD` 形式のタグを push すると、依存を埋め込んだ単一ファイル
 # `webnp2-mcp.mjs` をビルドして GitHub Release に添付する。
 # 利用者はファイル1個を落とすだけで済む（git clone も npm install も不要）:
-#   https://github.com/uraraworks/WebNP2/releases/latest/download/webnp2-mcp.mjs
+#   https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
 #
 # 注意: 上の `latest` URL は「リポジトリ内で最新の Release」を指す。将来
 # MCP 以外の Release を作る場合は、そちらにも同名アセットを含めるか、

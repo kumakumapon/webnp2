@@ -7,24 +7,62 @@ compiled to WebAssembly (NP2kai-wasm). The goal is a "just open the URL and
 play" experience — launch, play, and resume — with progress carried across
 sessions.
 
+This repository is a fork of [uraraworks/WebNP2](https://github.com/uraraworks/WebNP2).
+Site and release links below refer to `kumakumapon/webnp2`.
+
 See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 ## Try it now
 
-- **Live site**: <https://uraraworks.github.io/WebNP2/>
-- **FreeDOS(98) auto-boot demo**: <https://uraraworks.github.io/WebNP2/?freedos=1&run=1>
+- **Live site**: <https://kumakumapon.github.io/webnp2/>
+- **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
 No ROMs or commercial software images are bundled. You can load your own
 HDD/FD images by dragging and dropping them onto the screen.
 
+## Deploy to your own GitHub Pages
+
+The workflow in [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
+builds this repository and publishes its `dist/` artifact to **this repository's
+GitHub Pages** using `GITHUB_TOKEN`. No upstream repository or external deployment
+token is used.
+
+1. In `kumakumapon/webnp2`, enable GitHub Actions if GitHub shows a prompt to
+   enable workflows on a fork.
+2. Open **Settings → Pages → Build and deployment**, set **Source** to
+   **GitHub Actions**, and save if prompted.
+3. Merge the changes into `master` to deploy automatically, or open
+   **Actions → Deploy to GitHub Pages → Run workflow** and select `master`.
+4. Wait for both the `build` and `deploy` jobs to finish. The `github-pages`
+   environment and deployment job show the published URL:
+   <https://kumakumapon.github.io/webnp2/>.
+
+The site URL becomes available after the first successful deployment. Vite uses
+relative asset paths (`base: './'`), so the lowercase `/webnp2/` project path works
+without changing the build configuration. If you fork again, use
+`https://<owner>.github.io/<repository>/` and update the site/repository links in
+the documentation and HTML pages, plus `WEBNP2_REPO_URL` in `src/main.ts`.
+If the default branch changes, update `on.push.branches` in the workflow too.
+
+Optionally, set **Settings → Secrets and variables → Actions → Variables →
+New repository variable** with the name `DISK_PROXY_URL` and your own relay URL
+(no trailing `/`). The workflow passes it as `VITE_DISK_PROXY`; leaving it unset
+uses direct fetching only. Google Drive links require a relay.
+
+MCP releases are separate from Pages deployment. To make the download links
+below available in this repository, push an `mcp-*` tag (for example,
+`mcp-2026-10-03`) to run **Release MCP server**. Until a release containing
+`webnp2-mcp.mjs` exists, use the source setup in [mcp/README.md](mcp/README.md).
+The release workflow also publishes to the repository where it runs.
+
 ## Usage
 
 An introduction page highlighting WebNP2's unique features is available at
-<https://uraraworks.github.io/WebNP2/about.html?lang=en>.
+<https://kumakumapon.github.io/webnp2/about.html?lang=en>.
 
 A player-facing help page (with screenshots) is available at
-<https://uraraworks.github.io/WebNP2/help.html?lang=en>. It can also be opened
+<https://kumakumapon.github.io/webnp2/help.html?lang=en>. It can also be opened
 from **More (…) → Help** in the player.
 
 ### URL parameters
@@ -73,9 +111,10 @@ rewrite may not cover them, in which case the relay below is used as a
 fallback).
 
 Google Drive doesn't support CORS for a direct fetch, so it fails
-at first, but the public page **automatically retries through a relay
-service** (only when the direct fetch fails). If you fork and host this
-yourself, you need to set `VITE_DISK_PROXY` (see below) to use this.
+at first, but a build configured with `VITE_DISK_PROXY` **automatically retries through
+a relay service** (only when the direct fetch fails). This repository does not
+configure a relay by default; set `DISK_PROXY_URL` for Pages (see above) or
+`VITE_DISK_PROXY` for a local build (see below) to use this.
 **OneDrive share links (`1drv.ms` / `onedrive.live.com` / `sharepoint.com`)
 are not supported** — they don't work even through the relay (confirmed by
 testing). Please use Dropbox or Google Drive instead.
@@ -252,11 +291,11 @@ Setup is a single self-contained file — no `git clone`, no `npm install`,
 just Node.js 18+:
 
 ```sh
-curl -fLO https://github.com/uraraworks/WebNP2/releases/latest/download/webnp2-mcp.mjs
+curl -fLO https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
 claude mcp add webnp2 -- node "$PWD/webnp2-mcp.mjs"
 ```
 
-Then open `https://uraraworks.github.io/WebNP2/?freedos=1&run=1&bridge=1`
+Then open `https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
 in your browser. Full instructions and the tool list live in
 [mcp/README.md](mcp/README.md). To have your AI agent set it up for you,
 just point it at that file and say "set up MCP access to WebNP2 as

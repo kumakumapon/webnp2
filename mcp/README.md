@@ -7,17 +7,20 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
 エミュレータ本体はブラウザ内で動き、この MCP サーバーは常に**あなたのマシン上**で動きます。
 ページの JavaScript が `ws://127.0.0.1:<ポート>` へ接続しに来る構成のため、
 ページをローカル開発サーバーで開いても、公開ページ
-(https://uraraworks.github.io/WebNP2/) で開いても同じように使えます。
+(https://kumakumapon.github.io/webnp2/) で開いても同じように使えます。
 ディスクイメージや画面の内容が外部サーバーへ送られることはありません。
 
 ## セットアップ手順（Claude Code 等の AI エージェントはこの節をそのまま実行すればよい）
 
 前提: Node.js 18 以上がインストールされていること。git も npm も不要。
+この手順の公開ページは GitHub Pages のデプロイ後、ダウンロードURLはこのリポジトリで
+`webnp2-mcp.mjs` を含む Release を作成した後に利用できます。Release がまだない場合は、
+後述の「リポジトリから直接動かす場合」を使ってください。
 
 1. 依存を埋め込んだ単一ファイルを Release から取得する（好きな場所でよい）:
 
    ```sh
-   curl -fLO https://github.com/uraraworks/WebNP2/releases/latest/download/webnp2-mcp.mjs
+   curl -fLO https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
    ```
 
 2. MCP サーバーとして登録する。`<絶対パス>` は 1. で置いた場所に置き換えること:
@@ -31,7 +34,7 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
 
 3. ブラウザで WebNP2 を `bridge=1` パラメータ付きで開く（どちらでもよい）:
 
-   - 公開ページ: `https://uraraworks.github.io/WebNP2/?freedos=1&run=1&bridge=1`
+   - 公開ページ: `https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
    - ローカル: `http://localhost:5173/?freedos=1&run=1&bridge=1`
      （リポジトリ直下で `npm install && npm run dev`）
 
@@ -50,8 +53,8 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
 上の単一ファイル版と機能は同じ。
 
 ```sh
-git clone https://github.com/uraraworks/WebNP2.git
-cd WebNP2/mcp
+git clone https://github.com/kumakumapon/webnp2.git
+cd webnp2/mcp
 npm install
 claude mcp add webnp2 -- node "$PWD/server.mjs"
 ```
