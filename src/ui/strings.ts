@@ -46,6 +46,7 @@ interface Dict {
   startBtnPending(): string;
   startBtnFreeDos(): string;
   startBtnMsDos2(): string;
+  startBtnMsDos4(): string;
   toolbarReset(): string;
   toolbarFullscreen(): string;
   toolbarMachineReset(): string;
@@ -488,6 +489,7 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnPending: () => 'セットしたディスクで起動',
     startBtnFreeDos: () => 'FreeDOS(98) で起動',
     startBtnMsDos2: () => 'MS-DOS 2.0 で起動',
+    startBtnMsDos4: () => 'MS-DOS 4.0 + RetroBasic で起動',
     toolbarReset: () => '初期状態に戻す',
     toolbarFullscreen: () => 'フルスクリーン',
     toolbarMachineReset: () => 'マシンリセット',
@@ -852,6 +854,7 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnPending: () => 'Boot with the Selected Disks',
     startBtnFreeDos: () => 'Start with FreeDOS(98)',
     startBtnMsDos2: () => 'Start with MS-DOS 2.0',
+    startBtnMsDos4: () => 'Start with MS-DOS 4.0 + RetroBasic',
     toolbarReset: () => 'Reset to Original',
     toolbarFullscreen: () => 'Fullscreen',
     toolbarMachineReset: () => 'Reset Machine',

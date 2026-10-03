@@ -309,8 +309,9 @@
               ページを開くと起動オーバーレイが表示されます。URLでディスクイメージを
               指定していない場合は「そのまま起動」（イメージ無しで開始し、後から
               ドラッグ&ドロップで読み込む）と「FreeDOS(98) で起動」（同梱の起動FDで
-              すぐに試す）、または「MS-DOS 2.0 で起動」（MIT License のPC-98移植版）の
-              3択が、URLでディスクを指定している場合は単一の
+              すぐに試す）、「MS-DOS 2.0 で起動」、
+              「MS-DOS 4.0 + RetroBasic で起動」（MIT License のPC-98移植版）の
+              4択が、URLでディスクを指定している場合は単一の
               「クリックして起動」ボタンが表示されます。ライブラリに保存済みの
               イメージがあれば「保存済みディスクから起動」も表示されます。
               起動するのはこれらのボタンを押した場合だけで、余白をクリックしても起動しません。
@@ -328,6 +329,17 @@
               <a href="./msdos2/README.txt">出典・対応範囲</a> /
               <a href="./msdos2/LICENSE.txt">MIT License</a>
             </div>
+            <div class="note-box">
+              <a href="./?fd1=./msdos4/msdos4-retrobasic-f75824650c7b.xdf&amp;run=1&amp;lang=ja">MS-DOS 4.0 + RetroBasic を起動</a>すると
+              <code>A&gt;</code> が表示されます。<code>VER</code> は 4.00、
+              <code>RBASIC</code> は BASIC の対話モード（<code>SYSTEM</code> で DOS に戻る）です。
+              <code>RBASIC PRIMES.BAS</code>・<code>RBASIC GRAPHICS.BAS</code>・
+              <code>RBASIC FILEIO.BAS</code> でサンプルを試せます。最後のサンプルは
+              <code>SEQ.TXT</code> を作成します。書き込みは同じ起動URLで復元します。
+              A: のみ対応し、HDD/FAT16・2台目のFD・日本語入力は未対応です。
+              <a href="./msdos4/README.txt">出典・BASICの制限</a> /
+              <a href="./msdos4/LICENSE.txt">両 MIT License</a>
+            </div>
             <p>
               ブラウザの音声再生制限により、音声はクリック操作(または自動起動時は
               最初のクリック/キー入力)まではミュートになります。
@@ -337,10 +349,11 @@
             <h2>Starting the emulator</h2>
             <p>
               A start overlay appears when you open the page. If no disk image is
-              specified via URL, you get three choices: "Start As-Is" (start with no
+              specified via URL, you get four choices: "Start As-Is" (start with no
               image loaded, then drag & drop one afterward) or "Start with
               FreeDOS(98)" (try it immediately with the bundled boot floppy), or
-              "Start with MS-DOS 2.0" (the MIT-licensed PC-98 port). If a
+              "Start with MS-DOS 2.0", or "Start with MS-DOS 4.0 + RetroBasic"
+              (the MIT-licensed PC-98 ports). If a
               disk is specified via URL, a single "Click to Start" button is shown
               instead. If saved images exist in the library, a "Boot from Saved
               Disk" button also appears.
@@ -359,6 +372,17 @@
               second floppy, or Japanese input FEP is included.
               <a href="./msdos2/README.txt">Source and limits</a> /
               <a href="./msdos2/LICENSE.txt">MIT License</a>
+            </div>
+            <div class="note-box">
+              <a href="./?fd1=./msdos4/msdos4-retrobasic-f75824650c7b.xdf&amp;run=1&amp;lang=en">Boot MS-DOS 4.0 + RetroBasic</a>
+              to reach <code>A&gt;</code>. <code>VER</code> reports 4.00;
+              <code>RBASIC</code> starts interactive BASIC (<code>SYSTEM</code> returns to DOS).
+              Try <code>RBASIC PRIMES.BAS</code>, <code>RBASIC GRAPHICS.BAS</code>, or
+              <code>RBASIC FILEIO.BAS</code>. The last sample creates <code>SEQ.TXT</code>.
+              Disk writes persist for the same boot URL. Only drive A: is supported;
+              HDD/FAT16, a second floppy, and Japanese input are unsupported.
+              <a href="./msdos4/README.txt">Sources and BASIC limits</a> /
+              <a href="./msdos4/LICENSE.txt">Both MIT licenses</a>
             </div>
             <p>
               Due to browser autoplay restrictions, audio stays muted until you

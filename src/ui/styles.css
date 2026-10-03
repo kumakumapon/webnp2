@@ -321,6 +321,16 @@ header.app-header .app-tagline {
   background: #3672aa;
 }
 
+.overlay .start-btn-msdos4 {
+  text-decoration: none;
+  border-color: #c5a1e8;
+  background: #62417b;
+}
+
+.overlay .start-btn-msdos4:hover {
+  background: #8258a2;
+}
+
 .overlay .overlay-note {
   font-size: 12px;
   color: #d0d0d0;

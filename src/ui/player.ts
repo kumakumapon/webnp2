@@ -210,10 +210,12 @@ export interface PlayerCallbacks {
 }
 
 export interface PlayerOptions {
-  /** true: URLでディスク未指定のためオーバーレイに「そのまま起動」/「FreeDOS(98)で起動」の2択を出す。 */
+  /** true: URLでディスク未指定のためオーバーレイに「そのまま起動」/「FreeDOS(98)で起動」を出す。 */
   offerFreeDosChoice: boolean;
   /** Optional standalone-player link to the bundled MS-DOS 2.0 boot disk. */
   msDosBootUrl?: string;
+  /** Optional standalone-player link to the bundled DOS 4.0 + RetroBasic disk. */
+  msDos4BootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
   /**
@@ -727,6 +729,10 @@ export function buildPlayerUI(
   const msDosBtn = options.msDosBootUrl
     ? el('a', { class: 'start-btn start-btn-msdos2', href: msDosHref() }, [t('startBtnMsDos2')])
     : undefined;
+  const msDos4Href = () => `${options.msDos4BootUrl}&lang=${getLang()}`;
+  const msDos4Btn = options.msDos4BootUrl
+    ? el('a', { class: 'start-btn start-btn-msdos4', href: msDos4Href() }, [t('startBtnMsDos4')])
+    : undefined;
   // ライブラリが空の場合もあるため既定は非表示。起動可否は非同期チェック後に表示する。
   const libraryStartBtn = el('button', { class: 'start-btn start-btn-library hidden', type: 'button' }, [
     t('overlayLibraryBtn'),
@@ -734,6 +740,7 @@ export function buildPlayerUI(
   const overlayButtonList: HTMLElement[] = [startBtn];
   if (freeDosBtn) overlayButtonList.push(freeDosBtn);
   if (msDosBtn) overlayButtonList.push(msDosBtn);
+  if (msDos4Btn) overlayButtonList.push(msDos4Btn);
   overlayButtonList.push(libraryStartBtn);
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
   const overlay = el('div', { class: 'overlay' }, [overlayButtons, overlayNote]);
@@ -2728,6 +2735,10 @@ export function buildPlayerUI(
       if (msDosBtn) {
         msDosBtn.textContent = t('startBtnMsDos2');
         msDosBtn.setAttribute('href', msDosHref());
+      }
+      if (msDos4Btn) {
+        msDos4Btn.textContent = t('startBtnMsDos4');
+        msDos4Btn.setAttribute('href', msDos4Href());
       }
       pauseOverlayText.textContent = t('pauseOverlayLabel');
       // 言語切替では状態(corePaused/pausedByUser)自体は変わらないため、そのままだと
