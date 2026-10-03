@@ -291,11 +291,9 @@ IBM PC の BIOS・画面・ハードウェアを直接操作するソフトは P
 
 DOS カーネルとシェルは
 [MS-DOS commit 0b6f8f2](https://github.com/kumakumapon/MS-DOS/tree/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596)
-の v4.0 ソースからビルドし、ネイティブ BASIC は
-[RetroBasic commit 6609a04](https://github.com/kumakumapon/RetroBasic/tree/6609a046ae0d1ec0206739524627a48b54c84ba9)
-からビルドしました。両方の MIT License 全文を
+の v4.0 ソースからビルドし、ネイティブ版 RetroBasic を同梱しています。両方の MIT License 全文を
 [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt) とディスク内の `LICENSE.TXT` に格納しています。
-[manifest.json](public/msdos4/manifest.json) は正確な出典コミットとイメージ・ファイルの
+[manifest.json](public/msdos4/manifest.json) はビルドのリビジョンとイメージ・ファイルの
 チェックサムを記録します。Microsoft の公式移植・サポートを示すものではありません。
 
 同じ起動URLでは書き込みを復元します。**「初期状態に戻す」** は変更内容を削除して
@@ -303,9 +301,7 @@ DOS カーネルとシェルは
 WebNP2、386 以上、同梱ジオメトリの A: のみ対応し、HDD/FAT16、2台目のFD、日本語入力、
 `FORMAT` / `SYS` による起動FDの作り直しは対象外です。
 BASIC は Python 版の機能の一部を移植しています。
-[同梱物と制限](public/msdos4/README.txt)・
-[ネイティブ版の機能表](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-webnp2.md)
-を参照してください。
+[同梱物と制限](public/msdos4/README.txt)を参照してください。
 
 ## MCPサーバー (AIエージェントからWebNP2を操作する)
 
@@ -431,15 +427,12 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos2.mjs http://127.0.0.1:4173/
 
 ### DOS 4.0 + RetroBasic 起動FDの更新
 
-[public/msdos4/manifest.json](public/msdos4/manifest.json) に記録したコミットを
-クリーンな状態でチェックアウトします。
-[DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md) と
-[ネイティブ RetroBasic のビルド手順](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-file-io.md)
-に従ってビルド後、WebNP2 のチェックアウトで実行します。
+保守者のビルド環境でネイティブ BASIC と組み合わせた起動FDを作成・検証します。
+DOS は [DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md)
+に従ってビルドします。完成したビルド成果物を WebNP2 に取り込み、検証してください。
 
 ```sh
-python3 /path/to/RetroBasic/ports/pc98/build_disk.py --msdos /path/to/MS-DOS --dos-version 4
-python3 scripts/update-msdos4-retrobasic.py /path/to/MS-DOS /path/to/RetroBasic
+python3 scripts/update-msdos4-retrobasic.py /path/to/MS-DOS /path/to/native-basic-build
 npm test
 npm run build
 npm run preview -- --host 127.0.0.1 --port 4173

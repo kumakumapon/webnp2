@@ -323,19 +323,17 @@ Sequential file I/O includes `OPEN`/`CLOSE`, `PRINT #`/`WRITE #`/`INPUT #`/
 
 The DOS kernel and shell are built from the v4.0 sources in
 [MS-DOS commit 0b6f8f2](https://github.com/kumakumapon/MS-DOS/tree/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596);
-native RetroBasic comes from
-[RetroBasic commit 6609a04](https://github.com/kumakumapon/RetroBasic/tree/6609a046ae0d1ec0206739524627a48b54c84ba9).
+the disk also includes native RetroBasic.
 Both MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
 and `LICENSE.TXT` inside the disk. [manifest.json](public/msdos4/manifest.json)
-records exact source commits and image/file checksums. This is an unofficial port.
+records build revisions and image/file checksums. This is an unofficial port.
 
 Disk writes persist for the same boot URL; **Reset to initial state** deletes
 changes and restores the bundled disk. Each image version has a content hash in
 its filename. Support is limited to WebNP2, 386 or later, and drive A: with the
 bundled geometry. HDD/FAT16, a second floppy, Japanese input, and recreating
 boot disks with `FORMAT`/`SYS` are unsupported. Native BASIC implements a subset
-of the Python version; see [source and limits](public/msdos4/README.txt) and
-[the native feature table](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-webnp2.md).
+of the Python version; see [bundled components and limits](public/msdos4/README.txt).
 
 ## MCP server (control WebNP2 from AI agents)
 
@@ -465,14 +463,13 @@ files with the normal build; assembling MS-DOS during each deployment is unneces
 
 ### Updating the DOS 4.0 + RetroBasic floppy
 
-Use clean checkouts of the revisions recorded in
-[public/msdos4/manifest.json](public/msdos4/manifest.json). Follow the
-[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md)
-and [native RetroBasic build instructions](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-file-io.md), then:
+Maintainers prepare and validate the native BASIC build and combined boot disk
+in their build environment, using the
+[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md).
+Import the completed build into WebNP2, then verify it:
 
 ```sh
-python3 /path/to/RetroBasic/ports/pc98/build_disk.py --msdos /path/to/MS-DOS --dos-version 4
-python3 scripts/update-msdos4-retrobasic.py /path/to/MS-DOS /path/to/RetroBasic
+python3 scripts/update-msdos4-retrobasic.py /path/to/MS-DOS /path/to/native-basic-build
 npm test
 npm run build
 npm run preview -- --host 127.0.0.1 --port 4173

@@ -87,13 +87,14 @@
   "dos_version": "4",
   "sources": {
     "msdos": {
-      "repository": "https://github.com/kumakumapon/MS-DOS",
+      "component": "MS-DOS",
       "commit": "0b6f8f2f1eae2b6727dfe83b66cd81e222da0596",
       "path": "ports/pc98",
-      "license": "MIT"
+      "license": "MIT",
+      "repository": "https://github.com/kumakumapon/MS-DOS"
     },
     "retrobasic": {
-      "repository": "https://github.com/kumakumapon/RetroBasic",
+      "component": "RetroBasic",
       "commit": "6609a046ae0d1ec0206739524627a48b54c84ba9",
       "path": "ports/pc98",
       "license": "MIT"

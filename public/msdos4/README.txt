@@ -4,10 +4,10 @@ MS-DOS 4.0 + RetroBasic for PC-98 / WebNP2
 日本語
 ------
 kumakumapon/MS-DOS の v4.0 カーネルと COMMAND.COM をソースからビルドし、
-PC-98 用 BIOS / IPL と kumakumapon/RetroBasic のネイティブ移植版を含めた
-1232 KiB FAT12 の起動FDです。両プロジェクトの MIT License 全文は、この
+PC-98 用 BIOS / IPL とネイティブ版 RetroBasic を含めた
+1232 KiB FAT12 の起動FDです。両ソフトウェアの MIT License 全文は、この
 ディレクトリの LICENSE.txt とディスク内の LICENSE.TXT に格納しています。
-DOSLIC.TXT は Microsoft のライセンスです。出典コミットと各ファイルの
+DOSLIC.TXT は Microsoft のライセンスです。ビルドのリビジョンと各ファイルの
 SHA256 は manifest.json に記録しています。
 
 起動画面の「MS-DOS 4.0 + RetroBasic で起動」を選択します。
@@ -34,9 +34,9 @@ English
 -------
 This 1232 KiB FAT12 floppy contains the source-built Microsoft MS-DOS 4.0
 kernel and COMMAND.COM, a PC-98 OEM BIOS/IPL, and the native RetroBasic port.
-Both projects use the MIT License. Full notices are in LICENSE.txt alongside
+Both components use the MIT License. Full notices are in LICENSE.txt alongside
 this file and LICENSE.TXT on the disk; DOSLIC.TXT is Microsoft's notice.
-manifest.json records the exact source commits and image/file SHA256 hashes.
+manifest.json records build revisions and image/file SHA256 hashes.
 
 Select "Start with MS-DOS 4.0 + RetroBasic" in WebNP2. At A>, try VER and DIR,
 RBASIC for interactive BASIC (SYSTEM returns to DOS), or RBASIC PRIMES.BAS,
@@ -54,7 +54,6 @@ strings, 512 array elements, and four open files. MANDEL.BAS is slow;
 MANSMOKE.BAS uses STEP 32. This unofficial port does not imply Microsoft
 support or endorsement.
 
-Sources (exact revisions are recorded in manifest.json):
+MS-DOS source:
 https://github.com/kumakumapon/MS-DOS
-https://github.com/kumakumapon/RetroBasic
-See the WebNP2 README for build/import instructions.
+See the WebNP2 README for the bundled disk update procedure.

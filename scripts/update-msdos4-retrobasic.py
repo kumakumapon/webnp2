@@ -54,14 +54,15 @@ def main():
     args = parser.parse_args()
     dos, basic = args.msdos.resolve(), args.retrobasic.resolve()
     sources = {}
-    for name, checkout, repository in [
+    for name, checkout, component in [
         ('msdos', dos, 'MS-DOS'), ('retrobasic', basic, 'RetroBasic'),
     ]:
         if git(checkout, 'status', '--porcelain', '--untracked-files=no'):
-            raise ValueError(f'{repository} tracked sources must be clean before importing')
-        sources[name] = {'repository': f'https://github.com/kumakumapon/{repository}',
+            raise ValueError(f'{component} tracked sources must be clean before importing')
+        sources[name] = {'component': component,
                          'commit': git(checkout, 'rev-parse', 'HEAD'), 'path': 'ports/pc98',
                          'license': 'MIT'}
+    sources['msdos']['repository'] = 'https://github.com/kumakumapon/MS-DOS'
     build = basic / 'ports/pc98/build'
     manifest = json.loads((build / 'manifest.json').read_text())
     image = (build / 'retrobasic-pc98.xdf').read_bytes()
