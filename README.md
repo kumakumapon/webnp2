@@ -336,6 +336,50 @@ Note: with the public (https) page, use a Chromium-based browser or
 Firefox — Safari blocks `ws://` connections from https pages even to
 localhost.
 
+## Run locally on Windows or Linux
+
+Install **Node.js 22.12 or later with npm** from <https://nodejs.org/> (Node.js 24
+LTS is recommended). Clone this repository or download and extract its ZIP.
+The emulator core and bundled boot disks are already included; no assembler or
+Chromium installation is required to launch the player.
+
+On **Windows**, double-click `start-windows.cmd`, or run it from PowerShell:
+
+```powershell
+.\start-windows.cmd
+```
+
+On **Linux**, run this in a terminal in the repository directory:
+
+```sh
+./start-linux.sh
+# If the ZIP extraction did not preserve executable permissions:
+bash start-linux.sh
+```
+
+The launcher installs dependencies using `npm ci --include=dev` on first use,
+then starts Vite and opens <http://127.0.0.1:5173/>. Internet access is needed
+for installation. Later launches reuse dependencies; changes to `package.json`,
+`package-lock.json`, or the Node.js major version/platform trigger reinstalling.
+Keep the terminal open while using WebNP2; press **Ctrl+C** to stop it.
+The server listens on your own machine only. FreeDOS(98), MS-DOS 2.0, and your
+own disk images work as on the hosted player; browser saves belong to the local
+origin and are separate from GitHub Pages (changing the port also changes the origin).
+
+Both launchers accept the same options:
+
+| Option | Purpose |
+| --- | --- |
+| `--port 5180` | Use a different port; an occupied port produces an error |
+| `--no-open` | Start without opening a browser (useful on a headless machine) |
+| `--install` | Force a clean dependency reinstall if local dependencies are damaged |
+| `--help` | Show usage |
+
+For example: `./start-linux.sh --no-open --port 5180` or
+`.\start-windows.cmd --no-open --port 5180`. The scripts also work when launched
+from another directory, including a checkout path containing spaces. If a
+prerequisite or installation fails, follow the error shown in the terminal.
+
 ## Development
 
 ```sh

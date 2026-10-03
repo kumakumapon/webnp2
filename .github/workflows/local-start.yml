@@ -1,0 +1,46 @@
+name: Local launchers
+
+on:
+  pull_request:
+    paths:
+      - '.gitattributes'
+      - 'start-linux.sh'
+      - 'start-windows.cmd'
+      - 'scripts/start-local.mjs'
+      - 'scripts/verify-local-start.mjs'
+      - 'package*.json'
+      - '.github/workflows/local-start.yml'
+  push:
+    branches: [master]
+    paths:
+      - '.gitattributes'
+      - 'start-linux.sh'
+      - 'start-windows.cmd'
+      - 'scripts/start-local.mjs'
+      - 'scripts/verify-local-start.mjs'
+      - 'package*.json'
+      - '.github/workflows/local-start.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Exercise launchers from a checkout path containing spaces.
+          path: WebNP2 local
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify OS launcher
+        working-directory: WebNP2 local
+        run: node scripts/verify-local-start.mjs
