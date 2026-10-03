@@ -1,0 +1,2 @@
+start-linux.sh text eol=lf
+start-windows.cmd text eol=crlf
