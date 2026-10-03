@@ -16,11 +16,12 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f75824650c7b.xdf&run=1>
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
 No ROMs or proprietary commercial software images are bundled.
-FreeDOS(98) and the MIT-licensed MS-DOS 2.0 PC-98 port are included. You can load your own
+FreeDOS(98), the MIT-licensed MS-DOS 2.0 port, and MS-DOS 4.0 with native RetroBasic are included. You can load your own
 HDD/FD images by dragging and dropping them onto the screen.
 
 ## Deploy to your own GitHub Pages
@@ -310,6 +311,32 @@ separate saved disks. Full source/limits are in
 [the port documentation](https://github.com/kumakumapon/MS-DOS/blob/35cb651ae720ddb4de8ae6b7f335628a0c5ac001/docs/pc98-webnp2.md);
 [manifest.json](public/msdos2/manifest.json) records provenance and file checksums.
 
+### Bundled MS-DOS 4.0 + RetroBasic boot floppy
+
+Select **Start with MS-DOS 4.0 + RetroBasic** on the start overlay. The bundled
+1232 KiB FAT12 disk boots to `A>`; `VER` reports **4.00**. Run `RBASIC` for
+interactive BASIC, or `RBASIC PRIMES.BAS`, `RBASIC GRAPHICS.BAS`, or
+`RBASIC FILEIO.BAS` to try the samples. `SYSTEM` returns from BASIC to DOS.
+In BASIC, try `10 PRINT "HELLO"`, `RUN`, then `SAVE "HELLO.BAS"`.
+Sequential file I/O includes `OPEN`/`CLOSE`, `PRINT #`/`WRITE #`/`INPUT #`/
+`LINE INPUT #`, and `EOF`/`LOF`/`LOC`/`INPUT$`.
+
+The DOS kernel and shell are built from the v4.0 sources in
+[MS-DOS commit 0b6f8f2](https://github.com/kumakumapon/MS-DOS/tree/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596);
+native RetroBasic comes from
+[RetroBasic commit 6609a04](https://github.com/kumakumapon/RetroBasic/tree/6609a046ae0d1ec0206739524627a48b54c84ba9).
+Both MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
+and `LICENSE.TXT` inside the disk. [manifest.json](public/msdos4/manifest.json)
+records exact source commits and image/file checksums. This is an unofficial port.
+
+Disk writes persist for the same boot URL; **Reset to initial state** deletes
+changes and restores the bundled disk. Each image version has a content hash in
+its filename. Support is limited to WebNP2, 386 or later, and drive A: with the
+bundled geometry. HDD/FAT16, a second floppy, Japanese input, and recreating
+boot disks with `FORMAT`/`SYS` are unsupported. Native BASIC implements a subset
+of the Python version; see [source and limits](public/msdos4/README.txt) and
+[the native feature table](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-webnp2.md).
+
 ## MCP server (control WebNP2 from AI agents)
 
 WebNP2 can be driven by AI agents (Claude Code etc.) through a local MCP
@@ -436,6 +463,29 @@ player reads the image filename from the manifest. Keep old image filenames
 available for existing saved disks and shared links. Pages publishes the tracked
 files with the normal build; assembling MS-DOS during each deployment is unnecessary.
 
+### Updating the DOS 4.0 + RetroBasic floppy
+
+Use clean checkouts of the revisions recorded in
+[public/msdos4/manifest.json](public/msdos4/manifest.json). Follow the
+[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md)
+and [native RetroBasic build instructions](https://github.com/kumakumapon/RetroBasic/blob/6609a046ae0d1ec0206739524627a48b54c84ba9/docs/pc98-file-io.md), then:
+
+```sh
+python3 /path/to/RetroBasic/ports/pc98/build_disk.py --msdos /path/to/MS-DOS --dos-version 4
+python3 scripts/update-msdos4-retrobasic.py /path/to/MS-DOS /path/to/RetroBasic
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+# In another terminal (Chromium must be installed):
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
+```
+
+The importer checks both clean source revisions, DOS version, image checksum,
+both FATs, boot code, executables, samples, and complete license notices.
+Commit `public/msdos4/` and update the image links in the READMEs/help page.
+Keep previous image filenames for saved disks and shared URLs. The normal
+Pages build includes the disk; users and deployment do not need DOS build tools.
+
 ### Updating the core (public/core/)
 
 `public/core/` holds the build output of
@@ -482,6 +532,8 @@ excluded via `.gitignore` and never committed.
   `bios/bios.c`).
 - `public/msdos2/` contains the MS-DOS 2.0 PC-98 boot floppy under the MIT
   License, the full license notice, and provenance/checksums; see the section above.
+- `public/msdos4/` contains the source-built MS-DOS 4.0 + native RetroBasic
+  PC-98 boot floppy, both MIT license notices, and provenance/checksums.
 - `public/freedos/fd98_2hd.xdf` is the FreeDOS(98) boot floppy described
   above, licensed under GPLv2+; source is available from
   [lpproj/fdkernel](https://github.com/lpproj/fdkernel) and

@@ -1,0 +1,47 @@
+name: Bundled PC-98 DOS disks
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Serve production assets under the Pages project path
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/webnp2-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/webnp2-preview.log
+          exit 1
+      - name: Verify bundled DOS 2.0 and DOS 4.0 + RetroBasic in Chromium
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          mkdir -p test-results/dos2
+          node scripts/verify-msdos2.mjs http://127.0.0.1:4173/webnp2/ test-results/dos2/screen.png
+          node scripts/verify-msdos4.mjs http://127.0.0.1:4173/webnp2/ test-results/dos4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bundled-dos-browser-validation
+          path: test-results/
+          if-no-files-found: ignore

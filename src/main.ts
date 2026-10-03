@@ -16,6 +16,7 @@ import { createDebugger, createWebNP2, type DebuggerController } from '../packag
 import { Bridge } from './api/bridge.ts';
 import { WEBNP2_VERSION_FOOTER } from './version.ts';
 import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
+import { MSDOS4_BOOT_URL } from './bundled-msdos4.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -1982,6 +1983,7 @@ function init(): void {
     {
       offerFreeDosChoice: !diskSpecified,
       msDosBootUrl: !diskSpecified ? MSDOS2_BOOT_URL : undefined,
+      msDos4BootUrl: !diskSpecified ? MSDOS4_BOOT_URL : undefined,
       trackingEnabled: params.get('mousetrack') !== '0',
       aspectModeParam,
     },
