@@ -16,7 +16,7 @@ import { createDebugger, createWebNP2, type DebuggerController } from '../packag
 import { Bridge } from './api/bridge.ts';
 import { WEBNP2_VERSION_FOOTER } from './version.ts';
 import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
-import { MSDOS4_BOOT_URL } from './bundled-msdos4.ts';
+import { MSDOS4_BOOT_URL, MSDOS4_IMAGE_URL } from './bundled-msdos4.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -53,6 +53,8 @@ import {
   type Source,
 } from './api/gamepad.ts';
 import { SharedKeyInput } from './api/shared-key-input.ts';
+import { createJisKeyboard, isBrowserInput, loadKeyboardLayout, saveKeyboardLayout } from './api/keyboard-layout.ts';
+import { encodeSjisUnits } from './api/sjis.ts';
 import type { GamepadDialogCallbacks, HostKeyDialogCallbacks, VpadDialogCallbacks } from './ui/gamepad-ui.ts';
 import {
   createVirtualPad,
@@ -89,6 +91,7 @@ import {
   duplicateProfile as hostKeyDuplicateProfile,
   type HostKeyStore,
   loadHostKeyStore,
+  resolveHostKeyBinding,
   renameProfile as hostKeyRenameProfile,
   saveHostKeyStore,
   setActiveProfile as hostKeySetActiveProfile,
@@ -1351,6 +1354,7 @@ function updatePasteFeature(): void {
   const fullwidthAvailable =
     pasteParam === '1' ||
     np2.getMountedImages().some((m) => m.sourceKey.startsWith('freedos:')) ||
+    np2.getMountedImages().some((m) => m.sourceKey.endsWith(MSDOS4_IMAGE_URL.slice(1))) ||
     hasResidentPasteHelper();
   ui.setPasteFeature({ buttonVisible, fullwidthAvailable });
 }
@@ -1687,20 +1691,30 @@ function persistHostKeyStore(next: HostKeyStore): void {
 // ソフトキーボード・ゲームパッドと同じ SharedKeyInput を共有する(sharedKeyInputは上で定義済み)。
 // 同じPC-98キーを複数ソースが同時に押していても、片方のreleaseだけではbreakを送らない。
 const hostKeyHandlers = createHostKeyHandlers(() => hostKeyStore, sharedKeyInput);
+let keyboardLayout = loadKeyboardLayout(localStorage, getLang() === 'ja' ? 'jis' : 'us');
+const jisKeyboard = createJisKeyboard(() => keyboardLayout, sharedKeyInput, () => {
+  if (np2.isBooted()) ui.openImeInput();
+});
+const hostKeyDown = (e: KeyboardEvent): void => {
+  if (!isBrowserInput(e.target) && !e.isComposing && e.keyCode !== 229) hostKeyHandlers.onKeyDown(e);
+};
+const hostKeyUp = (e: KeyboardEvent): void => {
+  if (!isBrowserInput(e.target) && !e.isComposing && e.keyCode !== 229) hostKeyHandlers.onKeyUp(e);
+};
 
 let hostKeyListenersAttached = false;
 
 function attachHostKeyListeners(): void {
   if (hostKeyListenersAttached) return;
-  window.addEventListener('keydown', hostKeyHandlers.onKeyDown as unknown as EventListener, true);
-  window.addEventListener('keyup', hostKeyHandlers.onKeyUp as unknown as EventListener, true);
+  window.addEventListener('keydown', hostKeyDown, true);
+  window.addEventListener('keyup', hostKeyUp, true);
   hostKeyListenersAttached = true;
 }
 
 function detachHostKeyListeners(): void {
   if (!hostKeyListenersAttached) return;
-  window.removeEventListener('keydown', hostKeyHandlers.onKeyDown as unknown as EventListener, true);
-  window.removeEventListener('keyup', hostKeyHandlers.onKeyUp as unknown as EventListener, true);
+  window.removeEventListener('keydown', hostKeyDown, true);
+  window.removeEventListener('keyup', hostKeyUp, true);
   hostKeyListenersAttached = false;
   hostKeyHandlers.releaseAll();
 }
@@ -1713,7 +1727,17 @@ function syncHostKeyListeners(): void {
 
 // タブ切替・ウィンドウ非アクティブ化で押しっぱなしを残さない。
 window.addEventListener('blur', () => hostKeyHandlers.releaseAll());
+window.addEventListener('keydown', (e) => {
+  if (!isBrowserInput(e.target) && ui?.observePhysicalKeyDown(e)) {
+    e.preventDefault(); e.stopImmediatePropagation(); return;
+  }
+  if (resolveHostKeyBinding(hostKeyStore, e.code) === null) jisKeyboard.onKeyDown(e);
+}, true);
+window.addEventListener('keyup', (e) => jisKeyboard.onKeyUp(e), true);
+window.addEventListener('blur', () => jisKeyboard.releaseAll());
+document.addEventListener('focusin', () => { jisKeyboard.releaseAll(); hostKeyHandlers.releaseAll(); });
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) jisKeyboard.releaseAll();
   if (document.hidden) hostKeyHandlers.releaseAll();
 });
 
@@ -1723,6 +1747,11 @@ function activeHostKeyProfile(store: HostKeyStore): { id: string; builtin?: bool
 }
 
 const hostKeyDialogCallbacks: HostKeyDialogCallbacks = {
+  getKeyboardLayout: () => keyboardLayout,
+  setKeyboardLayout: (layout) => {
+    jisKeyboard.releaseAll(); hostKeyHandlers.releaseAll();
+    keyboardLayout = layout; saveKeyboardLayout(layout, localStorage);
+  },
   getStore: () => hostKeyStore,
   setEnabled: (enabled) => {
     persistHostKeyStore(hostKeySetEnabled(hostKeyStore, enabled));
@@ -1827,14 +1856,21 @@ const vpadDialogCallbacks: VpadDialogCallbacks = {
   clearBinding: (profileId, sourceId) => persistVpadStore(clearVpadBinding(vpadStore, profileId, sourceId)),
 };
 
-async function handlePasteText(text: string): Promise<void> {
+async function handlePasteText(text: string): Promise<boolean> {
+  const { skipped: unsupported } = encodeSjisUnits(text);
+  if (unsupported.length) {
+    setStatusT('statusPasteRejected', [{ chars: [...new Set(unsupported)].join(', ') }], true);
+    return false;
+  }
   try {
     const { skipped } = await np2.pasteText(text);
     if (skipped.length > 0) {
       setStatusT('statusPasteSkipped', [{ count: skipped.length, chars: skipped.join(', ') }], true);
     }
+    return skipped.length === 0;
   } catch (err) {
-    setStatusT('statusBootFailed', [{ message: describeError(err) }], true);
+    setStatusT('statusPasteFailed', [{ message: describeError(err) }], true);
+    return false;
   }
 }
 
@@ -1936,7 +1972,7 @@ function init(): void {
       onCreateBlankHdd: () => void handleCreateBlankHdd(),
       onSaveState: () => void np2.saveState(),
       onLoadState: () => void np2.loadState(),
-      onPasteText: (text) => void handlePasteText(text),
+      onPasteText: handlePasteText,
       onSetupPasteHelper: () => void handleSetupPasteHelper(),
       onListRoms: () => listRoms(),
       onSaveRomFiles: async (files) => {

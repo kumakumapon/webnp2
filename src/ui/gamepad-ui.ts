@@ -54,6 +54,8 @@ export function textLabelForKeyCode(code: number): string {
  * GamepadDialogCallbacks と同じ。
  */
 export interface HostKeyDialogCallbacks {
+  getKeyboardLayout?(): 'jis' | 'us';
+  setKeyboardLayout?(layout: 'jis' | 'us'): void;
   getStore(): HostKeyStore;
   setEnabled(enabled: boolean): void;
   setActiveProfile(id: string | null): void;
@@ -524,6 +526,12 @@ export function buildGamepadDialog(
   ]);
 
   // --- タブ2: キーボード(ホストキー再割り当て) ---
+  const layoutSelect = el('select', { id: 'gp-keyboard-layout', class: 'gp-edit-pad-input' });
+  const layoutLabel = el('label', { for: 'gp-keyboard-layout' }, [t('keyboardLayoutLabel')]);
+  const layoutHint = el('p', { class: 'gp-hint' }, [t('keyboardLayoutHint')]);
+  const layoutRow = el('div', { class: 'gp-edit-pad-row' }, [layoutLabel, layoutSelect]);
+  layoutSelect.append(new Option(t('keyboardLayoutJis'), 'jis'), new Option(t('keyboardLayoutUs'), 'us'));
+  layoutSelect.addEventListener('change', () => hostKeyCallbacks.setKeyboardLayout?.(layoutSelect.value === 'us' ? 'us' : 'jis'));
   const hkDescEl = el('p', { class: 'gp-desc' }, [t('hostkeyDialogDescription')]);
   const hkEnableRow = el('div', { class: 'gp-hk-enable-row' });
   const hkEnableCheckbox = el('input', { type: 'checkbox', id: 'gp-hk-enable' }) as HTMLInputElement;
@@ -554,6 +562,7 @@ export function buildGamepadDialog(
   const hkCancelPendingBtn = el('button', { type: 'button', class: 'gp-detect-btn hidden' }, [t('hostkeyCancelBtn')]);
 
   const hostkeyPanelEl = el('div', { class: 'gp-tab-panel hidden' }, [
+    layoutRow, layoutHint,
     hkDescEl,
     hkEnableRow,
     hkProfileRow,
@@ -731,6 +740,7 @@ export function buildGamepadDialog(
 
   /** ホストキー再割り当てタブを丸ごと再構築する。 */
   function renderHostKeyTab(): void {
+    layoutSelect.value = hostKeyCallbacks.getKeyboardLayout?.() ?? 'us';
     const store = hostKeyCallbacks.getStore();
     hkEnableCheckbox.checked = store.enabled;
 
@@ -1373,6 +1383,10 @@ export function buildGamepadDialog(
       pickerTitleEl.textContent = t('gamepadKeyPickerTitle');
       closeBtn.textContent = t('gamepadDialogClose');
       hkDescEl.textContent = t('hostkeyDialogDescription');
+      layoutLabel.textContent = t('keyboardLayoutLabel');
+      layoutHint.textContent = t('keyboardLayoutHint');
+      layoutSelect.options[0].text = t('keyboardLayoutJis');
+      layoutSelect.options[1].text = t('keyboardLayoutUs');
       hkEnableLabel.textContent = t('hostkeyEnableLabel');
       hkProfileLabel.textContent = t('hostkeyProfileLabel');
       hkNewBtn.textContent = t('hostkeyNewProfileBtn');

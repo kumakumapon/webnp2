@@ -7,10 +7,11 @@ PC-98用の二画面ファイラーを同じFDに同梱しています。F1で�
 | --- | --- |
 | ↑↓ / J・K、PgUp・PgDn、Home | 選択、ページ移動 |
 | Tab / ←→、Enter、Backspace | 左右切替、ディレクトリへ移動、親へ移動 |
-| F2、F3、F4 | 名前変更、ASCIIファイル閲覧、再読み込み |
+| F2、F3、F4 | 名前変更、ASCII / Shift_JIS本文の閲覧、再読み込み |
 | F5、F6 | コピー、移動（保存先は反対側パネル） |
 | F7、F8 | ディレクトリ作成、削除（Yで確認） |
 | F9 | COM/EXE、または同梱BASICでBASサンプルを起動 |
+| E | 選択した本文をEDIT98で編集し、終了後に戻る |
 | F1、F10 / Q / Esc | ヘルプ、DOSへ終了 |
 
 入力欄はCtrl-Uでクリア、Enterで確定、Escで取消できます。
@@ -18,14 +19,15 @@ PC-98用の二画面ファイラーを同じFDに同梱しています。F1で�
 ファイル・空ディレクトリの削除は確認が必要です。
 
 FD-cloneのような操作を持つ独自のMIT実装です。ASCIIの8.3ファイル名、各パネル256件まで。
-再帰コピー・一括選択・編集・アーカイブ・長い名前・日本語表示には対応しません。
+再帰コピー・一括選択・アーカイブ・長い名前・日本語ファイル名には対応しません。
+本文の日本語入力と編集は[EDIT98の説明](japanese-input.md)を参照してください。
 同梱DOSの対応範囲はA:の1232 KiB FAT12 FD、WebNP2、386以上です。
 
 [詳細な操作説明](../public/msdos4/FILER.txt)はディスク内の`FILER.TXT`にもあります。
 [全ライセンス](../public/msdos4/LICENSE.txt)と`LICENSE.TXT`には各MIT通知、
 `FILERLIC.TXT`にはファイラーの通知を格納しています。
 
-実装とビルド手順は[MS-DOSのファイラー](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/filer.md)にあります。
+実装とビルド手順は[MS-DOSのファイラー](https://github.com/kumakumapon/MS-DOS/blob/62181dbfad74ba722cd0ef9af6ae347f3f541cdf/docs/filer.md)にあります。
 [manifest.json](../public/msdos4/manifest.json)は出典コミットとイメージ・各ファイル・
 共有ゲスト検証スクリプトのハッシュを記録します。以前のFDも保存URLのために保持します。
 

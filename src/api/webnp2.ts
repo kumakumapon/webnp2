@@ -1865,9 +1865,12 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
     let sent = 0;
     let unitCount = 0;
     for (const unit of units) {
+      const deadline = Date.now() + 10000;
       for (;;) {
         const ok = unit.length === 2 ? corePushKeyBufferPair(unit[0], unit[1]) : corePushKeyBuffer(unit[0]);
         if (ok) break;
+        if (!this.isBooted() || Date.now() > deadline)
+          throw new Error('Guest is not consuming input. Some text may already have been sent.');
         await this.sleep(20);
       }
       sent += unit.length;

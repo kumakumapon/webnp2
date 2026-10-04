@@ -235,6 +235,8 @@ interface Dict {
   pasteBarClose(): string;
   /** テキスト送信完了後、変換できず送れなかった文字があったときのステータス表示。 */
   statusPasteSkipped(args: { count: number; chars: string }): string;
+  statusPasteRejected(args: { chars: string }): string;
+  statusPasteFailed(args: { message: string }): string;
 
   // --- デバッガ ---
   toolbarDebugger(): string;
@@ -416,6 +418,10 @@ interface Dict {
 
   // --- ホストキー再割り当て ---
   hostkeyDialogDescription(): string;
+  keyboardLayoutLabel(): string;
+  keyboardLayoutJis(): string;
+  keyboardLayoutUs(): string;
+  keyboardLayoutHint(): string;
   /** ON/OFFスイッチのラベル。 */
   hostkeyEnableLabel(): string;
   /** 組み込みプロファイル「テンキー移動」の表示名。localStorageには入れず表示時にここから引く。 */
@@ -631,7 +637,7 @@ const STRINGS: Record<Lang, Dict> = {
     libraryDialogClose: () => '閉じる',
     toolbarPasteText: () => 'テキスト送信 (Shiftキー2回でも開く)',
     toolbarVirtualKbd: () => 'ソフトキーボード',
-    pasteBarPlaceholder: () => 'ここに送信するテキストを入力…',
+    pasteBarPlaceholder: () => 'IMEで変換・確定してから送信…',
     pasteBarSetupBtn: () => '日本語入力を有効化',
     pasteBarSetupNote: () =>
       'このゲストでは全角が届きません。ゲスト常駐ヘルパー(同梱ツールFD)を導入すると全角を送れます。DOSのコマンド待ち状態で実行してください。',
@@ -642,6 +648,12 @@ const STRINGS: Record<Lang, Dict> = {
     pasteBarSend: () => '送信',
     pasteBarClose: () => '閉じる',
     statusPasteSkipped: ({ count, chars }) => `${count}文字を送信できずスキップしました: ${chars}`,
+    statusPasteRejected: ({ chars }) => `Shift_JISで表せない文字があります。修正してから送信してください: ${chars}`,
+    statusPasteFailed: ({ message }) => `入力の送信に失敗しました。一部が届いている場合は内容を確認してください: ${message}`,
+    keyboardLayoutLabel: () => '物理キーボードの配列',
+    keyboardLayoutJis: () => '日本語 (JIS 106/109)',
+    keyboardLayoutUs: () => '英語 (US / 従来の配列)',
+    keyboardLayoutHint: () => '設定は保存されます。日本語配列の半角/全角キーでIME入力欄を開けます。日本語は入力欄で変換・確定して送信してください。',
     toolbarDebugger: () => 'デバッガ',
     debuggerTitle: () => 'CPUデバッガ',
     debuggerPause: () => '一時停止',
@@ -999,7 +1011,7 @@ const STRINGS: Record<Lang, Dict> = {
     libraryDialogClose: () => 'Close',
     toolbarPasteText: () => 'Send Text (or double-tap Shift)',
     toolbarVirtualKbd: () => 'On-screen keyboard',
-    pasteBarPlaceholder: () => 'Type text to send…',
+    pasteBarPlaceholder: () => 'Compose with your OS IME, then Send…',
     pasteBarSetupBtn: () => 'Enable full-width input',
     pasteBarSetupNote: () =>
       'This guest drops full-width characters. Installing the guest helper (bundled tool disk) enables them. Run it at a DOS command prompt.',
@@ -1010,6 +1022,12 @@ const STRINGS: Record<Lang, Dict> = {
     pasteBarSend: () => 'Send',
     pasteBarClose: () => 'Close',
     statusPasteSkipped: ({ count, chars }) => `Skipped ${count} unsupported character(s): ${chars}`,
+    statusPasteRejected: ({ chars }) => `Cannot send characters outside Shift_JIS. Edit the text and try again: ${chars}`,
+    statusPasteFailed: ({ message }) => `Input failed. Check the guest for text already sent before retrying: ${message}`,
+    keyboardLayoutLabel: () => 'Physical keyboard layout',
+    keyboardLayoutJis: () => 'Japanese (JIS 106/109)',
+    keyboardLayoutUs: () => 'English (US / existing layout)',
+    keyboardLayoutHint: () => 'Saved for future visits. The JIS half/full-width key opens IME input. Convert and commit Japanese text in the input field, then Send.',
     toolbarDebugger: () => 'Debugger',
     debuggerTitle: () => 'CPU Debugger',
     debuggerPause: () => 'Pause',

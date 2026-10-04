@@ -16,7 +16,7 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-508fa65868dc.xdf&run=1>
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
@@ -193,12 +193,18 @@ highlighted.
 
 ### Keyboard and mouse
 
-- Key input is delivered to the guest as raw scancodes. PC-98 specific keys are
-  mapped as XFER = right Alt (right Option) and NFER = left Alt (left Option).
-- **Kanji input inside the guest** requires a guest-side FEP (a resident
-  kana-kanji conversion program such as ATOK or VJE-β). Your host OS IME has no
-  effect on the emulator screen (turn it off while typing). FreeDOS(98) does
-  not include a FEP, so use your own MS-DOS + FEP disk images for kanji input.
+- **More (…) → Input → Input Settings → Keyboard** selects Japanese JIS 106/109
+  or the existing US keyboard translation. The selection is saved; Japanese UI
+  defaults to JIS, English UI to US. JIS maps the physical @, :, ^, yen and
+  underscore keys to PC-98 positions. US mode keeps XFER = right Alt (right
+  Option) and NFER = left Alt (left Option).
+- **Japanese input** uses your host OS IME in **More (…) → Input → Send Text**.
+  Convert and commit text, then Send; conversion keys and the confirming Enter
+  stay in the browser. The JIS half/full-width key also opens the field.
+  Unsupported Shift_JIS characters are reported and retained for correction.
+  The bundled DOS 4.0 console and EDIT98 support Japanese text directly.
+  Conversion inside the emulator screen itself still needs a guest-side FEP;
+  none is bundled. Other DOS images may need the send bar's resident helper.
 - **Mouse** support is enabled from **More (…) → Input → Capture Mouse** (the
   pointer is locked to the screen and emulated as a PC-98 bus mouse; press Esc
   to release). The DOS prompt itself does not use a mouse. Software that reads
@@ -327,9 +333,16 @@ BASIC samples, and F10 returns to DOS. F1 shows help. Existing files are never
 overwritten. See the [keyboard guide](public/msdos4/FILER.txt) and
 [bundled filer](docs/bundled-filer.md).
 
+Run `EDIT MEMO.TXT` (or `EDIT98 MEMO.TXT`) to edit ASCII/Shift_JIS text up to
+16 KiB. F2 opens, F3/Ctrl-S saves, F4 saves as, F5 finds, and F10 quits with an
+unsaved-change prompt. Full-width characters move and delete as a unit; saves
+use CRLF. FD98's **E** key opens the selected file in EDIT98. `TYPE JPHELLO.TXT`
+shows the Japanese sample. See [Japanese input and editing](docs/japanese-input.md)
+and [editor keyboard guide](public/msdos4/EDIT.txt).
+
 The DOS kernel and shell are built from the v4.0 sources in
-[MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3);
-the disk also includes native RetroBasic and the original FD Filer implementation.
+[MS-DOS commit 62181db](https://github.com/kumakumapon/MS-DOS/tree/62181dbfad74ba722cd0ef9af6ae347f3f541cdf);
+the disk also includes native RetroBasic, FD Filer, and the new MIT-licensed EDIT98.
 All MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
 and `LICENSE.TXT` inside the disk. [manifest.json](public/msdos4/manifest.json)
 records build revisions and image/file checksums. This is an unofficial port.
@@ -337,7 +350,8 @@ records build revisions and image/file checksums. This is an unofficial port.
 Disk writes persist for the same boot URL; **Reset to initial state** deletes
 changes and restores the bundled disk. Each image version has a content hash in
 its filename. Support is limited to WebNP2, 386 or later, and drive A: with the
-bundled geometry. HDD/FAT16, a second floppy, Japanese input, and recreating
+bundled geometry. HDD/FAT16, a second floppy, Japanese filenames, a standalone
+DOS FEP, and recreating
 boot disks with `FORMAT`/`SYS` are unsupported. Native BASIC implements a subset
 of the Python version; see [bundled components and limits](public/msdos4/README.txt).
 
@@ -471,7 +485,7 @@ files with the normal build; assembling MS-DOS during each deployment is unneces
 
 Maintainers prepare and validate the native BASIC build and combined boot disk
 in their build environment, using the
-[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/pc98-dos4.md).
+[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/62181dbfad74ba722cd0ef9af6ae347f3f541cdf/docs/pc98-dos4.md).
 Import the completed build into WebNP2, then verify it:
 
 ```sh
@@ -485,9 +499,13 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 
 The importer checks both clean source revisions, DOS version, image checksum,
 both FATs, boot code, executables, samples, and complete license notices.
-It then builds `tools/filer` from the DOS source and adds FD98, its guide, and
-license to the same disk. Commit `public/msdos4/` and the guest verifier copied
-from that source (`scripts/verify-filer.mjs`), and update the image links in the READMEs/help page.
+It then builds `tools/filer` and `tools/editor` from the DOS source and adds
+FD98, EDIT/EDIT98, the Japanese sample, guides, and full license notices to the
+same disk. Commit `public/msdos4/` and the copied guest verifiers
+(`scripts/verify-filer.mjs`, `scripts/verify-editor.mjs`), and update the image links
+in the READMEs/help page. Verification includes physical JIS/US keys, IME
+composition through the browser field, byte-exact Japanese save/reopen/TYPE,
+and the existing BASIC/filer tests.
 Keep previous image filenames for saved disks and shared URLs. The normal
 Pages build includes the disk; users and deployment do not need DOS build tools.
 
