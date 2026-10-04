@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { verifyFiler } from './verify-filer.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos4/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
@@ -108,6 +109,9 @@ try {
   const sequentialBytes = Buffer.from('"A,B",42,"Q""R"\r\nTAIL\r\nAPPEND\r\n');
   assert.deepEqual(await readGuest('SEQ.TXT'), sequentialBytes);
   results.push('Native prime/graphics samples with VRAM checks; numbered sequential file I/O and exact CSV/CRLF bytes');
+  results.push(...await verifyFiler(page, {
+    screenshot: output ? join(output, 'filer.png') : undefined, basic: true,
+  }));
 
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.reload({ waitUntil: 'networkidle2' });
@@ -131,7 +135,7 @@ try {
     return Array.from(new Uint8Array(await response.arrayBuffer()));
   }, manifest.image);
   assert.equal(createHash('sha256').update(Buffer.from(pristine)).digest('hex'), manifest.sha256);
-  results.push('Distributed image stays pristine; both MIT notices are served and match guest notices');
+  results.push('Distributed image stays pristine; all MIT notices are served and match guest notices');
   const exported = await page.evaluate(() => window.np2debug.np2.exportDiskBase64('fd1'));
   const disk = Buffer.from(exported.base64, 'base64');
   assert.deepEqual(disk.subarray(1024, 3072), disk.subarray(3072, 5120), 'Exported FAT copies must match');

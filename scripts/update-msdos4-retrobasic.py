@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import the source-built DOS 4.0 + native RetroBasic PC-98 boot floppy."""
+"""Import DOS 4.0 + native BASIC and add the PC-98 filer to the bundled floppy."""
 import argparse
 import hashlib
 import importlib.util
@@ -114,12 +114,34 @@ def main():
                      (len(expected['MSDOS.SYS']) + 1023) // 1024)
     if files != expected or image[:1024] != ipl:
         raise ValueError('disk does not match the source builds and samples; rebuild before importing')
+    # Compose the updated distribution from the validated base disk and public filer build.
+    filer = dos / 'tools/filer'
+    subprocess.run(['make', '-C', str(filer), 'all'], check=True)
+    applications = [(name, (filer / 'build' / name).read_bytes())
+                    for name in ('FD98.COM', 'FILER.TXT', 'FILERLIC.TXT')]
+    notices += b'\r\nFD Filer license\r\n' + (filer / 'LICENSE').read_bytes()
+    extra = [(file['name'], notices if file['name'] == 'LICENSE.TXT' else files[file['name']])
+             for file in manifest['files'] if file['name'] not in
+             ('IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT')]
+    autoexec = files['AUTOEXEC.BAT'] + b'ECHO FD98: File manager   RBASIC: BASIC\r\n'
+    image, entries = helper.make_image((dos_build / 'ipl.bin').read_bytes(), files['IO.SYS'],
+                                      [*extra, *applications], kernel=files['MSDOS.SYS'],
+                                      command=files['COMMAND.COM'], autoexec=autoexec)
+    sha256 = digest(image)
+    manifest['sha256'], manifest['files'] = sha256, entries
+    sources['filer'] = {'component': 'FD Filer', 'repository': sources['msdos']['repository'],
+                        'commit': sources['msdos']['commit'], 'path': 'tools/filer', 'license': 'MIT'}
+    # Keep the guest UI checks in sync with the public, pinned filer implementation.
+    verifier = filer / 'verify-ui.mjs'
+    (Path(__file__).parent / 'verify-filer.mjs').write_bytes(verifier.read_bytes())
+    manifest['filer_verifier_sha256'] = digest(verifier.read_bytes())
     destination = Path(__file__).resolve().parents[1] / 'public/msdos4'
     destination.mkdir(parents=True, exist_ok=True)
     name = f'msdos4-retrobasic-{sha256[:12]}.xdf'
     manifest.update(image=name, sources=sources, license='MIT')
     (destination / name).write_bytes(image)
     (destination / 'LICENSE.txt').write_bytes(notices)
+    (destination / 'FILER.txt').write_bytes((filer / 'build/FILER.TXT').read_bytes())
     (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Imported {name}: MS-DOS {sources["msdos"]["commit"]}, RetroBasic {sources["retrobasic"]["commit"]}')
     print('Keep old image filenames available for saved disks and shared URLs.')

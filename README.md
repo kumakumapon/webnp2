@@ -16,7 +16,7 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f75824650c7b.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&run=1>
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
@@ -321,10 +321,16 @@ In BASIC, try `10 PRINT "HELLO"`, `RUN`, then `SAVE "HELLO.BAS"`.
 Sequential file I/O includes `OPEN`/`CLOSE`, `PRINT #`/`WRITE #`/`INPUT #`/
 `LINE INPUT #`, and `EOF`/`LOF`/`LOC`/`INPUT$`.
 
+Run `FD98` for the two-pane filer: arrows select, Tab switches panes, Enter opens
+directories, F3 views files, F5 copies, F6 moves, F8 deletes, F9 launches apps or
+BASIC samples, and F10 returns to DOS. F1 shows help. Existing files are never
+overwritten. See the [keyboard guide](public/msdos4/FILER.txt) and
+[bundled filer](docs/bundled-filer.md).
+
 The DOS kernel and shell are built from the v4.0 sources in
-[MS-DOS commit 0b6f8f2](https://github.com/kumakumapon/MS-DOS/tree/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596);
-the disk also includes native RetroBasic.
-Both MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
+[MS-DOS commit b66b6dc](https://github.com/kumakumapon/MS-DOS/tree/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff);
+the disk also includes native RetroBasic and the original FD Filer implementation.
+All MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
 and `LICENSE.TXT` inside the disk. [manifest.json](public/msdos4/manifest.json)
 records build revisions and image/file checksums. This is an unofficial port.
 
@@ -465,7 +471,7 @@ files with the normal build; assembling MS-DOS during each deployment is unneces
 
 Maintainers prepare and validate the native BASIC build and combined boot disk
 in their build environment, using the
-[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md).
+[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff/docs/pc98-dos4.md).
 Import the completed build into WebNP2, then verify it:
 
 ```sh
@@ -479,7 +485,9 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 
 The importer checks both clean source revisions, DOS version, image checksum,
 both FATs, boot code, executables, samples, and complete license notices.
-Commit `public/msdos4/` and update the image links in the READMEs/help page.
+It then builds `tools/filer` from the DOS source and adds FD98, its guide, and
+license to the same disk. Commit `public/msdos4/` and the guest verifier copied
+from that source (`scripts/verify-filer.mjs`), and update the image links in the READMEs/help page.
 Keep previous image filenames for saved disks and shared URLs. The normal
 Pages build includes the disk; users and deployment do not need DOS build tools.
 
@@ -529,8 +537,8 @@ excluded via `.gitignore` and never committed.
   `bios/bios.c`).
 - `public/msdos2/` contains the MS-DOS 2.0 PC-98 boot floppy under the MIT
   License, the full license notice, and provenance/checksums; see the section above.
-- `public/msdos4/` contains the source-built MS-DOS 4.0 + native RetroBasic
-  PC-98 boot floppy, both MIT license notices, and provenance/checksums.
+- `public/msdos4/` contains the source-built MS-DOS 4.0 + native RetroBasic + FD Filer
+  PC-98 boot floppy, all MIT license notices, and provenance/checksums.
 - `public/freedos/fd98_2hd.xdf` is the FreeDOS(98) boot floppy described
   above, licensed under GPLv2+; source is available from
   [lpproj/fdkernel](https://github.com/lpproj/fdkernel) and

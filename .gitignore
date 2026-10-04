@@ -1,6 +1,7 @@
 node_modules/
 dist/
 public/test/
+test-results/
 *.log
 .DS_Store
 .claude/
