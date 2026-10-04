@@ -54,9 +54,11 @@ export async function verifyJapaneseInput(page, { screenshot } = {}) {
     field.dispatchEvent(new KeyboardEvent('keyup', { code: 'ArrowUp', key: 'ArrowUp', bubbles: true }));
     field.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
     field.value = 'にほんご';
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', keyCode: 229, bubbles: true }));
     field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', key: 'Enter', isComposing: true, keyCode: 229, bubbles: true }));
   });
   assert.ok(!(await screen()).includes('にほんご'));
+  assert.ok(await page.$('.paste-bar:not(.hidden)'), 'IME cancellation must not close the input field');
   await page.click('.paste-bar-send-btn'); // composing text must not be sent
   assert.ok(!(await screen()).includes('にほんご'));
   await page.evaluate(() => {

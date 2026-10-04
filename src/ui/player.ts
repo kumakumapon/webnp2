@@ -1142,13 +1142,14 @@ export function buildPlayerUI(
   const closePasteBar = (): void => {
     pasteBar.classList.add('hidden');
     pasteInput.blur();
+    composing = false;
   };
   pasteInput.addEventListener('keydown', (e) => {
     // IME変換確定のEnter(isComposing/keyCode 229)では送信しない。
     if (e.key === 'Enter' && !composing && !e.isComposing && e.keyCode !== 229 && performance.now() - compositionEndedAt > 100) {
       e.preventDefault();
       sendPasteText();
-    } else if (e.key === 'Escape' && !e.isComposing) {
+    } else if (e.key === 'Escape' && !composing && !e.isComposing && e.keyCode !== 229) {
       e.preventDefault();
       closePasteBar();
     }
