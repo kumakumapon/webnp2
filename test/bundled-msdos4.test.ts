@@ -32,11 +32,18 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(fatReadFile(disk, 'LICENSE.TXT')).toEqual(new Uint8Array(notices));
     expect(notices.toString()).toContain('Copyright (c) Microsoft Corporation');
     expect(notices.toString()).toContain('Copyright (c) 2026 kumakumapon');
-    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(3);
+    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(4);
     expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
+    expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
+    expect(fatReadFile(disk, 'FILER.TXT')).toEqual(
+      new Uint8Array(readFileSync(new URL('../public/msdos4/FILER.txt', import.meta.url))),
+    );
+    expect(hash(readFileSync(new URL('../scripts/verify-filer.mjs', import.meta.url))))
+      .toBe(manifest.filer_verifier_sha256);
+    expect(manifest.sources.filer.commit).toBe(manifest.sources.msdos.commit);
     expect(manifest.files.map(file => file.name)).toEqual(expect.arrayContaining([
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
-      'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS',
+      'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', 'FD98.COM', 'FILER.TXT', 'FILERLIC.TXT',
     ]));
   });
 

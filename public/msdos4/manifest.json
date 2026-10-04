@@ -1,6 +1,6 @@
 {
-  "image": "msdos4-retrobasic-f75824650c7b.xdf",
-  "sha256": "f75824650c7ba982ca2eb88e4d942c1623db0779b798c8f46781f9897df1a6d3",
+  "image": "msdos4-retrobasic-f531228021b5.xdf",
+  "sha256": "f531228021b5bed1e55f817cb48d84e00fdce1be7026afbc32922a4b53643bbe",
   "files": [
     {
       "name": "IO.SYS",
@@ -19,8 +19,8 @@
     },
     {
       "name": "AUTOEXEC.BAT",
-      "size": 43,
-      "sha256": "98fa204a4cba0b1688cb4bda355a2481f9185a8cfd7080defd46d7a8bd83e5c3"
+      "size": 84,
+      "sha256": "21c5aec0efb8c20e22138bef18d54ecd4c996e3561186044fec6f2b963411656"
     },
     {
       "name": "DOSLIC.TXT",
@@ -69,8 +69,8 @@
     },
     {
       "name": "LICENSE.TXT",
-      "size": 2180,
-      "sha256": "ea13e439d88703583796404f5b3fef9dde70bb849b2380ff9b2905e7de4f7d61"
+      "size": 3268,
+      "sha256": "8960d2a1007f2f8cadebdcdbf926165dbc5653e41382e30a00bff8a3ad70d80f"
     },
     {
       "name": "CONFIG.SYS",
@@ -81,14 +81,30 @@
       "name": "P98TEST.COM",
       "size": 75,
       "sha256": "1ad2574b94b621ed85d35c8d8a99fcd0c01f6c733c55961172227650f49c9b81"
+    },
+    {
+      "name": "FD98.COM",
+      "size": 14320,
+      "sha256": "16acb2708eb1425297afb9765b4ece5c9df12ea3d3ef5a8817e7bebc6674e5c6"
+    },
+    {
+      "name": "FILER.TXT",
+      "size": 2299,
+      "sha256": "a1cacabc08c34234a5ac02a9d2a37434ac61ef3c3090b7c94d15db922e7237a4"
+    },
+    {
+      "name": "FILERLIC.TXT",
+      "size": 1068,
+      "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
     }
   ],
-  "dos_commit": "0b6f8f2f1eae2b6727dfe83b66cd81e222da0596",
+  "dos_commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
   "dos_version": "4",
+  "filer_verifier_sha256": "244f9f47e5c39cbc71cb185e0413d096e2a43fb33c288841e71c04673b7d1d1b",
   "sources": {
     "msdos": {
       "component": "MS-DOS",
-      "commit": "0b6f8f2f1eae2b6727dfe83b66cd81e222da0596",
+      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
       "path": "ports/pc98",
       "license": "MIT",
       "repository": "https://github.com/kumakumapon/MS-DOS"
@@ -97,6 +113,13 @@
       "component": "RetroBasic",
       "commit": "6609a046ae0d1ec0206739524627a48b54c84ba9",
       "path": "ports/pc98",
+      "license": "MIT"
+    },
+    "filer": {
+      "component": "FD Filer",
+      "repository": "https://github.com/kumakumapon/MS-DOS",
+      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
+      "path": "tools/filer",
       "license": "MIT"
     }
   },

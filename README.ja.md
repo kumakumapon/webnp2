@@ -15,7 +15,7 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 
 - **公開ページ**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f75824650c7b.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&run=1>
 - **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
@@ -289,9 +289,15 @@ IBM PC の BIOS・画面・ハードウェアを直接操作するソフトは P
 逐次ファイル入出力の `OPEN` / `CLOSE`、`PRINT #` / `WRITE #` / `INPUT #` /
 `LINE INPUT #`、`EOF` / `LOF` / `LOC` / `INPUT$` にも対応しています。
 
+`FD98` で二画面ファイラーを起動できます。矢印キーで選択、Tabで左右切替、
+Enterでディレクトリへ移動、F3で閲覧、F5でコピー、F6で移動、F8で削除、
+F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1でヘルプを表示します。
+既存ファイルには上書きしません。[操作説明](public/msdos4/FILER.txt)と
+[同梱ファイラー](docs/bundled-filer.md)を参照してください。
+
 DOS カーネルとシェルは
-[MS-DOS commit 0b6f8f2](https://github.com/kumakumapon/MS-DOS/tree/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596)
-の v4.0 ソースからビルドし、ネイティブ版 RetroBasic を同梱しています。両方の MIT License 全文を
+[MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3)
+の v4.0 ソースからビルドし、ネイティブ版 RetroBasic と独自実装の FD Filer を同梱しています。各 MIT License 全文を
 [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt) とディスク内の `LICENSE.TXT` に格納しています。
 [manifest.json](public/msdos4/manifest.json) はビルドのリビジョンとイメージ・ファイルの
 チェックサムを記録します。Microsoft の公式移植・サポートを示すものではありません。
@@ -428,7 +434,7 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos2.mjs http://127.0.0.1:4173/
 ### DOS 4.0 + RetroBasic 起動FDの更新
 
 保守者のビルド環境でネイティブ BASIC と組み合わせた起動FDを作成・検証します。
-DOS は [DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/0b6f8f2f1eae2b6727dfe83b66cd81e222da0596/docs/pc98-dos4.md)
+DOS は [DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/pc98-dos4.md)
 に従ってビルドします。完成したビルド成果物を WebNP2 に取り込み、検証してください。
 
 ```sh
@@ -442,7 +448,9 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 
 取り込みスクリプトは両出典のクリーンな状態、DOS バージョン、イメージのハッシュ、
 2個の FAT、起動コード、実行ファイル、サンプル、ライセンス全文を検証します。
-`public/msdos4/` をコミットし、README・使い方ページの起動URLを更新してください。
+続いてDOS出典の `tools/filer` をビルドし、FD98と説明・ライセンスを同じFDへ追加します。
+`public/msdos4/` と同じ出典からコピーする `scripts/verify-filer.mjs` をコミットし、
+README・使い方ページの起動URLを更新してください。
 保存データ・共有URLのために以前のイメージファイルは残します。
 通常の Pages ビルドで同梱するため、利用者やデプロイ環境に DOS ビルドツールは不要です。
 
@@ -483,8 +491,8 @@ scripts/update-core.sh
   文字列は配布 wasm ビルドにも含まれます(NP2kai の `bios/bios.c` 由来)。
 - `public/msdos2/` は MIT License の MS-DOS 2.0 PC-98 起動FD・ライセンス全文・
   出典とチェックサムを格納しています。詳しくは前述の説明を参照してください。
-- `public/msdos4/` はソースからビルドした MS-DOS 4.0 + ネイティブ RetroBasic の
-  PC-98 起動FD、両 MIT License 全文、出典とチェックサムを格納しています。
+- `public/msdos4/` はソースからビルドした MS-DOS 4.0 + ネイティブ RetroBasic + FD Filer の
+  PC-98 起動FD、各 MIT License 全文、出典とチェックサムを格納しています。
 - `public/freedos/fd98_2hd.xdf` は前述の FreeDOS(98) 起動FDで、GPLv2以降の下で配布しています。
   ソースは [lpproj/fdkernel](https://github.com/lpproj/fdkernel) および
   [lpproj/freecom_dbcs2](https://github.com/lpproj/freecom_dbcs2) から入手可能です。
