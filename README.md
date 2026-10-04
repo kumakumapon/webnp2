@@ -328,7 +328,7 @@ overwritten. See the [keyboard guide](public/msdos4/FILER.txt) and
 [bundled filer](docs/bundled-filer.md).
 
 The DOS kernel and shell are built from the v4.0 sources in
-[MS-DOS commit b66b6dc](https://github.com/kumakumapon/MS-DOS/tree/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff);
+[MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3);
 the disk also includes native RetroBasic and the original FD Filer implementation.
 All MIT license notices are in [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt)
 and `LICENSE.TXT` inside the disk. [manifest.json](public/msdos4/manifest.json)
@@ -471,7 +471,7 @@ files with the normal build; assembling MS-DOS during each deployment is unneces
 
 Maintainers prepare and validate the native BASIC build and combined boot disk
 in their build environment, using the
-[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff/docs/pc98-dos4.md).
+[DOS 4.0 build instructions](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/pc98-dos4.md).
 Import the completed build into WebNP2, then verify it:
 
 ```sh

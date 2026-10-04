@@ -25,7 +25,7 @@ FD-cloneのような操作を持つ独自のMIT実装です。ASCIIの8.3ファ�
 [全ライセンス](../public/msdos4/LICENSE.txt)と`LICENSE.TXT`には各MIT通知、
 `FILERLIC.TXT`にはファイラーの通知を格納しています。
 
-実装とビルド手順は[MS-DOSのファイラー](https://github.com/kumakumapon/MS-DOS/blob/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff/docs/filer.md)にあります。
+実装とビルド手順は[MS-DOSのファイラー](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/filer.md)にあります。
 [manifest.json](../public/msdos4/manifest.json)は出典コミットとイメージ・各ファイル・
 共有ゲスト検証スクリプトのハッシュを記録します。以前のFDも保存URLのために保持します。
 

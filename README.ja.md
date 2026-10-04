@@ -296,7 +296,7 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 [同梱ファイラー](docs/bundled-filer.md)を参照してください。
 
 DOS カーネルとシェルは
-[MS-DOS commit b66b6dc](https://github.com/kumakumapon/MS-DOS/tree/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff)
+[MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3)
 の v4.0 ソースからビルドし、ネイティブ版 RetroBasic と独自実装の FD Filer を同梱しています。各 MIT License 全文を
 [public/msdos4/LICENSE.txt](public/msdos4/LICENSE.txt) とディスク内の `LICENSE.TXT` に格納しています。
 [manifest.json](public/msdos4/manifest.json) はビルドのリビジョンとイメージ・ファイルの
@@ -434,7 +434,7 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos2.mjs http://127.0.0.1:4173/
 ### DOS 4.0 + RetroBasic 起動FDの更新
 
 保守者のビルド環境でネイティブ BASIC と組み合わせた起動FDを作成・検証します。
-DOS は [DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff/docs/pc98-dos4.md)
+DOS は [DOS 4.0 のビルド手順](https://github.com/kumakumapon/MS-DOS/blob/d371a1f8f68a26b4e36b1b1b604d295972b7cba3/docs/pc98-dos4.md)
 に従ってビルドします。完成したビルド成果物を WebNP2 に取り込み、検証してください。
 
 ```sh

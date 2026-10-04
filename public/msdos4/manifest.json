@@ -98,13 +98,13 @@
       "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
     }
   ],
-  "dos_commit": "b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff",
+  "dos_commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
   "dos_version": "4",
-  "filer_verifier_sha256": "e166e8e8f1a535afd940ab8d71fa15415952be6831112f15e8006ab561927683",
+  "filer_verifier_sha256": "244f9f47e5c39cbc71cb185e0413d096e2a43fb33c288841e71c04673b7d1d1b",
   "sources": {
     "msdos": {
       "component": "MS-DOS",
-      "commit": "b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff",
+      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
       "path": "ports/pc98",
       "license": "MIT",
       "repository": "https://github.com/kumakumapon/MS-DOS"
@@ -118,7 +118,7 @@
     "filer": {
       "component": "FD Filer",
       "repository": "https://github.com/kumakumapon/MS-DOS",
-      "commit": "b66b6dc6b5531cff4cc5d18bd38e83c19b9055ff",
+      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
       "path": "tools/filer",
       "license": "MIT"
     }
