@@ -163,7 +163,7 @@ export interface PlayerCallbacks {
   onSaveState: () => void;
   onLoadState: () => void;
   /** テキスト送信バーからの送信。checkbox ONなら末尾に'\n'を含めた文字列が渡される。 */
-  onPasteText: (text: string) => void;
+  onPasteText: (text: string) => Promise<boolean>;
   /** テキスト送信バーの「日本語入力を有効化」ボタン押下時(ゲスト常駐ヘルパーの導入)。 */
   onSetupPasteHelper: () => void;
   /** ROM登録ダイアログの一覧取得。 */
@@ -261,6 +261,8 @@ export interface PlayerUI {
    * (false のときはバー内に「日本語入力を有効化」の案内を出す)。
    */
   setPasteFeature(state: { buttonVisible: boolean; fullwidthAvailable: boolean }): void;
+  openImeInput(): void;
+  observePhysicalKeyDown(event: KeyboardEvent): boolean;
   /** マウスキャプチャ状態の通知(onMouseToggle/pointerlockchange双方から呼ぶ)。ダブルクリック開始の可否判定に使う。 */
   setMouseCaptured(captured: boolean): void;
   /** ホストキー再割り当てが有効かどうかをツールバーの入力設定ボタンにバッジ(小さいドット)で示す。 */
@@ -1110,12 +1112,21 @@ export function buildPlayerUI(
     pasteInput.addEventListener(eventName, (e) => e.stopPropagation());
   }
 
-  const sendPasteText = (): void => {
+  let composing = false, sending = false, compositionEndedAt = -Infinity;
+  pasteInput.addEventListener('compositionstart', () => { composing = true; });
+  pasteInput.addEventListener('compositionend', () => { composing = false; compositionEndedAt = performance.now(); });
+  const sendPasteText = async (): Promise<void> => {
+    if (composing || sending) return;
     const text = pasteInput.value + (pasteEnterCheckbox.checked ? '\n' : '');
     if (text.length === 0) return;
-    callbacks.onPasteText(text);
-    pasteInput.value = '';
-    pasteInput.focus();
+    const original = pasteInput.value;
+    sending = true; pasteSendBtn.disabled = true;
+    try {
+      if (await callbacks.onPasteText(text) && pasteInput.value === original) pasteInput.value = '';
+    } finally {
+      sending = false; pasteSendBtn.disabled = false;
+      if (!pasteBar.classList.contains('hidden')) pasteInput.focus();
+    }
   };
   // バーはstage内の絶対配置オーバーレイ(レイアウト高さに影響させず、開閉で画面が縮まないように)。
   stage.append(pasteBar);
@@ -1134,7 +1145,7 @@ export function buildPlayerUI(
   };
   pasteInput.addEventListener('keydown', (e) => {
     // IME変換確定のEnter(isComposing/keyCode 229)では送信しない。
-    if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) {
+    if (e.key === 'Enter' && !composing && !e.isComposing && e.keyCode !== 229 && performance.now() - compositionEndedAt > 100) {
       e.preventDefault();
       sendPasteText();
     } else if (e.key === 'Escape' && !e.isComposing) {
@@ -1154,21 +1165,22 @@ export function buildPlayerUI(
   });
   // Shiftキー2回押し(500ms以内、間に他のキーなし)でテキスト送信バーを開く。
   // Shift単独のmake/breakはゲスト側でも無害なのでショートカットとして安全。
-  let lastShiftDownAt = 0;
-  window.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
+  let lastShiftDownAt = -Infinity;
+  const observePhysicalKeyDown = (e: KeyboardEvent): boolean => {
+    if (e.repeat || e.isComposing || e.keyCode === 229) return false;
     if (e.key === 'Shift') {
       const now = performance.now();
       if (now - lastShiftDownAt < 500 && pasteButtonVisible && toolbarEnabled && pasteBar.classList.contains('hidden')) {
-        lastShiftDownAt = 0;
+        lastShiftDownAt = -Infinity;
         openPasteBar();
-        return;
+        return true;
       }
       lastShiftDownAt = now;
     } else {
-      lastShiftDownAt = 0;
+      lastShiftDownAt = -Infinity;
     }
-  });
+    return false;
+  };
 
   const statusPanel = el('div', { class: 'status-panel' }, ['']);
 
@@ -2640,6 +2652,8 @@ export function buildPlayerUI(
     showOverlay() {
       overlay.classList.remove('hidden');
     },
+    openImeInput() { if (pasteButtonVisible) openPasteBar(); },
+    observePhysicalKeyDown,
     setPasteFeature(state: { buttonVisible: boolean; fullwidthAvailable: boolean }) {
       pasteButtonVisible = state.buttonVisible;
       btnPasteText.style.display = state.buttonVisible ? '' : 'none';

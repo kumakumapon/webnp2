@@ -32,9 +32,18 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(fatReadFile(disk, 'LICENSE.TXT')).toEqual(new Uint8Array(notices));
     expect(notices.toString()).toContain('Copyright (c) Microsoft Corporation');
     expect(notices.toString()).toContain('Copyright (c) 2026 kumakumapon');
-    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(4);
+    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(5);
     expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
+    expect(notices.includes(fatReadFile(disk, 'EDITLIC.TXT'))).toBe(true);
+    expect(fatReadFile(disk, 'EDIT.COM')).toEqual(fatReadFile(disk, 'EDIT98.COM'));
+    expect(new TextDecoder('shift_jis').decode(fatReadFile(disk, 'JPHELLO.TXT'))).toContain('日本語表示のテスト');
+    expect(fatReadFile(disk, 'EDIT.TXT')).toEqual(
+      new Uint8Array(readFileSync(new URL('../public/msdos4/EDIT.txt', import.meta.url))),
+    );
+    expect(hash(readFileSync(new URL('../scripts/verify-editor.mjs', import.meta.url))))
+      .toBe(manifest.editor_verifier_sha256);
+    expect(manifest.sources.editor.commit).toBe(manifest.sources.msdos.commit);
     expect(fatReadFile(disk, 'FILER.TXT')).toEqual(
       new Uint8Array(readFileSync(new URL('../public/msdos4/FILER.txt', import.meta.url))),
     );
@@ -44,6 +53,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(manifest.files.map(file => file.name)).toEqual(expect.arrayContaining([
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
       'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', 'FD98.COM', 'FILER.TXT', 'FILERLIC.TXT',
+      'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
     ]));
   });
 

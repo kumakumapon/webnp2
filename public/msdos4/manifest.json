@@ -1,11 +1,11 @@
 {
-  "image": "msdos4-retrobasic-f531228021b5.xdf",
-  "sha256": "f531228021b5bed1e55f817cb48d84e00fdce1be7026afbc32922a4b53643bbe",
+  "image": "msdos4-retrobasic-508fa65868dc.xdf",
+  "sha256": "508fa65868dc19f0b0cb6c83d56832b709e5d7a08b7ca0ada569418e410c66e3",
   "files": [
     {
       "name": "IO.SYS",
       "size": 16180,
-      "sha256": "37d9ad61ba4f974f2745831132981bc3883e0838d34c1040529424b988ed120d"
+      "sha256": "1a4361f9f83feb9ff0285647190df67f47d9ab666c6366b9dab2eec83db779e5"
     },
     {
       "name": "MSDOS.SYS",
@@ -19,8 +19,8 @@
     },
     {
       "name": "AUTOEXEC.BAT",
-      "size": 84,
-      "sha256": "21c5aec0efb8c20e22138bef18d54ecd4c996e3561186044fec6f2b963411656"
+      "size": 104,
+      "sha256": "5755b045edf80c40bba3e34df7ae393d5eeab411379ee93769b3eefca59aa28c"
     },
     {
       "name": "DOSLIC.TXT",
@@ -69,8 +69,8 @@
     },
     {
       "name": "LICENSE.TXT",
-      "size": 3268,
-      "sha256": "8960d2a1007f2f8cadebdcdbf926165dbc5653e41382e30a00bff8a3ad70d80f"
+      "size": 4354,
+      "sha256": "85aff9078489eb55955f8c880af76d288dafc9e3b600e3185c2f08005ebb0349"
     },
     {
       "name": "CONFIG.SYS",
@@ -84,27 +84,53 @@
     },
     {
       "name": "FD98.COM",
-      "size": 14320,
-      "sha256": "16acb2708eb1425297afb9765b4ece5c9df12ea3d3ef5a8817e7bebc6674e5c6"
+      "size": 15024,
+      "sha256": "11c0a2f53841b3a029b069c6605abef5e40ee2afc33882cee4c32cb9bb4a0283"
     },
     {
       "name": "FILER.TXT",
-      "size": 2299,
-      "sha256": "a1cacabc08c34234a5ac02a9d2a37434ac61ef3c3090b7c94d15db922e7237a4"
+      "size": 2507,
+      "sha256": "aa5fa5eedca2afe0b8b2ff870ec24e1edd03ee9fb32a6b704ce13f00900402d0"
     },
     {
       "name": "FILERLIC.TXT",
       "size": 1068,
       "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
+    },
+    {
+      "name": "EDIT98.COM",
+      "size": 15252,
+      "sha256": "c964e7cb4b48e25a57aa3945c2caf33b78611a997e7aa55495f9e5eb2842334b"
+    },
+    {
+      "name": "EDIT.COM",
+      "size": 15252,
+      "sha256": "c964e7cb4b48e25a57aa3945c2caf33b78611a997e7aa55495f9e5eb2842334b"
+    },
+    {
+      "name": "EDIT.TXT",
+      "size": 1535,
+      "sha256": "24104e8a8dbf102a0c7b393b1336817d648ee9c0c258aeb0efbe0d4d8f3f8c68"
+    },
+    {
+      "name": "EDITLIC.TXT",
+      "size": 1068,
+      "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
+    },
+    {
+      "name": "JPHELLO.TXT",
+      "size": 145,
+      "sha256": "4f66761fc44bae352d3d570177054b66acf57e21b5f37e2132079f63b79c440d"
     }
   ],
-  "dos_commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
+  "dos_commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
   "dos_version": "4",
   "filer_verifier_sha256": "244f9f47e5c39cbc71cb185e0413d096e2a43fb33c288841e71c04673b7d1d1b",
+  "editor_verifier_sha256": "dbd6deefbb027941cf02bb432d85b372a79d4db2132436cc98cce63f8dc2406c",
   "sources": {
     "msdos": {
       "component": "MS-DOS",
-      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
+      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
       "path": "ports/pc98",
       "license": "MIT",
       "repository": "https://github.com/kumakumapon/MS-DOS"
@@ -118,8 +144,15 @@
     "filer": {
       "component": "FD Filer",
       "repository": "https://github.com/kumakumapon/MS-DOS",
-      "commit": "d371a1f8f68a26b4e36b1b1b604d295972b7cba3",
+      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
       "path": "tools/filer",
+      "license": "MIT"
+    },
+    "editor": {
+      "component": "EDIT98",
+      "repository": "https://github.com/kumakumapon/MS-DOS",
+      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
+      "path": "tools/editor",
       "license": "MIT"
     }
   },

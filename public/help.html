@@ -330,7 +330,7 @@
               <a href="./msdos2/LICENSE.txt">MIT License</a>
             </div>
             <div class="note-box">
-              <a href="./?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&amp;run=1&amp;lang=ja">MS-DOS 4.0 + RetroBasic を起動</a>すると
+              <a href="./?fd1=./msdos4/msdos4-retrobasic-508fa65868dc.xdf&amp;run=1&amp;lang=ja">MS-DOS 4.0 + RetroBasic を起動</a>すると
               <code>A&gt;</code> が表示されます。<code>VER</code> は 4.00、
               <code>FD98</code> は二画面ファイラーです。F1でヘルプ、F5でコピー、F6で移動、
               F8で削除、F9でアプリ起動、F10で終了できます。
@@ -338,9 +338,13 @@
               <code>RBASIC PRIMES.BAS</code>・<code>RBASIC GRAPHICS.BAS</code>・
               <code>RBASIC FILEIO.BAS</code> でサンプルを試せます。最後のサンプルは
               <code>SEQ.TXT</code> を作成します。書き込みは同じ起動URLで復元します。
-              A: のみ対応し、HDD/FAT16・2台目のFD・日本語入力は未対応です。
+              <code>EDIT MEMO.TXT</code>で日本語本文を編集できます（F3で保存、F10で終了）。
+              FD98のEでも編集できます。ホストIMEのテキスト送信に対応し、
+              <code>TYPE JPHELLO.TXT</code>で日本語表示を確認できます。
+              A: のみ対応し、HDD/FAT16・2台目のFD・日本語ファイル名・DOS単体FEPは未対応です。
               <a href="./msdos4/README.txt">同梱物・制限</a> /
               <a href="./msdos4/FILER.txt">ファイラーの操作</a> /
+              <a href="./msdos4/EDIT.txt">エディタの操作</a> /
               <a href="./msdos4/LICENSE.txt">MIT License</a>
             </div>
             <p>
@@ -377,7 +381,7 @@
               <a href="./msdos2/LICENSE.txt">MIT License</a>
             </div>
             <div class="note-box">
-              <a href="./?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&amp;run=1&amp;lang=en">Boot MS-DOS 4.0 + RetroBasic</a>
+              <a href="./?fd1=./msdos4/msdos4-retrobasic-508fa65868dc.xdf&amp;run=1&amp;lang=en">Boot MS-DOS 4.0 + RetroBasic</a>
               to reach <code>A&gt;</code>. <code>VER</code> reports 4.00;
               <code>FD98</code> starts the two-pane filer: F1 shows help, F5 copies,
               F6 moves, F8 deletes, F9 launches apps, and F10 exits.
@@ -385,9 +389,13 @@
               Try <code>RBASIC PRIMES.BAS</code>, <code>RBASIC GRAPHICS.BAS</code>, or
               <code>RBASIC FILEIO.BAS</code>. The last sample creates <code>SEQ.TXT</code>.
               Disk writes persist for the same boot URL. Only drive A: is supported;
-              HDD/FAT16, a second floppy, and Japanese input are unsupported.
+              <code>EDIT MEMO.TXT</code> edits Japanese text (F3 saves, F10 quits);
+              FD98's E key also opens the editor. Use the host IME in Send Text;
+              <code>TYPE JPHELLO.TXT</code> demonstrates Japanese display.
+              HDD/FAT16, a second floppy, Japanese filenames and a standalone DOS FEP are unsupported.
               <a href="./msdos4/README.txt">Components and limits</a> /
               <a href="./msdos4/FILER.txt">Filer keyboard guide</a> /
+              <a href="./msdos4/EDIT.txt">Editor keyboard guide</a> /
               <a href="./msdos4/LICENSE.txt">MIT licenses</a>
             </div>
             <p>
@@ -791,6 +799,8 @@
         <section class="help-card">
           <div class="lang-ja">
             <h2>テキスト送信（日本語入力）</h2>
+            <p>「…」→「入力」→「入力設定」→「キーボード」で日本語JIS 106/109と従来のUS配列を
+              選べます。設定は保存されます。JISの半角/全角キーでも入力欄を開けます。</p>
             <p>
               「…」→「入力」の「テキスト送信」、または <strong>Shiftキーを2回連続</strong>
               (0.5秒以内、間に他のキーを挟まない)で押すと、送信バーが開きます。
@@ -800,8 +810,11 @@
               ホスト側（このページ）で入力したテキストを、ゲスト(エミュレータ内)へ
               キーボード入力として送信します。「Enter付き」にチェックを入れると
               末尾に改行を付けて送信します。
+              ホストOSのIMEで変換・確定してから「送信」を押してください。
+              変換中のキーと確定Enterはゲストへ送りません。Shift_JISで表せない文字は欄に残して通知します。
             </p>
             <p>
+              同梱DOS 4.0とEDIT98は日本語の入力・表示に対応し、追加ヘルパーは不要です。
               全角文字(Shift_JIS)は、FreeDOS(98) など対応しているゲスト環境では
               そのまま届きます。NEC MS-DOS の標準的なコンソール入力では全角が
               化けてしまう場合があります。その際はテキスト送信バー内の
@@ -813,6 +826,8 @@
           </div>
           <div class="lang-en">
             <h2>Sending text (typing Japanese)</h2>
+            <p>More → Input → Input Settings → Keyboard selects Japanese JIS 106/109
+              or the existing US layout. The choice is saved. The JIS half/full-width key also opens input.</p>
             <p>
               Choose More (…) → Input → Send Text, or press <strong>Shift twice in a
               row</strong> (within 0.5 seconds, no other key in between) to open
@@ -823,8 +838,11 @@
               Text you type on the host (this page) is sent to the guest (inside
               the emulator) as keyboard input. Check "With Enter" to append a
               newline at the end.
+              Use your OS IME, commit conversion, then Send. Composition keys and confirming Enter stay
+              in the browser. Characters outside Shift_JIS are retained for correction.
             </p>
             <p>
+              The bundled DOS 4.0 and EDIT98 support Japanese input/display without an extra helper.
               Full-width characters (Shift_JIS) reach the guest directly on
               environments that support them, such as FreeDOS(98). On a plain NEC
               MS-DOS console, full-width characters may come out garbled. In that
