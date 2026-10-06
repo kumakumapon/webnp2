@@ -77,6 +77,12 @@ try {
   assert.equal((await readGuest('EXEC.TXT')).toString(), 'DOS4 EXEC OK\r\n');
   results.push('Source-built DOS 4.00 boot, version API, COM EXEC, redirected output and return');
 
+  await command('XMSCHK');
+  await line('XMS allocation/move/free OK');
+  await command('EMSCHK');
+  await line('EMS map/read/write/free OK');
+  results.push('PC-98 XMS allocation/move/free and EMS mapping/read/write/free');
+
   await command('RBASIC');
   await line('Ready');
   const program = ['10 FOR I=1 TO 3', '20 PRINT I', '30 NEXT I', '40 PRINT "BUNDLED BASIC OK"'];
