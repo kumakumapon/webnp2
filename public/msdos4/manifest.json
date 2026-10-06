@@ -1,6 +1,6 @@
 {
-  "image": "msdos4-retrobasic-508fa65868dc.xdf",
-  "sha256": "508fa65868dc19f0b0cb6c83d56832b709e5d7a08b7ca0ada569418e410c66e3",
+  "image": "msdos4-retrobasic-98623b3c3241.xdf",
+  "sha256": "98623b3c32414acedd90a2f49681321fd21a7c8c6421831aa10657178909fc16",
   "files": [
     {
       "name": "IO.SYS",
@@ -28,79 +28,9 @@
       "sha256": "b5179f780ec212a434efcc989a2295a140deb0bdb17182d2bf9c5f6f1f1a01c4"
     },
     {
-      "name": "RBASIC.COM",
-      "size": 27916,
-      "sha256": "a23f64bc87a0b7d5d59ebe36ffacb4324386830c382dd27df2d06e29cd8c2813"
-    },
-    {
-      "name": "PRIMES.BAS",
-      "size": 425,
-      "sha256": "2a39547a549c3bec64ce60c9a4b1d55da9902e5115d6cf2f40bbe8b4ca8c8539"
-    },
-    {
-      "name": "FUNCTEST.BAS",
-      "size": 1432,
-      "sha256": "b8d4e990f5e812967ffa9bee8dbe139516e9368e509b6f40f134ec53c0de40a8"
-    },
-    {
-      "name": "GRAPHICS.BAS",
-      "size": 476,
-      "sha256": "a2d161f002aeaf98a144a707da1479d923b620867e20f18c4aa71f767f326b57"
-    },
-    {
-      "name": "WAVE3D.BAS",
-      "size": 466,
-      "sha256": "aadc2cdef68bce1b1e23806ad67eee564fcd3213223440aa2fd36b00e9f267dc"
-    },
-    {
-      "name": "MANDEL.BAS",
-      "size": 622,
-      "sha256": "406ba063e781d44c9aa74ba1aca116559f41266649c07872ce0ef2c9d800fbb6"
-    },
-    {
-      "name": "MANSMOKE.BAS",
-      "size": 624,
-      "sha256": "4c89079b557a16b4be42a3a39352a195729de6345de48166094fc5ae823ee42d"
-    },
-    {
-      "name": "FILEIO.BAS",
-      "size": 796,
-      "sha256": "51a5968b95835d1263baab643cf347dcf95438660eec9d45b6f9d357d5eaf700"
-    },
-    {
-      "name": "LICENSE.TXT",
-      "size": 4354,
-      "sha256": "85aff9078489eb55955f8c880af76d288dafc9e3b600e3185c2f08005ebb0349"
-    },
-    {
       "name": "CONFIG.SYS",
-      "size": 34,
-      "sha256": "2bca5ac0479c3760f5da20a9e5b6069657204d347a21e22687ca3f5938110490"
-    },
-    {
-      "name": "P98TEST.COM",
-      "size": 75,
-      "sha256": "1ad2574b94b621ed85d35c8d8a99fcd0c01f6c733c55961172227650f49c9b81"
-    },
-    {
-      "name": "FD98.COM",
-      "size": 15024,
-      "sha256": "11c0a2f53841b3a029b069c6605abef5e40ee2afc33882cee4c32cb9bb4a0283"
-    },
-    {
-      "name": "FILER.TXT",
-      "size": 2507,
-      "sha256": "aa5fa5eedca2afe0b8b2ff870ec24e1edd03ee9fb32a6b704ce13f00900402d0"
-    },
-    {
-      "name": "FILERLIC.TXT",
-      "size": 1068,
-      "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
-    },
-    {
-      "name": "EDIT98.COM",
-      "size": 15252,
-      "sha256": "c964e7cb4b48e25a57aa3945c2caf33b78611a997e7aa55495f9e5eb2842334b"
+      "size": 83,
+      "sha256": "84766b29c1d8a6a322caade3654358d353d0f075989214aa477217c8ecf7d06a"
     },
     {
       "name": "EDIT.COM",
@@ -113,24 +43,124 @@
       "sha256": "24104e8a8dbf102a0c7b393b1336817d648ee9c0c258aeb0efbe0d4d8f3f8c68"
     },
     {
+      "name": "EDIT98.COM",
+      "size": 15252,
+      "sha256": "c964e7cb4b48e25a57aa3945c2caf33b78611a997e7aa55495f9e5eb2842334b"
+    },
+    {
       "name": "EDITLIC.TXT",
       "size": 1068,
       "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
     },
     {
+      "name": "EMM386.EXE",
+      "size": 37474,
+      "sha256": "8054f03bc762e22ba9897c901cbf24bd7f406449b7cb390a685fa3d828a90ef0"
+    },
+    {
+      "name": "EMM386L.TXT",
+      "size": 4922,
+      "sha256": "47e9026e597eb214ec7e9c0a5fe72311b67a81d26bcf4a3cfa6ab21eb8ffeca0"
+    },
+    {
+      "name": "EMSCHK.COM",
+      "size": 680,
+      "sha256": "0b0bb875896b5791a21174533b471308a6d3e0d22de4da8c8dab0eeb1bd62820"
+    },
+    {
+      "name": "FD98.COM",
+      "size": 15024,
+      "sha256": "11c0a2f53841b3a029b069c6605abef5e40ee2afc33882cee4c32cb9bb4a0283"
+    },
+    {
+      "name": "FDXMS286.SYS",
+      "size": 4790,
+      "sha256": "cd15149999373e79ed2269a2dbbaee61ea7226f8330fad6f60309606e8fd6c5f"
+    },
+    {
+      "name": "FILEIO.BAS",
+      "size": 796,
+      "sha256": "51a5968b95835d1263baab643cf347dcf95438660eec9d45b6f9d357d5eaf700"
+    },
+    {
+      "name": "FILER.TXT",
+      "size": 2507,
+      "sha256": "aa5fa5eedca2afe0b8b2ff870ec24e1edd03ee9fb32a6b704ce13f00900402d0"
+    },
+    {
+      "name": "FILERLIC.TXT",
+      "size": 1068,
+      "sha256": "81bd00191d942981c6ebbb1b68d9fb4223aef575763c21314ef44f851324b7c1"
+    },
+    {
+      "name": "FUNCTEST.BAS",
+      "size": 1432,
+      "sha256": "b8d4e990f5e812967ffa9bee8dbe139516e9368e509b6f40f134ec53c0de40a8"
+    },
+    {
+      "name": "GRAPHICS.BAS",
+      "size": 476,
+      "sha256": "a2d161f002aeaf98a144a707da1479d923b620867e20f18c4aa71f767f326b57"
+    },
+    {
       "name": "JPHELLO.TXT",
       "size": 145,
       "sha256": "4f66761fc44bae352d3d570177054b66acf57e21b5f37e2132079f63b79c440d"
+    },
+    {
+      "name": "LICENSE.TXT",
+      "size": 4354,
+      "sha256": "85aff9078489eb55955f8c880af76d288dafc9e3b600e3185c2f08005ebb0349"
+    },
+    {
+      "name": "MANDEL.BAS",
+      "size": 622,
+      "sha256": "406ba063e781d44c9aa74ba1aca116559f41266649c07872ce0ef2c9d800fbb6"
+    },
+    {
+      "name": "MANSMOKE.BAS",
+      "size": 624,
+      "sha256": "4c89079b557a16b4be42a3a39352a195729de6345de48166094fc5ae823ee42d"
+    },
+    {
+      "name": "P98TEST.COM",
+      "size": 75,
+      "sha256": "1ad2574b94b621ed85d35c8d8a99fcd0c01f6c733c55961172227650f49c9b81"
+    },
+    {
+      "name": "PRIMES.BAS",
+      "size": 425,
+      "sha256": "2a39547a549c3bec64ce60c9a4b1d55da9902e5115d6cf2f40bbe8b4ca8c8539"
+    },
+    {
+      "name": "RBASIC.COM",
+      "size": 27916,
+      "sha256": "a23f64bc87a0b7d5d59ebe36ffacb4324386830c382dd27df2d06e29cd8c2813"
+    },
+    {
+      "name": "WAVE3D.BAS",
+      "size": 466,
+      "sha256": "aadc2cdef68bce1b1e23806ad67eee564fcd3213223440aa2fd36b00e9f267dc"
+    },
+    {
+      "name": "XMSCHK.COM",
+      "size": 602,
+      "sha256": "bade78aa3d756d794d067418b5902e81e887eca4d4649006061bea1aa95332a1"
+    },
+    {
+      "name": "XMSLIC.TXT",
+      "size": 17983,
+      "sha256": "e6f390535d95dc536feb9750189daeb6efe6cd4922826a3885411c3d547a58a5"
     }
   ],
-  "dos_commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
+  "dos_commit": "3efe31f7443fc716e61a29d05e414e04a7f26581",
   "dos_version": "4",
   "filer_verifier_sha256": "244f9f47e5c39cbc71cb185e0413d096e2a43fb33c288841e71c04673b7d1d1b",
   "editor_verifier_sha256": "dbd6deefbb027941cf02bb432d85b372a79d4db2132436cc98cce63f8dc2406c",
   "sources": {
     "msdos": {
       "component": "MS-DOS",
-      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
+      "commit": "3efe31f7443fc716e61a29d05e414e04a7f26581",
       "path": "ports/pc98",
       "license": "MIT",
       "repository": "https://github.com/kumakumapon/MS-DOS"
@@ -144,17 +174,37 @@
     "filer": {
       "component": "FD Filer",
       "repository": "https://github.com/kumakumapon/MS-DOS",
-      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
+      "commit": "3efe31f7443fc716e61a29d05e414e04a7f26581",
       "path": "tools/filer",
       "license": "MIT"
     },
     "editor": {
       "component": "EDIT98",
       "repository": "https://github.com/kumakumapon/MS-DOS",
-      "commit": "62181dbfad74ba722cd0ef9af6ae347f3f541cdf",
+      "commit": "3efe31f7443fc716e61a29d05e414e04a7f26581",
       "path": "tools/editor",
       "license": "MIT"
     }
   },
-  "license": "MIT"
+  "license": "MIT + GPL-2.0-only + Artistic-1.0",
+  "memory_drivers": {
+    "FDXMS286.SYS": {
+      "version": "0.03.Temperaments.r1 (PC-98)",
+      "license": "GPL-2.0-only",
+      "license_file": "XMSLIC.TXT",
+      "repository": "https://github.com/FDOS/himem",
+      "source_commit": "25aca5c4bec2fc4197c9b0f71c6d7dd1c331e96f",
+      "sha256": "cd15149999373e79ed2269a2dbbaee61ea7226f8330fad6f60309606e8fd6c5f",
+      "license_sha256": "e6f390535d95dc536feb9750189daeb6efe6cd4922826a3885411c3d547a58a5"
+    },
+    "EMM386.EXE": {
+      "version": "2.26 NEC PC-98",
+      "license": "Artistic-1.0",
+      "license_file": "EMM386L.TXT",
+      "repository": "https://github.com/lpproj/emm386.nec",
+      "source_commit": "e3bfad17d85a549876f08c7ddb656302a4541db7",
+      "sha256": "8054f03bc762e22ba9897c901cbf24bd7f406449b7cb390a685fa3d828a90ef0",
+      "license_sha256": "47e9026e597eb214ec7e9c0a5fe72311b67a81d26bcf4a3cfa6ab21eb8ffeca0"
+    }
+  }
 }

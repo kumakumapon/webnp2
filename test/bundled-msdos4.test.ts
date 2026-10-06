@@ -44,6 +44,9 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(hash(readFileSync(new URL('../scripts/verify-editor.mjs', import.meta.url))))
       .toBe(manifest.editor_verifier_sha256);
     expect(manifest.sources.editor.commit).toBe(manifest.sources.msdos.commit);
+    expect(manifest.memory_drivers['FDXMS286.SYS'].license).toBe('GPL-2.0-only');
+    expect(manifest.memory_drivers['EMM386.EXE'].license).toBe('Artistic-1.0');
+    expect(manifest.license).toBe('MIT + GPL-2.0-only + Artistic-1.0');
     expect(fatReadFile(disk, 'FILER.TXT')).toEqual(
       new Uint8Array(readFileSync(new URL('../public/msdos4/FILER.txt', import.meta.url))),
     );
@@ -54,7 +57,15 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
       'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', 'FD98.COM', 'FILER.TXT', 'FILERLIC.TXT',
       'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
+      'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
     ]));
+    const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
+    expect(config).toContain('DEVICE=FDXMS286.SYS');
+    expect(config).toContain('DEVICE=EMM386.EXE EMM=8192');
+    for (const [name, driver] of Object.entries(manifest.memory_drivers)) {
+      expect(hash(fatReadFile(disk, name))).toBe(driver.sha256);
+      expect(hash(fatReadFile(disk, driver.license_file))).toBe(driver.license_sha256);
+    }
   });
 
   it('boots the bundled image relative to the Pages project path', () => {
