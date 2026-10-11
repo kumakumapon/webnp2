@@ -21,6 +21,11 @@ A> が表示されたら VER / DIR を試すか、次のコマンドを実行し
   EDIT MEMO.TXT          Shift_JIS本文の新規作成・編集（EDIT98も同じアプリ）
   TYPE JPHELLO.TXT       日本語表示のサンプル
 
+CPANEL で DOS の設定画面を開きます。X/E で XMS/EMS、+/- で FILES、
+[/] で BUFFERS、F で FD98 の自動起動を切り替え、S で保存します。
+設定は CONFIG.SYS / AUTOEXEC.BAT に保存され、CONFIG.SYS は再起動後に有効になります。
+CPANEL.TXT にキー操作を記載しています。
+
 「…」→「入力」→「入力設定」→「キーボード」でJIS 106/109または従来のUS配列を選びます。
 設定は保存します。日本語UIの初期値はJIS、英語UIはUSです。
 「テキスト送信」欄でホストOSのIMEを使い、変換・確定後に送信してください。
@@ -87,6 +92,11 @@ Ctrl-Z undoes/redoes the last edit. The limit is 16 KiB, output Shift_JIS/CRLF.
 Saving writes/closes a temporary before replacing the original; failures
 preserve/restore the original or show a recovery path. See EDIT.TXT/EDITLIC.TXT.
 TYPE JPHELLO.TXT demonstrates Japanese console output.
+
+Run CPANEL to open the DOS settings screen. X/E toggle XMS/EMS, +/- changes
+FILES, [/] toggles BUFFERS, and F toggles FD98 auto-start. Press S to save.
+Settings are saved to CONFIG.SYS / AUTOEXEC.BAT; CONFIG.SYS changes take effect
+after reboot. CPANEL.TXT lists all keys.
 In BASIC, try 10 PRINT "HELLO", RUN, and SAVE "HELLO.BAS".
 Sequential file I/O supports OPEN/CLOSE, PRINT#/WRITE#/INPUT#/LINE INPUT#,
 EOF/LOF/LOC/INPUT$. Disk writes persist in IndexedDB for the same boot URL.
