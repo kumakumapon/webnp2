@@ -455,8 +455,10 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 続いてDOS出典の `tools/filer` をビルドし、FD98と説明・ライセンスを同じFDへ追加します。
 `public/msdos4/` と同じ出典からコピーする `scripts/verify-filer.mjs` をコミットし、
 README・使い方ページの起動URLを更新してください。
-保存データ・共有URLのために以前のイメージファイルは残します。
-通常の Pages ビルドで同梱するため、利用者やデプロイ環境に DOS ビルドツールは不要です。
+保存データ・共有URLのために以前のイメージファイルは残します。Pages のCIは
+ピン留めした MS-DOS ソースから CPANEL をビルドし、ジョブ内で manifest を更新して
+生成したFDをサイトへ同梱します。XDFはCI成果物にも保存しますが、ワークフローから
+リポジトリへ書き戻しません。
 
 既存の起動FDへCPANELを追加する場合は、次の手順で取り込み・検証します。
 
