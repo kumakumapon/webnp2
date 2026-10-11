@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Generate the CPANEL-enabled DOS 4 image
+        run: ./scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm ci
       - run: npm test
       - run: npm run build
@@ -45,3 +47,12 @@ jobs:
           name: bundled-dos-browser-validation
           path: test-results/
           if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msdos4-cpanel-pages-build
+          path: |
+            public/msdos4/*.xdf
+            public/msdos4/manifest.json
+            public/msdos4/LICENSE.txt
+            public/msdos4/CPANEL.txt
