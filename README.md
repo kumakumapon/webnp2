@@ -510,8 +510,10 @@ same disk. Commit `public/msdos4/` and the copied guest verifiers
 in the READMEs/help page. Verification includes physical JIS/US keys, IME
 composition through the browser field, byte-exact Japanese save/reopen/TYPE,
 and the existing BASIC/filer tests.
-Keep previous image filenames for saved disks and shared URLs. The normal
-Pages build includes the disk; users and deployment do not need DOS build tools.
+Keep previous image filenames for saved disks and shared URLs. The Pages workflows
+build CPANEL from a pinned MS-DOS source commit, update the manifest in the job
+workspace, and bundle the generated disk into the deployment. The generated XDF
+is available as a CI artifact; the workflow does not commit it back to this repository.
 
 To add CPANEL to the current bundled image without rebuilding its other components:
 
