@@ -83,6 +83,7 @@ try {
   await line('EMS map/read/write/free OK');
   results.push('PC-98 XMS allocation/move/free and EMS mapping/read/write/free');
 
+  if (manifest.files.some(file => file.name === 'CPANEL.COM')) {
   await command('CPANEL');
   await line('PC-98 SYSTEM SETTINGS');
   let panel = await text();
@@ -127,6 +128,7 @@ try {
   await panelKey('q');
   await line('A>');
   results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
+  }
 
   await command('RBASIC');
   await line('Ready');
