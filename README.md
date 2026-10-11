@@ -513,6 +513,19 @@ and the existing BASIC/filer tests.
 Keep previous image filenames for saved disks and shared URLs. The normal
 Pages build includes the disk; users and deployment do not need DOS build tools.
 
+To add CPANEL to the current bundled image without rebuilding its other components:
+
+```sh
+python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
+```
+
+The importer builds CPANEL from the merged MS-DOS source, preserves the existing
+DOS 4 files, updates the image manifest, and leaves previous image filenames in place.
+
 ### Updating the core (public/core/)
 
 `public/core/` holds the build output of
