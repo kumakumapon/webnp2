@@ -32,7 +32,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Generate the CPANEL-enabled DOS 4 image
-        run: ./scripts/prepare-msdos4-cpanel-ci.sh
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm run build
         env:
           # CORS未対応の配布元(OneDrive除く)向けの中継サービスのURL。リポジトリ変数
