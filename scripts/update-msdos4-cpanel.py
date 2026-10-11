@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import struct
 import subprocess
 from pathlib import Path
@@ -135,6 +136,11 @@ def main():
     (destination / 'LICENSE.txt').write_bytes(notices)
     (destination / 'CPANEL.txt').write_bytes(apps['CPANEL.TXT'])
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+    for readme in (webnp2 / 'README.md', webnp2 / 'README.ja.md'):
+        text = readme.read_text()
+        updated = re.sub(r'msdos4-retrobasic-[0-9a-f]{12}\\.xdf', manifest['image'], text)
+        if updated != text:
+            readme.write_text(updated)
     print(f"Updated {destination / manifest['image']} ({sha256})")
 
 
