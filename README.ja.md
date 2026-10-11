@@ -295,6 +295,10 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 既存ファイルには上書きしません。[操作説明](public/msdos4/FILER.txt)と
 [同梱ファイラー](docs/bundled-filer.md)を参照してください。
 
+`CPANEL` で XMS/EMS、FILES/BUFFERS、FD98 の自動起動を設定できます。
+`S` で保存し、CONFIG.SYS の変更は再起動後に反映されます。
+[操作説明](public/msdos4/CPANEL.txt)を参照してください。
+
 DOS カーネルとシェルは
 [MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3)
 の v4.0 ソースからビルドし、ネイティブ版 RetroBasic と独自実装の FD Filer を同梱しています。各 MIT License 全文を
