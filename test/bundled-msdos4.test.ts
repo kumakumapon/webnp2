@@ -7,6 +7,7 @@ import { fatList, fatReadFile, openDiskImage } from '../src/api/fat.ts';
 
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const image = readFileSync(new URL(`../public/msdos4/${manifest.image}`, import.meta.url));
+const hasCpanel = manifest.files.some(file => file.name === 'CPANEL.COM');
 
 describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
   it('ships the clean release disk, both FATs, all recorded files and full MIT notices', () => {
@@ -32,7 +33,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(fatReadFile(disk, 'LICENSE.TXT')).toEqual(new Uint8Array(notices));
     expect(notices.toString()).toContain('Copyright (c) Microsoft Corporation');
     expect(notices.toString()).toContain('Copyright (c) 2026 kumakumapon');
-    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(5);
+    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(hasCpanel ? 6 : 5);
     expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'EDITLIC.TXT'))).toBe(true);
@@ -53,11 +54,20 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(hash(readFileSync(new URL('../scripts/verify-filer.mjs', import.meta.url))))
       .toBe(manifest.filer_verifier_sha256);
     expect(manifest.sources.filer.commit).toBe(manifest.sources.msdos.commit);
+    if (hasCpanel) {
+      expect(notices.includes(fatReadFile(disk, 'CPLIC.TXT'))).toBe(true);
+      expect(fatReadFile(disk, 'CPANEL.TXT')).toEqual(
+        new Uint8Array(readFileSync(new URL('../public/msdos4/CPANEL.txt', import.meta.url))),
+      );
+      expect((manifest.sources as Record<string, { commit: string }>).control.commit)
+        .toBe(manifest.sources.msdos.commit);
+    }
     expect(manifest.files.map(file => file.name)).toEqual(expect.arrayContaining([
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
       'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', 'FD98.COM', 'FILER.TXT', 'FILERLIC.TXT',
       'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
       'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
+      ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
     ]));
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');
