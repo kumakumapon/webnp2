@@ -20,7 +20,7 @@ jobs:
           node-version: 24
           cache: npm
       - name: Generate the CPANEL-enabled DOS 4 image
-        run: ./scripts/prepare-msdos4-cpanel-ci.sh
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm ci
       - run: npm test
       - run: npm run build
