@@ -458,6 +458,20 @@ README・使い方ページの起動URLを更新してください。
 保存データ・共有URLのために以前のイメージファイルは残します。
 通常の Pages ビルドで同梱するため、利用者やデプロイ環境に DOS ビルドツールは不要です。
 
+既存の起動FDへCPANELを追加する場合は、次の手順で取り込み・検証します。
+
+```sh
+python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
+```
+
+取り込みスクリプトはマージ済み MS-DOS ソースから CPANEL をビルドし、
+既存 DOS 4 ファイルを保ったままイメージとmanifestを更新します。
+以前のイメージファイル名も保存データ・共有URLのために残します。
+
 ### コア (public/core/) の更新
 
 `public/core/` には [NP2kai-wasm](../NP2kai) のビルド成果物
