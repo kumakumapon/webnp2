@@ -295,6 +295,10 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 既存ファイルには上書きしません。[操作説明](public/msdos4/FILER.txt)と
 [同梱ファイラー](docs/bundled-filer.md)を参照してください。
 
+`CPANEL` で XMS/EMS、FILES/BUFFERS、FD98 の自動起動を設定できます。
+`S` で保存し、CONFIG.SYS の変更は再起動後に反映されます。
+[操作説明](public/msdos4/CPANEL.txt)を参照してください。
+
 DOS カーネルとシェルは
 [MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3)
 の v4.0 ソースからビルドし、ネイティブ版 RetroBasic と独自実装の FD Filer を同梱しています。各 MIT License 全文を
@@ -453,6 +457,20 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 README・使い方ページの起動URLを更新してください。
 保存データ・共有URLのために以前のイメージファイルは残します。
 通常の Pages ビルドで同梱するため、利用者やデプロイ環境に DOS ビルドツールは不要です。
+
+既存の起動FDへCPANELを追加する場合は、次の手順で取り込み・検証します。
+
+```sh
+python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173
+CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
+```
+
+取り込みスクリプトはマージ済み MS-DOS ソースから CPANEL をビルドし、
+既存 DOS 4 ファイルを保ったままイメージとmanifestを更新します。
+以前のイメージファイル名も保存データ・共有URLのために残します。
 
 ### コア (public/core/) の更新
 

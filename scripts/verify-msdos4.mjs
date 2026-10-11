@@ -83,6 +83,53 @@ try {
   await line('EMS map/read/write/free OK');
   results.push('PC-98 XMS allocation/move/free and EMS mapping/read/write/free');
 
+  if (manifest.files.some(file => file.name === 'CPANEL.COM')) {
+  await command('CPANEL');
+  await line('PC-98 SYSTEM SETTINGS');
+  let panel = await text();
+  assert.ok(panel.includes('XMS manager FDXMS286.SYS : ENABLED'));
+  assert.ok(panel.includes('EMS manager EMM386.EXE   : ENABLED'));
+  assert.ok(panel.includes('FILES=20   BUFFERS=8'));
+  const panelKey = async value => {
+    await page.evaluate(value => window.np2debug.np2.typeText(value), value);
+    await new Promise(resolve => setTimeout(resolve, 250));
+  };
+  await panelKey('x');
+  await panelKey('=');
+  await panelKey(']');
+  await panelKey('f');
+  await panelKey('s');
+  await page.waitForFunction(() => window.np2debug.np2.getScreenText().text.includes('Saved. Reboot'));
+  await panelKey('q');
+  await line('A>');
+  await command('CPANEL');
+  await line('PC-98 SYSTEM SETTINGS');
+  panel = await text();
+  assert.ok(panel.includes('XMS manager FDXMS286.SYS : DISABLED'));
+  assert.ok(panel.includes('EMS manager EMM386.EXE   : DISABLED'));
+  assert.ok(panel.includes('FILES=30   BUFFERS=16'));
+  assert.ok(panel.includes('Start FD98 file manager automatically : YES'));
+  await panelKey('x');
+  await panelKey('e');
+  await panelKey('-');
+  await panelKey('[');
+  await panelKey('f');
+  await panelKey('s');
+  await page.waitForFunction(() => window.np2debug.np2.getScreenText().text.includes('Saved. Reboot'));
+  await panelKey('q');
+  await line('A>');
+  await command('CPANEL');
+  await line('PC-98 SYSTEM SETTINGS');
+  panel = await text();
+  assert.ok(panel.includes('XMS manager FDXMS286.SYS : ENABLED'));
+  assert.ok(panel.includes('EMS manager EMM386.EXE   : ENABLED'));
+  assert.ok(panel.includes('FILES=20   BUFFERS=8'));
+  assert.ok(panel.includes('Start FD98 file manager automatically : NO'));
+  await panelKey('q');
+  await line('A>');
+  results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
+  }
+
   await command('RBASIC');
   await line('Ready');
   const program = ['10 FOR I=1 TO 3', '20 PRINT I', '30 NEXT I', '40 PRINT "BUNDLED BASIC OK"'];
