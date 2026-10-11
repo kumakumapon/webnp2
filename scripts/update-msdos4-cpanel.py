@@ -138,7 +138,7 @@ def main():
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
     for readme in (webnp2 / 'README.md', webnp2 / 'README.ja.md'):
         text = readme.read_text()
-        updated = re.sub(r'msdos4-retrobasic-[0-9a-f]{12}\\.xdf', manifest['image'], text)
+        updated = re.sub(r'msdos4-retrobasic-[0-9a-f]{12}\.xdf', manifest['image'], text)
         if updated != text:
             readme.write_text(updated)
     print(f"Updated {destination / manifest['image']} ({sha256})")
