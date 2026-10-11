@@ -125,10 +125,15 @@ def main():
     applications += [(name, (editor / 'build' / name).read_bytes())
                      for name in ('EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT')]
     notices += b'\r\nEDIT98 license\r\n' + (editor / 'LICENSE').read_bytes()
+    control = dos / 'tools/control'
+    subprocess.run(['make', '-C', str(control), 'all'], check=True)
+    applications += [(name, (control / 'build' / name).read_bytes())
+                     for name in ('CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT')]
+    notices += b'\r\nCPANEL license\r\n' + (control / 'LICENSE').read_bytes()
     extra = [(file['name'], notices if file['name'] == 'LICENSE.TXT' else files[file['name']])
              for file in manifest['files'] if file['name'] not in
              ('IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT')]
-    autoexec = files['AUTOEXEC.BAT'] + b'ECHO FD98: File manager   EDIT: Text editor   RBASIC: BASIC\r\n'
+    autoexec = files['AUTOEXEC.BAT'] + b'ECHO FD98: File manager   EDIT: Text editor   CPANEL: System settings   RBASIC: BASIC\r\n'
     image, entries = helper.make_image((dos_build / 'ipl.bin').read_bytes(), files['IO.SYS'],
                                       [*extra, *applications], kernel=files['MSDOS.SYS'],
                                       command=files['COMMAND.COM'], autoexec=autoexec)
@@ -138,6 +143,8 @@ def main():
                         'commit': sources['msdos']['commit'], 'path': 'tools/filer', 'license': 'MIT'}
     sources['editor'] = {'component': 'EDIT98', 'repository': sources['msdos']['repository'],
                          'commit': sources['msdos']['commit'], 'path': 'tools/editor', 'license': 'MIT'}
+    sources['control'] = {'component': 'CPANEL', 'repository': sources['msdos']['repository'],
+                          'commit': sources['msdos']['commit'], 'path': 'tools/control', 'license': 'MIT'}
     # Keep the guest UI checks in sync with the public, pinned filer implementation.
     verifier = filer / 'verify-ui.mjs'
     (Path(__file__).parent / 'verify-filer.mjs').write_bytes(verifier.read_bytes())
@@ -153,6 +160,7 @@ def main():
     (destination / 'LICENSE.txt').write_bytes(notices)
     (destination / 'FILER.txt').write_bytes((filer / 'build/FILER.TXT').read_bytes())
     (destination / 'EDIT.txt').write_bytes((editor / 'build/EDIT.TXT').read_bytes())
+    (destination / 'CPANEL.txt').write_bytes((control / 'build/CPANEL.TXT').read_bytes())
     (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Imported {name}: MS-DOS {sources["msdos"]["commit"]}, RetroBasic {sources["retrobasic"]["commit"]}')
     print('Keep old image filenames available for saved disks and shared URLs.')
