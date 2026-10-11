@@ -340,6 +340,10 @@ use CRLF. FD98's **E** key opens the selected file in EDIT98. `TYPE JPHELLO.TXT`
 shows the Japanese sample. See [Japanese input and editing](docs/japanese-input.md)
 and [editor keyboard guide](public/msdos4/EDIT.txt).
 
+Run `CPANEL` to change XMS/EMS, FILES/BUFFERS, or FD98 auto-start. Press `S`
+to save; CONFIG.SYS changes take effect after reboot. See
+[CPANEL.TXT](public/msdos4/CPANEL.txt).
+
 The DOS kernel and shell are built from the v4.0 sources in
 [MS-DOS commit 62181db](https://github.com/kumakumapon/MS-DOS/tree/62181dbfad74ba722cd0ef9af6ae347f3f541cdf);
 the disk also includes native RetroBasic, FD Filer, and the new MIT-licensed EDIT98.
