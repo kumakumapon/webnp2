@@ -295,6 +295,10 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 既存ファイルには上書きしません。[操作説明](public/msdos4/FILER.txt)と
 [同梱ファイラー](docs/bundled-filer.md)を参照してください。
 
+`WIN98` でPC-98用の独自ウィンドウデスクトップを起動できます。
+ランチャー・ファイル一覧・メモ・ヘルプを表示し、キーボードでウィンドウの切り替え、
+移動・サイズ変更・最小化ができます。[操作説明](docs/window-desktop.md)を参照してください。
+
 `CPANEL` で XMS/EMS、FILES/BUFFERS、FD98 の自動起動を設定できます。
 `S` で保存し、CONFIG.SYS の変更は再起動後に反映されます。
 [操作説明](public/msdos4/CPANEL.txt)を参照してください。
@@ -456,21 +460,21 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 `public/msdos4/` と同じ出典からコピーする `scripts/verify-filer.mjs` をコミットし、
 README・使い方ページの起動URLを更新してください。
 保存データ・共有URLのために以前のイメージファイルは残します。Pages のCIは
-ピン留めした MS-DOS ソースから CPANEL をビルドし、ジョブ内で manifest を更新して
+ピン留めした MS-DOS ソースから CPANEL と WIN98 をビルドし、ジョブ内で manifest を更新して
 生成したFDをサイトへ同梱します。XDFはCI成果物にも保存しますが、ワークフローから
 リポジトリへ書き戻しません。
 
-既存の起動FDへCPANELを追加する場合は、次の手順で取り込み・検証します。
+既存の起動FDへCPANELとWIN98を追加する場合は、次の手順で取り込み・検証します。
 
 ```sh
-python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS
+python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS --with-window
 npm test
 npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 ```
 
-取り込みスクリプトはマージ済み MS-DOS ソースから CPANEL をビルドし、
+取り込みスクリプトは固定コミットの MS-DOS ソースから CPANEL と WIN98 をビルドし、
 既存 DOS 4 ファイルを保ったままイメージとmanifestを更新します。
 以前のイメージファイル名も保存データ・共有URLのために残します。
 

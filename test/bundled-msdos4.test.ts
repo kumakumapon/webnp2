@@ -8,6 +8,7 @@ import { fatList, fatReadFile, openDiskImage } from '../src/api/fat.ts';
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const image = readFileSync(new URL(`../public/msdos4/${manifest.image}`, import.meta.url));
 const hasCpanel = manifest.files.some(file => file.name === 'CPANEL.COM');
+const hasWindow = manifest.files.some(file => file.name === 'WIN98.COM');
 
 describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
   it('ships the clean release disk, both FATs, all recorded files and full MIT notices', () => {
@@ -33,7 +34,8 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(fatReadFile(disk, 'LICENSE.TXT')).toEqual(new Uint8Array(notices));
     expect(notices.toString()).toContain('Copyright (c) Microsoft Corporation');
     expect(notices.toString()).toContain('Copyright (c) 2026 kumakumapon');
-    expect(notices.toString().split('Permission is hereby granted')).toHaveLength(hasCpanel ? 6 : 5);
+    expect(notices.toString().split('Permission is hereby granted'))
+      .toHaveLength(5 + Number(hasCpanel) + Number(hasWindow));
     expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'EDITLIC.TXT'))).toBe(true);
@@ -60,7 +62,17 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
         new Uint8Array(readFileSync(new URL('../public/msdos4/CPANEL.txt', import.meta.url))),
       );
       expect((manifest.sources as Record<string, { commit: string }>).control.commit)
-        .toBe(manifest.sources.msdos.commit);
+        .toMatch(/^[a-f0-9]{40}$/);
+    }
+    if (hasWindow) {
+      expect(notices.includes(fatReadFile(disk, 'WINLIC.TXT'))).toBe(true);
+      expect(fatReadFile(disk, 'WIN98.TXT')).toEqual(
+        new Uint8Array(readFileSync(new URL('../public/msdos4/WIN98.txt', import.meta.url))),
+      );
+      expect((manifest.sources as Record<string, { commit: string }>).window.commit)
+        .toBe((manifest.sources as Record<string, { commit: string }>).control.commit);
+      expect(hash(readFileSync(new URL('../scripts/verify-window.mjs', import.meta.url))))
+        .toBe((manifest as unknown as { window_verifier_sha256: string }).window_verifier_sha256);
     }
     expect(manifest.files.map(file => file.name)).toEqual(expect.arrayContaining([
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
@@ -68,6 +80,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
       'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
       ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
+      ...(hasWindow ? ['WIN98.COM', 'WIN98.TXT', 'WINLIC.TXT'] : []),
     ]));
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');

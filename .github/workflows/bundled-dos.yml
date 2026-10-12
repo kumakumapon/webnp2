@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Generate the CPANEL-enabled DOS 4 image
+      - name: Generate the CPANEL and WIN98 DOS 4 image
         run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm ci
       - run: npm test
@@ -33,7 +33,7 @@ jobs:
           done
           cat /tmp/webnp2-preview.log
           exit 1
-      - name: Verify DOS disks, BASIC, Japanese keyboard, IME and editor in Chromium
+      - name: Verify DOS disks, window desktop, BASIC, Japanese input and editor in Chromium
         env:
           CHROMIUM: /usr/bin/google-chrome
           WEBNP2_NO_SANDBOX: '1'
@@ -56,3 +56,4 @@ jobs:
             public/msdos4/manifest.json
             public/msdos4/LICENSE.txt
             public/msdos4/CPANEL.txt
+            public/msdos4/WIN98.txt
