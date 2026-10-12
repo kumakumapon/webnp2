@@ -31,7 +31,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate the CPANEL and WIN98 DOS 4 image
+      - name: Generate the CPANEL and KDESK DOS 4 image
         run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm run build
         env:

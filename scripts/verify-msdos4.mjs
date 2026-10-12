@@ -131,7 +131,7 @@ try {
   results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
   }
 
-  if (manifest.files.some(file => file.name === 'WIN98.COM')) {
+  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
     results.push(...await verifyWindow(page, {
       screenshot: output ? join(output, 'desktop.png') : undefined,
     }));
@@ -185,7 +185,7 @@ try {
   await page.reload({ waitUntil: 'networkidle2' });
   await line('A>');
   assert.deepEqual(await readGuest('PROOF.BAS'), programBytes);
-  if (manifest.files.some(file => file.name === 'WIN98.COM')) {
+  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
     assert.equal((await readGuest('NOTE.TXT')).toString(), 'WINDOW MEMO OK\r\nSECOND LINE');
     results.push('Window desktop memo persists after browser reload');
   }
