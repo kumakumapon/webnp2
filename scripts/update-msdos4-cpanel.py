@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add CPANEL.COM from MS-DOS to the currently bundled DOS 4 PC-98 image."""
+"""Add CPANEL and optionally KDESK to the bundled DOS 4 PC-98 image."""
 import argparse
 import hashlib
 import importlib.util
@@ -57,6 +57,7 @@ def disk_files(image):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('msdos', type=Path, help='clean kumakumapon/MS-DOS checkout')
+    parser.add_argument('--with-window', action='store_true', help='also build and add KDESK')
     args = parser.parse_args()
     dos = args.msdos.resolve()
     webnp2 = Path(__file__).resolve().parents[1]
@@ -76,23 +77,40 @@ def main():
 
     control = dos / 'tools/control'
     subprocess.run(['make', '-C', str(control), 'all'], check=True)
-    license_text = (control / 'LICENSE').read_bytes()
-    marker = b'\r\nCPANEL license\r\n'
     notices = files['LICENSE.TXT']
-    suffix = marker + license_text
-    if notices.endswith(suffix):
-        notices = notices[:-len(suffix)]
-    notices += suffix
+    # Regenerate the appended application notices so repeated imports do not
+    # duplicate them. The original kernel/filer/editor notices remain intact.
+    for marker in (b'\r\nCPANEL license\r\n', b'\r\nKDESK license\r\n',
+                   b'\r\nWIN98 license\r\n'):
+        if marker in notices:
+            notices = notices[:notices.index(marker)]
+    notices += b'\r\nCPANEL license\r\n' + (control / 'LICENSE').read_bytes()
 
     apps = {
         'CPANEL.COM': (control / 'build/CPANEL.COM').read_bytes(),
         'CPANEL.TXT': (control / 'build/CPANEL.TXT').read_bytes(),
         'CPLIC.TXT': (control / 'build/CPLIC.TXT').read_bytes(),
     }
+    if args.with_window:
+        window = dos / 'tools/window'
+        subprocess.run(['make', '-C', str(window), 'all'], check=True)
+        apps.update({name: (window / 'build' / name).read_bytes()
+                     for name in ('KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT')})
+        verifier = (webnp2 / 'scripts/verify-window.mjs').read_bytes()
+        if verifier != (window / 'verify-ui.mjs').read_bytes():
+            raise ValueError('KDESK browser verifier does not match its source')
+        manifest['window_verifier_sha256'] = digest(verifier)
+    window_license = apps.get('KDLIC.TXT', files.get('KDLIC.TXT'))
+    if window_license is not None:
+        notices += b'\r\nKDESK license\r\n' + window_license
+    elif not args.with_window and 'WINLIC.TXT' in files:
+        notices += b'\r\nWIN98 license\r\n' + files['WINLIC.TXT']
     excluded = {
         'IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT',
-        'CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT',
+        *apps,
     }
+    if args.with_window:
+        excluded.update(('WIN98.COM', 'WIN98.TXT', 'WINLIC.TXT'))
     extra = [(name, notices if name == 'LICENSE.TXT' else data)
              for name, data in files.items() if name not in excluded]
     extra.extend(apps.items())
@@ -100,6 +118,11 @@ def main():
     startup = b'ECHO CPANEL: System settings\r\n'
     if startup not in autoexec:
         autoexec += startup
+    if args.with_window:
+        autoexec = autoexec.replace(b'ECHO WIN98: Window desktop (type WIN98)\r\n', b'')
+        startup = b'ECHO KDESK: Window desktop (type KDESK)\r\n'
+        if startup not in autoexec:
+            autoexec += startup
 
     helper_path = dos / 'ports/pc98/image.py'
     spec = importlib.util.spec_from_file_location('pc98_image', helper_path)
@@ -114,27 +137,26 @@ def main():
     commit = git(dos, 'rev-parse', 'HEAD')
     sources = manifest.setdefault('sources', {})
     repository = 'https://github.com/kumakumapon/MS-DOS'
-    sources['msdos'] = {
-        'component': 'MS-DOS', 'commit': commit, 'path': 'ports/pc98',
-        'license': 'MIT', 'repository': repository,
-    }
-    for key, component, path in [
-        ('filer', 'FD Filer', 'tools/filer'),
-        ('editor', 'EDIT98', 'tools/editor'),
-        ('control', 'CPANEL', 'tools/control'),
-    ]:
+    # Only these applications are rebuilt. Preserve the provenance of the
+    # kernel, command shell, editor, filer and other bytes copied from the disk.
+    components = [('control', 'CPANEL', 'tools/control')]
+    if args.with_window:
+        components.append(('window', 'Kuma Desktop', 'tools/window'))
+    for key, component, path in components:
         sources[key] = {
             'component': component, 'repository': repository,
             'commit': commit, 'path': path, 'license': 'MIT',
         }
     manifest.update(
         image=f'msdos4-retrobasic-{sha256[:12]}.xdf',
-        sha256=sha256, files=entries, dos_commit=commit,
+        sha256=sha256, files=entries,
     )
     destination = manifest_path.parent
     (destination / manifest['image']).write_bytes(image)
     (destination / 'LICENSE.txt').write_bytes(notices)
     (destination / 'CPANEL.txt').write_bytes(apps['CPANEL.TXT'])
+    if args.with_window:
+        (destination / 'KDESK.txt').write_bytes(apps['KDESK.TXT'])
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
     for readme in (webnp2 / 'README.md', webnp2 / 'README.ja.md'):
         text = readme.read_text()

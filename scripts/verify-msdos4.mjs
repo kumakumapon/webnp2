@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer-core';
 import { verifyFiler } from './verify-filer.mjs';
 import { verifyEditor } from './verify-editor.mjs';
 import { verifyJapaneseInput } from './verify-japanese-input.mjs';
+import { verifyWindow } from './verify-window.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos4/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
@@ -130,6 +131,12 @@ try {
   results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
   }
 
+  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
+    results.push(...await verifyWindow(page, {
+      screenshot: output ? join(output, 'desktop.png') : undefined,
+    }));
+  }
+
   await command('RBASIC');
   await line('Ready');
   const program = ['10 FOR I=1 TO 3', '20 PRINT I', '30 NEXT I', '40 PRINT "BUNDLED BASIC OK"'];
@@ -178,6 +185,10 @@ try {
   await page.reload({ waitUntil: 'networkidle2' });
   await line('A>');
   assert.deepEqual(await readGuest('PROOF.BAS'), programBytes);
+  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
+    assert.equal((await readGuest('NOTE.TXT')).toString(), 'WINDOW MEMO OK\r\nSECOND LINE');
+    results.push('Window desktop memo persists after browser reload');
+  }
   assert.deepEqual(await readGuest('SEQ.TXT'), sequentialBytes);
   await command('RBASIC PROOF.BAS');
   await line('BUNDLED BASIC OK');

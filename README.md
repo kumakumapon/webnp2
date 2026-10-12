@@ -340,6 +340,10 @@ use CRLF. FD98's **E** key opens the selected file in EDIT98. `TYPE JPHELLO.TXT`
 shows the Japanese sample. See [Japanese input and editing](docs/japanese-input.md)
 and [editor keyboard guide](public/msdos4/EDIT.txt).
 
+Run `KDESK` for the original PC-98 window desktop. It provides overlapping
+launcher, files, memo, help and about windows, with keyboard controls for focus,
+movement, resizing and minimization. See [desktop controls](docs/window-desktop.md).
+
 Run `CPANEL` to change XMS/EMS, FILES/BUFFERS, or FD98 auto-start. Press `S`
 to save; CONFIG.SYS changes take effect after reboot. See
 [CPANEL.TXT](public/msdos4/CPANEL.txt).
@@ -511,21 +515,21 @@ in the READMEs/help page. Verification includes physical JIS/US keys, IME
 composition through the browser field, byte-exact Japanese save/reopen/TYPE,
 and the existing BASIC/filer tests.
 Keep previous image filenames for saved disks and shared URLs. The Pages workflows
-build CPANEL from a pinned MS-DOS source commit, update the manifest in the job
+build CPANEL and KDESK from a pinned MS-DOS source commit, update the manifest in the job
 workspace, and bundle the generated disk into the deployment. The generated XDF
 is available as a CI artifact; the workflow does not commit it back to this repository.
 
-To add CPANEL to the current bundled image without rebuilding its other components:
+To add CPANEL and KDESK to the current bundled image:
 
 ```sh
-python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS
+python3 scripts/update-msdos4-cpanel.py /path/to/MS-DOS --with-window
 npm test
 npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 ```
 
-The importer builds CPANEL from the merged MS-DOS source, preserves the existing
+The importer builds CPANEL and KDESK from the pinned MS-DOS source, preserves the existing
 DOS 4 files, updates the image manifest, and leaves previous image filenames in place.
 
 ### Updating the core (public/core/)
