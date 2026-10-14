@@ -1941,7 +1941,7 @@ function init(): void {
         ++mouseTrackEpoch;
         mouseTrackHoming = null;
         stopMouseTrackTimer();
-        coreMouseButton(0, 0); coreMouseButton(1, 0);
+        if (np2.isBooted()) { coreMouseButton(0, 0); coreMouseButton(1, 0); }
       },
       onMouseTrack: (x, y) => {
         mouseTrackTarget = { x, y };
