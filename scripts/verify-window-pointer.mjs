@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-
 // Real DOM events exercise host synchronization as well as the guest mouse.
 export async function verifyWindowPointer(page, { screenshot } = {}) {
   await page.setViewport({ width: 1000, height: 780 });
@@ -37,13 +35,16 @@ export async function verifyWindowPointer(page, { screenshot } = {}) {
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.mouse.up();
   await click(592, 8); await wait('KDESK exited.');
-  assert.ok((await page.evaluate(() => window.np2debug.np2.getScreenText().text)).includes('A>'));
+  const prompt = () => page.waitForFunction(() => window.np2debug.np2.getScreenText().lines.some(
+    line => line.trim() === 'A>'), { timeout: 60000 });
+  await prompt();
   // Keep the screenshot at the useful new desktop state, without changing files.
   if (screenshot) {
     await page.evaluate(() => window.np2debug.np2.typeText('KDESK\r'));
     await wait('Ready'); await page.screenshot({ path: screenshot });
     await page.evaluate(() => window.np2debug.np2.sendKeys('F10'));
     await wait('KDESK exited.');
+    await prompt();
   }
   return ['canvas first-click homing, quick title drag, release outside canvas/blur, clipping and subsequent clicks'];
 }
