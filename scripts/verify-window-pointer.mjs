@@ -28,7 +28,12 @@ export async function verifyWindowPointer(page, { screenshot } = {}) {
   await page.mouse.move(outside.x, outside.y); await page.mouse.up();
   await title('Memo', 2, 33);
   await click(604, 40);
-  await page.waitForFunction(() => !window.np2debug.np2.getScreenText().text.includes('Memo '));
+  await page.waitForFunction(() => {
+    const { lines } = window.np2debug.np2.getScreenText();
+    // The top menu always says Memo; inspect the window title and a repainted
+    // taskbar rather than matching that permanent menu (or a half-drawn frame).
+    return lines[2]?.indexOf('Memo') !== 33 && lines[24]?.slice(41, 45) === 'Apps';
+  }, { timeout: 60000 });
   await click(404, 8); await wait('Drag title: move');
   const helpTitle = await coords(160, 104);
   await page.mouse.move(helpTitle.x, helpTitle.y); await page.mouse.down();
