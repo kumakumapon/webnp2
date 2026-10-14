@@ -41,7 +41,10 @@ export async function verifyWindowPointer(page, { screenshot } = {}) {
   // Keep the screenshot at the useful new desktop state, without changing files.
   if (screenshot) {
     await page.evaluate(() => window.np2debug.np2.typeText('KDESK\r'));
-    await wait('Ready'); await page.screenshot({ path: screenshot });
+    await wait('Ready');
+    await page.waitForFunction(() => window.np2debug.np2.getScreenText().lines[24]?.slice(41, 45) === 'Apps');
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await page.screenshot({ path: screenshot });
     await page.evaluate(() => window.np2debug.np2.sendKeys('F10'));
     await wait('KDESK exited.');
     await prompt();
