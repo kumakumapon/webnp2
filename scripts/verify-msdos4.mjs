@@ -10,6 +10,7 @@ import { verifyFiler } from './verify-filer.mjs';
 import { verifyEditor } from './verify-editor.mjs';
 import { verifyJapaneseInput } from './verify-japanese-input.mjs';
 import { verifyWindow } from './verify-window.mjs';
+import { verifyWindowPointer } from './verify-window-pointer.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos4/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
@@ -132,6 +133,9 @@ try {
   }
 
   if (manifest.files.some(file => file.name === 'KDESK.COM')) {
+    results.push(...await verifyWindowPointer(page, {
+      screenshot: output ? join(output, 'desktop-pointer.png') : undefined,
+    }));
     results.push(...await verifyWindow(page, {
       screenshot: output ? join(output, 'desktop.png') : undefined,
     }));

@@ -2300,7 +2300,7 @@ export function buildPlayerUI(
     lastRightClickAt = now;
   });
 
-  canvas.addEventListener('mousemove', (e) => {
+  const trackMousePosition = (e: MouseEvent): void => {
     if (!isTracking()) return;
     ensureHomed();
     const rect = canvas.getBoundingClientRect();
@@ -2314,14 +2314,29 @@ export function buildPlayerUI(
       Math.min(native.h - 1, Math.round(((e.clientY - rect.top) / rect.height) * native.h)),
     );
     callbacks.onMouseTrack(x, y);
+  };
+  const trackingButtons = new Set<number>();
+  canvas.addEventListener('mousemove', trackMousePosition);
+  window.addEventListener('mousemove', (e) => {
+    if (trackingButtons.size && e.target !== canvas) trackMousePosition(e);
   });
   canvas.addEventListener('mousedown', (e) => {
     if (!isTracking()) return;
-    if (e.button === 0 || e.button === 2) callbacks.onMouseButton(e.button === 0 ? 0 : 1, true);
+    if (e.button === 0 || e.button === 2) {
+      trackMousePosition(e);
+      trackingButtons.add(e.button);
+      callbacks.onMouseButton(e.button === 0 ? 0 : 1, true);
+    }
   });
-  canvas.addEventListener('mouseup', (e) => {
-    if (!isTracking()) return;
-    if (e.button === 0 || e.button === 2) callbacks.onMouseButton(e.button === 0 ? 0 : 1, false);
+  window.addEventListener('mouseup', (e) => {
+    if (!trackingButtons.delete(e.button) || !isTracking()) return;
+    trackMousePosition(e);
+    callbacks.onMouseButton(e.button === 0 ? 0 : 1, false);
+  });
+  window.addEventListener('blur', () => {
+    if (isTracking()) for (const button of trackingButtons)
+      callbacks.onMouseButton(button === 0 ? 0 : 1, false);
+    trackingButtons.clear();
   });
 
   // タッチ操作: 1本指移動=カーソル追従 / 短いタップ=左クリック / 長押し(450ms静止)=左ドラッグ / 2本指タップ=右クリック
@@ -2666,6 +2681,12 @@ export function buildPlayerUI(
     },
     setMouseCaptured(captured: boolean) {
       mouseCaptured = captured;
+      if (captured) {
+        callbacks.onMouseTrackStop();
+        trackingButtons.clear();
+        trackingHomed = false;
+        stage.classList.remove('tracking');
+      }
     },
     setHostKeyBadge(enabled: boolean) {
       hostKeyBadge.classList.toggle('hidden', !enabled);
@@ -2685,6 +2706,8 @@ export function buildPlayerUI(
       btnMouse.disabled = !enabled;
       btnMouseResync.disabled = !enabled;
       if (!enabled) {
+        callbacks.onMouseTrackStop();
+        trackingButtons.clear();
         trackingHomed = false;
         stage.classList.remove('tracking');
       }
