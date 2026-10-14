@@ -539,6 +539,9 @@ document.addEventListener('pointerlockchange', () => {
 let mouseTrackTarget: { x: number; y: number } | null = null;
 let mouseTrackPos: { x: number; y: number } = { x: 0, y: 0 };
 let mouseTrackTimer: number | null = null;
+let mouseTrackButtonTarget: { x: number; y: number } | null = null;
+let mouseTrackHoming: Promise<void> | null = null;
+let mouseTrackEpoch = 0;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -546,11 +549,16 @@ function sleep(ms: number): Promise<void> {
 
 /** タッチ由来のクリックは「カーソルが目標へ到達してから」ボタンを押す必要があるため、追従の収束を待つ。 */
 async function trackSettle(timeoutMs = 800): Promise<void> {
+  await mouseTrackHoming;
   const t0 = performance.now();
-  while (mouseTrackTarget && (mouseTrackPos.x !== mouseTrackTarget.x || mouseTrackPos.y !== mouseTrackTarget.y)) {
+  for (;;) {
+    const target = mouseTrackButtonTarget ?? mouseTrackTarget;
+    if (!target || (mouseTrackPos.x === target.x && mouseTrackPos.y === target.y && coreMousePending() === 0)) break;
     if (performance.now() - t0 > timeoutMs) break;
     await sleep(30);
   }
+  // The core spreads movement over a frame after its frontend queue empties.
+  await sleep(40);
 }
 
 // タッチ操作(クリック/ドラッグ)は順序が入れ替わると押しっぱなし等になるため直列化する。
@@ -559,8 +567,8 @@ function queueTouchOp(op: () => Promise<void>): void {
   touchOpChain = touchOpChain.then(op).catch(() => {});
 }
 
-async function mouseTrackHome(): Promise<void> {
-  for (let i = 0; i < 30; i++) {
+async function mouseTrackHome(epoch: number): Promise<void> {
+  for (let i = 0; i < 30 && epoch === mouseTrackEpoch; i++) {
     coreMouseMove(-64, -64);
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
   }
@@ -569,12 +577,13 @@ async function mouseTrackHome(): Promise<void> {
 function startMouseTrackTimer(): void {
   if (mouseTrackTimer !== null) return;
   mouseTrackTimer = window.setInterval(() => {
-    if (!mouseTrackTarget) return;
+    const target = mouseTrackButtonTarget ?? mouseTrackTarget;
+    if (!target) return;
     // ゲスト側の消費(coreMousePending)が詰まっている間は送らずに足踏みする。
     if (coreMousePending() > 96) return;
     for (let step = 0; step < 2; step++) {
-      const dx = mouseTrackTarget.x - mouseTrackPos.x;
-      const dy = mouseTrackTarget.y - mouseTrackPos.y;
+      const dx = target.x - mouseTrackPos.x;
+      const dy = target.y - mouseTrackPos.y;
       if (dx === 0 && dy === 0) break;
       const clamp = (v: number) => Math.max(-64, Math.min(64, v));
       const mx = clamp(dx);
@@ -591,6 +600,7 @@ function stopMouseTrackTimer(): void {
     mouseTrackTimer = null;
   }
   mouseTrackTarget = null;
+  mouseTrackButtonTarget = null;
 }
 
 // --- バーチャルトラックパッド --------------------------------------------------
@@ -1916,22 +1926,43 @@ function init(): void {
         setStatusT(captured ? 'statusMouseCaptured' : 'statusMouseReleased');
       },
       onMouseTrackStart: () => {
-        void (async () => {
-          await mouseTrackHome();
+        const epoch = ++mouseTrackEpoch;
+        stopMouseTrackTimer();
+        mouseTrackHoming = (async () => {
+          await mouseTrackHome(epoch);
+          if (epoch !== mouseTrackEpoch) return;
           mouseTrackPos = { x: 0, y: 0 };
-          mouseTrackTarget = null;
+          // Keep the target supplied by the first mousemove during homing.
           startMouseTrackTimer();
           setStatusT('statusMouseResynced');
-        })();
+        })().finally(() => { if (epoch === mouseTrackEpoch) mouseTrackHoming = null; });
       },
       onMouseTrackStop: () => {
+        ++mouseTrackEpoch;
+        mouseTrackHoming = null;
         stopMouseTrackTimer();
+        coreMouseButton(0, 0); coreMouseButton(1, 0);
       },
       onMouseTrack: (x, y) => {
         mouseTrackTarget = { x, y };
       },
       onMouseButton: (button, down) => {
-        coreMouseButton(button, down ? 1 : 0);
+        const epoch = mouseTrackEpoch, target = mouseTrackTarget;
+        queueTouchOp(async () => {
+          await mouseTrackHoming;
+          if (epoch !== mouseTrackEpoch) return;
+          // A quick move/click must press at its event position, even if the
+          // host pointer moves again while the guest catches up.
+          mouseTrackButtonTarget = target;
+          try {
+            await trackSettle(1500);
+            if (epoch !== mouseTrackEpoch) return;
+            coreMouseButton(button, down ? 1 : 0);
+            await sleep(down ? 60 : 40);
+          } finally {
+            if (epoch === mouseTrackEpoch) mouseTrackButtonTarget = null;
+          }
+        });
       },
       onVirtualKey: (code, down) => {
         // ゲームパッド(main.ts下部のgamepadTick)と同じ SharedKeyInput を経由させる。
