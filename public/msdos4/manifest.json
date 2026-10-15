@@ -155,7 +155,7 @@
   ],
   "dos_commit": "3efe31f7443fc716e61a29d05e414e04a7f26581",
   "dos_version": "4",
-  "filer_verifier_sha256": "82203ea10bace40f695dd22b2c923e130bd245120f70d4495c48a1a91497ce4a",
+  "filer_verifier_sha256": "33036c27f66ed3ffc1f1fc6c8d6d9d0ea08f64b05c67ee62c0aac70215d0add5",
   "editor_verifier_sha256": "dbd6deefbb027941cf02bb432d85b372a79d4db2132436cc98cce63f8dc2406c",
   "sources": {
     "msdos": {
