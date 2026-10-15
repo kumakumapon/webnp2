@@ -26,6 +26,7 @@ export type ToolbarActionId =
   | 'pasteText'
   | 'romManager'
   | 'diskLibrary'
+  | 'kdeskMedia'
   | 'fileManager'
   | 'debuggerOpen'
   | 'help'
@@ -37,7 +38,7 @@ export type ToolbarActionId =
 export const TOOLBAR_ACTIONS: readonly ToolbarActionId[] = [
   'aspect', 'showHddSlot', 'pause', 'machineReset', 'saveState', 'loadState', 'screenshot', 'fullscreen', 'virtualKbd', 'gamepad',
   'mouseCapture', 'mouseResync', 'resetOriginal', 'pasteText', 'romManager', 'diskLibrary',
-  'fileManager', 'debuggerOpen', 'help', 'language', 'mute', 'fddSeekSound',
+  'kdeskMedia', 'fileManager', 'debuggerOpen', 'help', 'language', 'mute', 'fddSeekSound',
 ];
 
 /** 常時ツールバーに残す操作(使用頻度が高い/常に押せる必要があるもの)。 */
@@ -76,7 +77,7 @@ export const OVERFLOW_GROUPS: Record<OverflowGroupId, readonly ToolbarActionId[]
 };
 
 /** グループへ無理に押し込まず、第1階層へ直接並べる操作(WebX68kの設定・ヘルプ等と同じ扱い)。 */
-export const OVERFLOW_DIRECT_ACTIONS: readonly ToolbarActionId[] = ['romManager', 'debuggerOpen', 'help', 'language'];
+export const OVERFLOW_DIRECT_ACTIONS: readonly ToolbarActionId[] = ['kdeskMedia', 'romManager', 'debuggerOpen', 'help', 'language'];
 
 /** 常時表示+オーバーフロー全体の操作一覧。重複/抜け漏れが無いことをテストで検査する基準に使う。 */
 export const ALL_TOOLBAR_ACTIONS: readonly ToolbarActionId[] = [

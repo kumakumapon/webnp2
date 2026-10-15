@@ -12,7 +12,7 @@ permissions:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,3 +57,4 @@ jobs:
             public/msdos4/LICENSE.txt
             public/msdos4/CPANEL.txt
             public/msdos4/KDESK.txt
+            public/msdos4/KIMAGE.txt

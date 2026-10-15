@@ -123,6 +123,7 @@ export interface PlayerCallbacks {
   onLangChanged: () => void;
   onMachineReset: () => void;
   onScreenshot: () => void;
+  onKdeskMedia?: () => void;
   onMouseToggle: () => void;
   /** 追従モードON。ホーミング等の非同期処理はmain.ts側で行う。 */
   onMouseTrackStart: () => void;
@@ -834,6 +835,8 @@ export function buildPlayerUI(
   // ソフトキーボード(PC-98配列)。トグルでkbdPanelの表示/非表示を切り替える。
   const btnVirtualKbd = iconButton(ICONS.keyboard, t('toolbarVirtualKbd'));
   // ファイルマネージャ(FTPクライアント風2ペイン)。起動前(ライブラリ閲覧)でも使えるよう常に有効。
+  const btnKdeskMedia = iconButton(ICONS.fileTransfer, t('toolbarKdeskMedia'));
+  btnKdeskMedia.addEventListener('click', () => callbacks.onKdeskMedia?.());
   const btnFileManager = iconButton(ICONS.fileTransfer, t('toolbarFileManager'));
   // ミュート切替。GainNodeで音量だけ0/1に切り替える(audio.ts:setAudioMuted参照)ので、
   // コア起動前でも押せて構わない。起動前後どちらでも常に有効(setToolbarEnabledの対象外)。
@@ -885,6 +888,7 @@ export function buildPlayerUI(
     pasteText: btnPasteText,
     romManager: btnRomManager,
     diskLibrary: btnDiskLibrary,
+    kdeskMedia: btnKdeskMedia,
     fileManager: btnFileManager,
     debuggerOpen: btnDebugger,
     help: btnHelp,
@@ -2703,6 +2707,7 @@ export function buildPlayerUI(
       if (!enabled) pausedByUser = false;
       updatePauseUi();
       btnScreenshot.disabled = !enabled;
+      btnKdeskMedia.disabled = !enabled || !callbacks.onKdeskMedia;
       btnMouse.disabled = !enabled;
       btnMouseResync.disabled = !enabled;
       if (!enabled) {
@@ -2891,6 +2896,8 @@ export function buildPlayerUI(
       libraryDescription.textContent = highlightedLibraryGroupId ? t('libraryGroupFocusHint') : t('libraryDialogDescription');
       libraryCloseBtn.textContent = t('libraryDialogClose');
       if (!libraryBackdrop.classList.contains('hidden')) void refreshLibraryList();
+      btnKdeskMedia.title = t('toolbarKdeskMedia');
+      btnKdeskMedia.setAttribute('aria-label', t('toolbarKdeskMedia'));
       btnFileManager.title = t('toolbarFileManager');
       btnFileManager.setAttribute('aria-label', t('toolbarFileManager'));
       fileManagerDialog.applyStrings();

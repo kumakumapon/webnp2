@@ -1,4 +1,5 @@
 import './ui/styles.css';
+import { openKdeskMedia } from './ui/kdesk-media.ts';
 import '../packages/embed/src/debugger.css';
 import {
   buildPlayerUI,
@@ -1919,6 +1920,7 @@ function init(): void {
         }
       },
       onScreenshot: () => saveScreenshot(),
+      onKdeskMedia: () => openKdeskMedia(np2),
       onMouseToggle: () => {
         // キャプチャ開始はpointer lock要求になるため、クリックハンドラ内で同期的に呼ぶ。
         const captured = coreMouseToggle();
