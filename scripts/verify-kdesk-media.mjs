@@ -39,6 +39,11 @@ export async function verifyKdeskMedia(page, { output = 'test-results/kdesk-medi
   assert.ok((await page.evaluate(() => window.np2debug.np2.getScreenText().text)).includes('Kuma Desktop'), 'Panel keys must not leak into DOS');
   await page.$eval('.kdesk-media-text', el => { el.value = ' BRIDGE OK'; }); await action('paste-text'); await wait('BRIDGE OK');
   assert.equal((await guest('NOTE.TXT')).toString(),note,'Pasting does not save over the note automatically');
+  await close(); await key('CTRL+A'); await open();
+  await page.$eval('.kdesk-media-text',el=>{el.value='X'.repeat(1023);});await action('paste-text');
+  await page.waitForFunction(()=>document.querySelector('.kdesk-media-status').textContent.includes('DOSへ貼り付けました') || document.querySelector('.kdesk-media-status').textContent.includes('Pasted to DOS'));
+  await close();await key('CTRL+A');await type('Y');await key('CTRL+C');await wait('Copied memo');
+  await open();await action('get-text');assert.equal(await page.$eval('.kdesk-media-text',el=>el.value),'Y','Typing replaces a full selected memo');
   await close(); await key('CTRL+A'); await type(note.replace(/\r\n/g,'\r')); await key('CTRL+S'); await wait('Saved NOTE.TXT');
   assert.equal((await guest('NOTE.TXT')).toString(),note);
   await open();
