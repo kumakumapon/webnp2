@@ -2256,3 +2256,15 @@ textarea,
   touch-action: none;
   -webkit-touch-callout: none;
 }
+
+.kdesk-media-backdrop { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 12px; background: #0008; }
+.kdesk-media.rom-modal { position: relative; width: min(680px, 100%); max-height: 94dvh; overflow: auto; padding: 20px; background: #f6f4ef; color: #24313a; border-radius: 12px; box-shadow: 0 12px 64px #0008; box-sizing: border-box; }
+.kdesk-media h2 { padding-right: 75px; margin-top: 0; }
+.kdesk-media-close { position: absolute; right: 16px; top: 16px; }
+.kdesk-media-text { width: 100%; box-sizing: border-box; resize: vertical; }
+.kdesk-media-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.kdesk-media button { padding: 7px 12px; cursor: pointer; }
+.kdesk-media label { display: block; margin: 12px 0; }
+.kdesk-media input { margin-left: 8px; max-width: 100%; }
+.kdesk-media-preview { max-width: 100%; max-height: 220px; image-rendering: pixelated; border: 1px solid #789; }
+.kdesk-media-status { overflow-wrap: anywhere; }

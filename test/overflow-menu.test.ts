@@ -48,7 +48,7 @@ describe('グループ定義', () => {
     expect(OVERFLOW_GROUPS.sound).toEqual(['mute', 'fddSeekSound']);
     expect(OVERFLOW_GROUPS.disk).toEqual(['diskLibrary', 'fileManager']);
     expect(OVERFLOW_GROUPS.state).toEqual(['saveState', 'loadState', 'resetOriginal']);
-    expect(OVERFLOW_DIRECT_ACTIONS).toEqual(['romManager', 'debuggerOpen', 'help', 'language']);
+    expect(OVERFLOW_DIRECT_ACTIONS).toEqual(['kdeskMedia', 'romManager', 'debuggerOpen', 'help', 'language']);
   });
 
   it('常時表示・3グループ・直結行の間で重複が無い', () => {

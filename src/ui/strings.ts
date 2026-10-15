@@ -266,6 +266,7 @@ interface Dict {
 
   // --- ファイルマネージャ(FTPクライアント風2ペイン) ---
   /** ツールバーの「ファイル転送」ボタン。 */
+  toolbarKdeskMedia(): string;
   toolbarFileManager(): string;
   fmDialogTitle(): string;
   /** ゲストがフロッピーへアクセス中の転送を避けるよう促す注意書き。 */
@@ -678,6 +679,7 @@ const STRINGS: Record<Lang, Dict> = {
     debuggerBreakpointLimit: () => 'ブレークポイントは最大8個です。不要なBPを解除してください。',
     debuggerBreakpointHit: ({ index }) => `BP${index} で停止しました。`,
     debuggerBreakpointMiss: () => '100000命令以内にBPへ到達しませんでした。',
+    toolbarKdeskMedia: () => 'KDESK クリップボードと画像',
     toolbarFileManager: () => 'ファイル転送',
     fmDialogTitle: () => 'ファイル転送',
     fmDialogNote: () =>
@@ -1052,6 +1054,7 @@ const STRINGS: Record<Lang, Dict> = {
     debuggerBreakpointLimit: () => 'The maximum of 8 breakpoints is already in use.',
     debuggerBreakpointHit: ({ index }) => `Stopped at BP${index}.`,
     debuggerBreakpointMiss: () => 'No breakpoint reached within 100000 instructions.',
+    toolbarKdeskMedia: () => 'KDESK Clipboard and Images',
     toolbarFileManager: () => 'File Transfer',
     fmDialogTitle: () => 'File Transfer',
     fmDialogNote: () =>

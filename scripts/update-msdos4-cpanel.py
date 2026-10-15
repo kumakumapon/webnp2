@@ -95,7 +95,8 @@ def main():
         window = dos / 'tools/window'
         subprocess.run(['make', '-C', str(window), 'all'], check=True)
         apps.update({name: (window / 'build' / name).read_bytes()
-                     for name in ('KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT')})
+                     for name in ('KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT',
+                                  'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP')})
         verifier = (webnp2 / 'scripts/verify-window.mjs').read_bytes()
         if verifier != (window / 'verify-ui.mjs').read_bytes():
             raise ValueError('KDESK browser verifier does not match its source')
@@ -157,6 +158,7 @@ def main():
     (destination / 'CPANEL.txt').write_bytes(apps['CPANEL.TXT'])
     if args.with_window:
         (destination / 'KDESK.txt').write_bytes(apps['KDESK.TXT'])
+        (destination / 'KIMAGE.txt').write_bytes(apps['KIMAGE.TXT'])
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
     for readme in (webnp2 / 'README.md', webnp2 / 'README.ja.md'):
         text = readme.read_text()

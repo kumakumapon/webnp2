@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer-core';
 import { verifyFiler } from './verify-filer.mjs';
 import { verifyEditor } from './verify-editor.mjs';
 import { verifyJapaneseInput } from './verify-japanese-input.mjs';
+import { verifyKdeskMedia } from './verify-kdesk-media.mjs';
 import { verifyWindow } from './verify-window.mjs';
 import { verifyWindowPointer } from './verify-window-pointer.mjs';
 
@@ -139,6 +140,7 @@ try {
     results.push(...await verifyWindow(page, {
       screenshot: output ? join(output, 'desktop.png') : undefined,
     }));
+    results.push(...await verifyKdeskMedia(page, { output: output ? join(output,'media') : undefined }));
   }
 
   await command('RBASIC');

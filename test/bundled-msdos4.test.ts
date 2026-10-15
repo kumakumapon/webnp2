@@ -69,6 +69,9 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       expect(fatReadFile(disk, 'KDESK.TXT')).toEqual(
         new Uint8Array(readFileSync(new URL('../public/msdos4/KDESK.txt', import.meta.url))),
       );
+      expect(fatReadFile(disk, 'KIMAGE.TXT')).toEqual(
+        new Uint8Array(readFileSync(new URL('../public/msdos4/KIMAGE.txt', import.meta.url))),
+      );
       expect((manifest.sources as Record<string, { commit: string }>).window.commit)
         .toBe((manifest.sources as Record<string, { commit: string }>).control.commit);
       expect(hash(readFileSync(new URL('../scripts/verify-window.mjs', import.meta.url))))
@@ -80,7 +83,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
       'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
       ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
-      ...(hasWindow ? ['KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT'] : []),
+      ...(hasWindow ? ['KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT', 'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP'] : []),
     ]));
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');
