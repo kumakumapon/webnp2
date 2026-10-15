@@ -29,6 +29,14 @@ export async function verifyFiler(page, { screenshot, basic = false } = {}) {
   };
   await type('ECHO FILER-GUEST-DATA>SOURCE.TXT\r');
   await wait('A>');
+  // An earlier prompt can still be visible while DOS has only created the
+  // empty directory entry. Wait for the redirected write and close to finish.
+  await page.waitForFunction(async () => {
+    try {
+      const bytes = await window.np2debug.np2.diskReadFile('fd1', 'SOURCE.TXT');
+      return new TextDecoder().decode(bytes) === 'FILER-GUEST-DATA\r\n';
+    } catch { return false; }
+  }, { timeout: 30000 });
   assert.equal((await guest('SOURCE.TXT')).toString(), 'FILER-GUEST-DATA\r\n');
   await type('FD98\r');
   await wait('FD Filer 1.0');
