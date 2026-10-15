@@ -40,7 +40,9 @@ including over text. A mouse driver is not required; keyboard controls also work
 | F10 | Exit to DOS |
 
 The launcher opens the file manager, text editor, settings panel, installed
-BASIC, DOS shell, image viewer or image editor. External DOS programs run one at a time in the foreground.
+BASIC, DOS shell, image viewer or image editor. KVIEW/KPAINT inherit and return the desktop mouse position, so switching
+between them and KDESK needs no mouse resync. External DOS programs run one at
+a time in the foreground.
 Exit the program (use `EXIT` for the shell), then press any key or click to return to the
 desktop. Each DOS tool retains its own controls (usually keyboard input). The Files window navigates directories and opens COM/EXE programs,
 TXT files in the text editor, BAS files in the installed BASIC, and BMP files in KVIEW.
