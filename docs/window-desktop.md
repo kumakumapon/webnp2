@@ -18,7 +18,8 @@ Click Apps/Files/Memo/Help/About to open a window, and click a window to focus i
 | Drag lower-right grip | Preview size, then resize on release |
 | `_` / `x` title button | Minimize / close |
 | Taskbar button | Restore and focus |
-| Launcher row | Start the chosen DOS tool |
+| Launcher icon | Select; double-click or Open starts it |
+| Launcher List/Icons (V) | Toggle icon grid/list; list rows start with one click |
 | Files row / double-click | Select / open directory or file |
 | Files Parent / Open / ^ / v | Parent directory / open / scroll selection |
 | Memo Save / Copy / Cut / Paste / All | Save NOTE.TXT / use the text clipboard |
@@ -40,7 +41,9 @@ including over text. A mouse driver is not required; keyboard controls also work
 | F10 | Exit to DOS |
 
 The launcher opens the file manager, text editor, settings panel, installed
-BASIC, DOS shell, image viewer or image editor. KVIEW/KPAINT inherit and return the desktop mouse position, so switching
+BASIC, DOS shell, image viewer, image editor, calculator or clock. Calculator
+and Clock are built-in windows that work alongside Memo. See the
+[utility and icon launcher guide](kdesk-utilities.md). KVIEW/KPAINT inherit and return the desktop mouse position, so switching
 between them and KDESK needs no mouse resync. External DOS programs run one at
 a time in the foreground.
 Exit the program (use `EXIT` for the shell), then press any key or click to return to the
@@ -90,6 +93,8 @@ The browser verification exercises actual guest input including over 200 simulta
 management, memo persistence and save errors, directory navigation, and
 CPANEL/editor/COM program launches and click-to-return. A separate canvas-event
 check covers first-click synchronization, rapid drags and release outside canvas.
-The media suite covers text/image clipboard, BMP decoding, drawing, undo/redo,
+The utility suite covers decimal arithmetic, memory, clipboard exchange, clock
+progression, 12/24-hour switching, minimize/restore and icon/list navigation,
+including narrow windows. The media suite covers text/image clipboard, BMP decoding, drawing, undo/redo,
 fill/selection, file protection and the visible browser import/export controls. Screenshots and results are available
 in the `bundled-dos-browser-validation` Actions artifact.
