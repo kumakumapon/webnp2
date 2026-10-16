@@ -32,7 +32,7 @@ export async function verifyWindowPointer(page, { screenshot } = {}) {
     const { lines } = window.np2debug.np2.getScreenText();
     // The top menu always says Memo; inspect the window title and a repainted
     // taskbar rather than matching that permanent menu (or a half-drawn frame).
-    return lines[2]?.indexOf('Memo') !== 33 && lines[24]?.slice(41, 45) === 'Apps';
+    return lines[2]?.indexOf('Memo') !== 33 && lines[24]?.slice(25, 29) === 'Apps';
   }, { timeout: 60000 });
   await click(404, 8); await wait('Drag title: move');
   const helpTitle = await coords(160, 104);
@@ -47,7 +47,7 @@ export async function verifyWindowPointer(page, { screenshot } = {}) {
   if (screenshot) {
     await page.evaluate(() => window.np2debug.np2.typeText('KDESK\r'));
     await wait('Ready');
-    await page.waitForFunction(() => window.np2debug.np2.getScreenText().lines[24]?.slice(41, 45) === 'Apps');
+    await page.waitForFunction(() => window.np2debug.np2.getScreenText().lines[24]?.slice(25, 29) === 'Apps');
     await new Promise(resolve => setTimeout(resolve, 100));
     await page.screenshot({ path: screenshot });
     await page.evaluate(() => window.np2debug.np2.sendKeys('F10'));
