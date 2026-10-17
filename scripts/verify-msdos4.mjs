@@ -201,7 +201,7 @@ try {
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.goto(new URL(`?fd1=./msdos4/${manifest.image}&run=1&lang=en&clk=8`, base).href, { waitUntil: 'networkidle2' });
   await exitAutostart(); await line('A>');
-  results.push(...await verifyJapaneseInput(page, { screenshot: output ? join(output, 'ime.png') : undefined }));
+  results.push(...await verifyJapaneseInput(page, { screenshot: output ? join(output, 'ime.png') : undefined, afterReload: exitAutostart }));
 
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.reload({ waitUntil: 'networkidle2' });

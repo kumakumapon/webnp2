@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 // Browser events use physical DOM codes, so JIS punctuation is tested independently
 // of Puppeteer's US-only keyboard layout. Composition events model committed OS IME text.
-export async function verifyJapaneseInput(page, { screenshot } = {}) {
+export async function verifyJapaneseInput(page, { screenshot, afterReload } = {}) {
   const screen = () => page.evaluate(() => window.np2debug.np2.getScreenText().text);
   const wait = async needle => page.waitForFunction(
     needle => window.np2debug?.np2?.getScreenText().text.includes(needle),
@@ -100,6 +100,7 @@ export async function verifyJapaneseInput(page, { screenshot } = {}) {
   assert.deepEqual(await read('USKEYS.TXT'), Buffer.from('usX'));
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.reload({ waitUntil: 'networkidle2' });
+  if (afterReload) await afterReload();
   assert.equal(await page.evaluate(() => localStorage.getItem('webnp2.keyboard-layout')), 'us');
   await wait('A>');
   await type('CLS\rTYPE IME.TXT\r'); await wait('日本語ｶﾅ');
