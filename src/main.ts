@@ -18,6 +18,7 @@ import { Bridge } from './api/bridge.ts';
 import { WEBNP2_VERSION_FOOTER } from './version.ts';
 import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
 import { MSDOS4_BOOT_URL, MSDOS4_IMAGE_URL } from './bundled-msdos4.ts';
+import { K386_BOOT_URL } from './bundled-k386.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -2053,6 +2054,7 @@ function init(): void {
       offerFreeDosChoice: !diskSpecified,
       msDosBootUrl: !diskSpecified ? MSDOS2_BOOT_URL : undefined,
       msDos4BootUrl: !diskSpecified ? MSDOS4_BOOT_URL : undefined,
+      k386BootUrl: !diskSpecified ? K386_BOOT_URL : undefined,
       trackingEnabled: params.get('mousetrack') !== '0',
       aspectModeParam,
     },

@@ -12,6 +12,7 @@
     "capture-help": "node scripts/capture-help-shots.mjs"
   },
   "devDependencies": {
+    "playwright": "^1.64.1",
     "puppeteer-core": "^25.4.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",

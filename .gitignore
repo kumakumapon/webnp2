@@ -7,3 +7,7 @@ test-results/
 .claude/
 test/fixtures/lzh/
 .env.local
+
+public/k386/*.xdf
+public/k386/LICENSE.txt
+public/k386/K386.txt
