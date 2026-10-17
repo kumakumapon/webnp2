@@ -217,6 +217,7 @@ export interface PlayerOptions {
   msDosBootUrl?: string;
   /** Optional standalone-player link to the bundled DOS 4.0 + RetroBasic disk. */
   msDos4BootUrl?: string;
+  k386BootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
   /**
@@ -736,6 +737,10 @@ export function buildPlayerUI(
   const msDos4Btn = options.msDos4BootUrl
     ? el('a', { class: 'start-btn start-btn-msdos4', href: msDos4Href() }, [t('startBtnMsDos4')])
     : undefined;
+  const k386Href = () => `${options.k386BootUrl}&lang=${getLang()}`;
+  const k386Btn = options.k386BootUrl
+    ? el('a', { class: 'start-btn start-btn-k386', href: k386Href() }, [t('startBtnK386')])
+    : undefined;
   // ライブラリが空の場合もあるため既定は非表示。起動可否は非同期チェック後に表示する。
   const libraryStartBtn = el('button', { class: 'start-btn start-btn-library hidden', type: 'button' }, [
     t('overlayLibraryBtn'),
@@ -744,6 +749,7 @@ export function buildPlayerUI(
   if (freeDosBtn) overlayButtonList.push(freeDosBtn);
   if (msDosBtn) overlayButtonList.push(msDosBtn);
   if (msDos4Btn) overlayButtonList.push(msDos4Btn);
+  if (k386Btn) overlayButtonList.push(k386Btn);
   overlayButtonList.push(libraryStartBtn);
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
   const overlay = el('div', { class: 'overlay' }, [overlayButtons, overlayNote]);
@@ -2778,6 +2784,10 @@ export function buildPlayerUI(
       if (msDosBtn) {
         msDosBtn.textContent = t('startBtnMsDos2');
         msDosBtn.setAttribute('href', msDosHref());
+      }
+      if (k386Btn) {
+        k386Btn.textContent = t('startBtnK386');
+        k386Btn.href = k386Href();
       }
       if (msDos4Btn) {
         msDos4Btn.textContent = t('startBtnMsDos4');
