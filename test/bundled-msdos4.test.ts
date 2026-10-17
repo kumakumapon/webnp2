@@ -85,6 +85,12 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
       ...(hasWindow ? ['KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT', 'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP'] : []),
     ]));
+    if ((manifest as unknown as { desktop_autostart?: boolean }).desktop_autostart) {
+      expect(hasWindow).toBe(true);
+      const startup = new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'));
+      expect(startup.split('REM KDESK AUTO START')).toHaveLength(2);
+      expect(startup.split('IF EXIST KDESK.COM KDESK')).toHaveLength(2);
+    }
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');
     expect(config).toContain('DEVICE=EMM386.EXE EMM=8192');

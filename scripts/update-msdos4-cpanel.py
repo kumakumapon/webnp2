@@ -124,6 +124,12 @@ def main():
         startup = b'ECHO KDESK: Window desktop (type KDESK)\r\n'
         if startup not in autoexec:
             autoexec += startup
+        # Own only this marked block; keep user commands and CPANEL's FD98 block.
+        autoexec = re.sub(rb'(?im)^REM KDESK AUTO START\r?\nIF EXIST KDESK.COM KDESK\r?\n', b'', autoexec)
+        if autoexec and not autoexec.endswith(b'\n'):
+            autoexec += b'\r\n'
+        autoexec += b'REM KDESK AUTO START\r\nIF EXIST KDESK.COM KDESK\r\n'
+        manifest['desktop_autostart'] = True
 
     helper_path = dos / 'ports/pc98/image.py'
     spec = importlib.util.spec_from_file_location('pc98_image', helper_path)

@@ -1,6 +1,7 @@
 # KDESK clipboard and images
 
-Boot the MS-DOS 4.0 option and type `KDESK`. KDESK 1.2 uses PC-9821 PEGC
+Boot the MS-DOS 4.0 option; KDESK starts automatically. F10 returns to DOS,
+where `KDESK` opens it again. KDESK uses PC-9821 PEGC
 256-color graphics and moves complete windows at pixel resolution. F9 or Paint
 starts KPAINT; Apps includes KVIEW and KPAINT, and Files opens BMPs in KVIEW.
 
