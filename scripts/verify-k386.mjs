@@ -146,7 +146,8 @@ try{
 
   await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[3]?.indexOf('Tasks')===10);await pause(200);
   await page.screenshot({path:join(output,'task-manager.png')});
-  await key('CTRL+N');await wait('V86 COUNTER');await key('CTRL+O');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>line.includes('Run')&&line.includes('Pause')&&line.includes('Resume')&&line.includes('End')));await pause(200);await page.screenshot({path:join(output,'dos-windows.png')});
+  await key('CTRL+N');await wait('V86 COUNTER');await key('CTRL+O');await wait('V86 ECHO');await pause(200);
+  await page.screenshot({path:join(output,'dos-windows.png')});
   await key('ESC');await until(s=>s[1].state===0,'Guest Escape exits Echo');
   await run(1,'ECHO.COM');await until(s=>s[1].state===2,'Restart exited guest');
   await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');await prompt();
