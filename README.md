@@ -320,7 +320,8 @@ separate saved disks. Full source/limits are in
 ### Bundled MS-DOS 4.0 + RetroBasic boot floppy
 
 Select **Start with MS-DOS 4.0 + RetroBasic** on the start overlay. The bundled
-1232 KiB FAT12 disk boots to `A>`; `VER` reports **4.00**. Run `RBASIC` for
+1232 KiB FAT12 disk starts KDESK automatically. Press F10 for `A>`; `VER`
+reports **4.00**. Run `RBASIC` for
 interactive BASIC, or `RBASIC PRIMES.BAS`, `RBASIC GRAPHICS.BAS`, or
 `RBASIC FILEIO.BAS` to try the samples. `SYSTEM` returns from BASIC to DOS.
 In BASIC, try `10 PRINT "HELLO"`, `RUN`, then `SAVE "HELLO.BAS"`.
@@ -340,7 +341,7 @@ use CRLF. FD98's **E** key opens the selected file in EDIT98. `TYPE JPHELLO.TXT`
 shows the Japanese sample. See [Japanese input and editing](docs/japanese-input.md)
 and [editor keyboard guide](public/msdos4/EDIT.txt).
 
-Run `KDESK` for the original PC-98 window desktop. It provides overlapping
+KDESK starts automatically and can be reopened with `KDESK` after F10. It provides overlapping
 launcher, files, memo, help and about windows, with keyboard controls for focus,
 movement, resizing and minimization. See [desktop controls](docs/window-desktop.md).
 

@@ -67,7 +67,17 @@ try {
   assert.ok(reachable, 'Mobile boot link must be visible and clickable inside the overlay');
   if (output) await page.screenshot({ path: join(output, 'mobile-start.png') });
   await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2' }), page.click('.start-btn-msdos4')]);
-  await line('A>');
+  const exitAutostart = async () => {
+    if (!manifest.desktop_autostart) return;
+    await page.waitForFunction(() => {
+      const {text,lines}=window.np2debug.np2.getScreenText();
+      return text.includes('Ready') && lines[24]?.slice(25,29)==='Apps';
+    },{timeout:60000});
+    await new Promise(resolve=>setTimeout(resolve,150));
+    if(output) await page.screenshot({path:join(output,'desktop-autostart.png')});
+    await page.evaluate(()=>window.np2debug.np2.sendKeys('F10'));
+  };
+  await exitAutostart(); await line('A>');
   assert.equal(await page.$('.start-btn-msdos4'), null, 'Explicit disk URLs must not offer another boot choice');
   assert.ok(!(await text()).includes('Specified COMMAND search directory bad'));
   results.push('Japanese/English mobile boot links, project subpath, existing OS choices, explicit disk URL');
@@ -78,6 +88,7 @@ try {
   await command('TYPE EXEC.TXT');
   await line('DOS4 EXEC OK');
   assert.equal((await readGuest('EXEC.TXT')).toString(), 'DOS4 EXEC OK\r\n');
+  if(manifest.desktop_autostart) results.push('automatic KDESK boot, F10 to DOS and commands without relaunch');
   results.push('Source-built DOS 4.00 boot, version API, COM EXEC, redirected output and return');
 
   await command('XMSCHK');
@@ -130,6 +141,11 @@ try {
   assert.ok(panel.includes('Start FD98 file manager automatically : NO'));
   await panelKey('q');
   await line('A>');
+  if(manifest.desktop_autostart) {
+    const auto=(await readGuest('AUTOEXEC.BAT')).toString();
+    assert.equal(auto.split('REM KDESK AUTO START').length-1,1);
+    assert.ok(auto.includes('IF EXIST KDESK.COM KDESK'));
+  }
   results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
   }
 
@@ -184,12 +200,12 @@ try {
   // Input settings and error feedback are checked in English as well.
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.goto(new URL(`?fd1=./msdos4/${manifest.image}&run=1&lang=en&clk=8`, base).href, { waitUntil: 'networkidle2' });
-  await line('A>');
+  await exitAutostart(); await line('A>');
   results.push(...await verifyJapaneseInput(page, { screenshot: output ? join(output, 'ime.png') : undefined }));
 
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
   await page.reload({ waitUntil: 'networkidle2' });
-  await line('A>');
+  await exitAutostart(); await line('A>');
   assert.deepEqual(await readGuest('PROOF.BAS'), programBytes);
   if (manifest.files.some(file => file.name === 'KDESK.COM')) {
     assert.equal((await readGuest('NOTE.TXT')).toString(), 'WINDOW MEMO OK\r\nSECOND LINE');

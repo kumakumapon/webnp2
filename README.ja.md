@@ -282,7 +282,8 @@ IBM PC の BIOS・画面・ハードウェアを直接操作するソフトは P
 ### 同梱の MS-DOS 4.0 + RetroBasic 起動FD
 
 起動画面の **「MS-DOS 4.0 + RetroBasic で起動」** を選択します。
-同梱の 1232 KiB FAT12 FD から `A>` へ起動し、`VER` は **4.00** を表示します。
+同梱の 1232 KiB FAT12 FD からKDESKが自動起動します。F10で `A>` に戻り、
+`VER` は **4.00** を表示します。
 `RBASIC` で BASIC の対話モード、`RBASIC PRIMES.BAS`、`RBASIC GRAPHICS.BAS`、
 `RBASIC FILEIO.BAS` でサンプルを実行できます。`SYSTEM` で BASIC から DOS に戻ります。
 対話モードでは `10 PRINT "HELLO"` → `RUN` → `SAVE "HELLO.BAS"` を試してください。
@@ -295,7 +296,8 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 既存ファイルには上書きしません。[操作説明](public/msdos4/FILER.txt)と
 [同梱ファイラー](docs/bundled-filer.md)を参照してください。
 
-`KDESK` でPC-98用の独自ウィンドウデスクトップを起動できます。
+PC-98用の独自ウィンドウデスクトップKDESKが自動起動します。
+F10でDOSに戻り、`KDESK` で再度開けます。
 ランチャー・ファイル一覧・メモ・ヘルプを表示し、キーボードでウィンドウの切り替え、
 移動・サイズ変更・最小化ができます。[操作説明](docs/window-desktop.md)を参照してください。
 

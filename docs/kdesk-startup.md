@@ -1,5 +1,31 @@
-# KDESK startup and display update
+# KDESKの自動起動とちらつき改善
 
-Bundle the buffered-rendering KDESK and enable one automatic desktop launch in
-AUTOEXEC.BAT. Verify boot, F10 return to DOS, CPANEL preservation, reboot and
-existing applications through the generated image.
+MS-DOS 4.0の起動メニューを選ぶと、KDESKが自動起動します。
+F10で終了するとDOSプロンプト `A>` に戻り、その後はDOSコマンドを利用できます。
+再び開くときは `KDESK` を実行してください。
+
+AUTOEXEC.BATには次のブロックを一つだけ追加します。
+
+```bat
+REM KDESK AUTO START
+IF EXIST KDESK.COM KDESK
+```
+
+KDESK.COMがない場合はDOSへ進みます。自動起動を止める場合は、
+`EDIT AUTOEXEC.BAT` でこの2行を削除して保存し、ディスクの変更を保持して再起動します。
+CPANELはこのブロックを保持したまま、ドライバーやFD98自動起動の設定を変更します。
+FD98自動起動も有効にした場合、そのコマンドはKDESK終了後に実行されます。
+
+PC-9821 PEGCでは画面外VRAMで描画を完成させ、変更したウインドウ範囲を表示中のVRAMへ転送します。
+選択・編集では操作中のウインドウを更新し、ウインドウ切り替えや移動・リサイズでは影響する領域を復元します。
+描画の途中で表示中のデスクトップ全体を背景色で消去しません。
+時計の更新とドラッグ時の背景も同じ仕組みに合わせています。
+16色フォールバックでは従来の直接描画を利用します。
+
+CIは固定したMS-DOSソースからKDESKをビルドし、起動イメージ・manifest・ガイドを生成します。
+カーネル・既存ツール・ドライバーの内容と出典は引き継ぎます。
+同じ生成処理を繰り返しても同一のイメージになり、自動起動行が増殖しないことを確認しています。
+
+検証では、実際の表示フレームを追跡して選択・切り替え・時計更新時のメニュー消失を検出します。
+自動起動、F10でのDOS復帰、CPANEL変更後と再読み込み後の自動起動、
+既存のウインドウ操作・画像アプリ・電卓・時計・日本語入力・ファイル永続化も確認します。
