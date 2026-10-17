@@ -24,7 +24,7 @@ def main():
     assert hashlib.sha256(original).hexdigest() == manifest['sha256']
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM')
+    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     files['K386.TXT'] = (source / 'tools/k386/DESIGN.md').read_bytes().replace(b'\n', b'\r\n')

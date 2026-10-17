@@ -96,6 +96,16 @@ try{
   let before=states;
   await key('F4');await type('GUI WHILE BOTH RUN');await wait('GUI WHILE BOTH RUN');
   states=await until(s=>s.every((v,i)=>v.counter>before[i].counter),'Both inactive VMs continue with Memo active');
+  before=states;
+  await key('F2');await key('HOME');await wait('Selected: File manager');
+  await key('HELP');await wait('Selected: Clock');await key('LEFT');await wait('Selected: Calculator');
+  await key('ENTER');await wait('Value: 0');await type('6*7=');await wait('Value: 42');
+  await key('F2');await key('HELP');await wait('Selected: Clock');await key('ENTER');
+  await page.waitForFunction(()=>/\b\d{2}:\d{2}:\d{2}\b/.test(window.np2debug.np2.getScreenText().text),null,{timeout:60000});
+  const clock=await page.evaluate(()=>window.np2debug.np2.getScreenText().text.match(/\b\d{2}:\d{2}:\d{2}\b/)[0]);
+  await page.waitForFunction(clock=>{const t=window.np2debug.np2.getScreenText().text.match(/\b\d{2}:\d{2}:\d{2}\b/);return t&&t[0]!==clock;},clock,{timeout:30000});
+  states=await until(s=>s.every((v,i)=>v.counter>before[i].counter),'Both VMs continue with Calculator, Clock and Memo open');
+  results.push('Calculator arithmetic, live Clock and Memo coexist with both background V86 contexts');
   await key('CTRL+N');await key('CTRL+P');before=await until(s=>s[0].state===3,'Pause DOS 1');
   states=await until(s=>s[1].counter>before[1].counter,'DOS 2 continues while DOS 1 is stopped');
   assert.equal(states[0].counter,before[0].counter);
@@ -129,10 +139,11 @@ try{
   await run(1,'FAULT.COM');states=await until(s=>s[1].state===4,'Isolated page violation');
   assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0x30000);
   before=states;await until(s=>s[0].counter>before[0].counter,'Other VM survives the fault');
-  await run(1,'PORT.COM');states=await until(s=>s[1].state===4,'Denied port I/O');assert.equal(states[1].fault,13);
+  await run(1,'PORT.COM');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
+  await run(1,'FPU.COM');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
   await run(1,'CON.COM');await wait('Cannot load COM');
   await key('ESC'); // Cancel the rejected path, leaving the GUI usable.
-  await run(1,'DF.COM');await until(s=>s[1].state===0&&s[1].screen.includes('V86 DIRECTION FLAG PASS'),'Guest DF does not corrupt monitor string copies');
+  await run(1,'DF.COM');await until(s=>s[1].state===0&&s[1].screen.includes('V86 DIRECTION FLAG PASS'),'Empty input at private RAM boundary and guest DF are safe');
   await run(1,'P98TEST.COM');await until(s=>s[1].state===0&&s[1].screen.includes('DOS4 EXEC OK'),'Existing DOS COM binary');
   await run(1,'KFILE.COM');states=await until(s=>s[1].state===0&&s[1].screen.includes('READ ONLY FILE PASS'),'DOS file broker');
   assert.ok(states[1].screen.includes('READ ONLY DATA'));
@@ -147,6 +158,11 @@ try{
   await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[3]?.indexOf('Tasks')===10);await pause(200);
   await page.screenshot({path:join(output,'task-manager.png')});
   await key('CTRL+N');await wait('V86 COUNTER');await key('CTRL+O');await wait('V86 ECHO');await pause(200);
+  await page.waitForFunction(()=>{
+    const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=640;c.height=400;
+    const g=c.getContext('2d');g.drawImage(source,0,0);const p=g.getImageData(352,110,1,1).data;
+    return p[0]<80&&p[1]>70&&p[1]<160&&p[2]>120;
+  },null,{timeout:60000}); // Wait for the foreground DOS 2 title in the actual framebuffer.
   await page.screenshot({path:join(output,'dos-windows.png')});
   await key('ESC');await until(s=>s[1].state===0,'Guest Escape exits Echo');
   await run(1,'ECHO.COM');await until(s=>s[1].state===2,'Restart exited guest');

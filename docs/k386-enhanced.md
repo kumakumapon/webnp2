@@ -43,6 +43,9 @@ with an existing EMM386/V86 owner. The experimental boot profile omits XMS/EMS
 loaders; the normal profile is preserved. Session memory uses DOS-owned conventional
 blocks, so available memory limits foreground tools and guest COM sizes (60 KiB).
 The monitor is resident until reboot; ending sessions releases their allocations.
+Only general/segment registers, flags and stack are saved. x87/SIMD context
+virtualization is not implemented; CR0 EM/TS/MP contains FPU instructions as a
+per-session #NM instead of sharing that hardware state.
 
 ## Build and validation
 
@@ -81,6 +84,9 @@ DOS COM (`P98TEST.COM`), guest direction-flag preservation, rejected device path
 read-only file services and a byte-identical disk export after all sessions ended.
 Builds with a different GCC may produce a different image hash; each generated
 manifest and test result identifies its own source and bytes.
+Subsequent boundary hardening adds zero-length DOS line input at private offset
+FFFEh and explicit FPU/#NM containment. The E2E now also checks Calculator,
+Clock and Memo while both V86 contexts run; final pinned results are in the PR.
 
 `npm test`: 486 passed, 2 existing skips. Production build passes. The separate
 normal-image suite and GitHub CI results are recorded on the two draft PRs:
