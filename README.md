@@ -16,7 +16,7 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-508fa65868dc.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&run=1>
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
@@ -343,7 +343,8 @@ and [editor keyboard guide](public/msdos4/EDIT.txt).
 
 KDESK starts automatically and can be reopened with `KDESK` after F10. It provides overlapping
 launcher, files, memo, help and about windows, with keyboard controls for focus,
-movement, resizing and minimization. See [desktop controls](docs/window-desktop.md).
+movement, resizing, minimization and content scrollbars. Files supports icon
+selection and double-click navigation. See [desktop controls](docs/window-desktop.md).
 
 Run `CPANEL` to change XMS/EMS, FILES/BUFFERS, or FD98 auto-start. Press `S`
 to save; CONFIG.SYS changes take effect after reboot. See

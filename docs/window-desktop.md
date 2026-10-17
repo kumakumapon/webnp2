@@ -21,8 +21,10 @@ Click Apps/Files/Memo/Help/About to open a window, and click a window to focus i
 | Taskbar button | Restore and focus |
 | Launcher icon | Select; double-click or Open starts it |
 | Launcher List/Icons (V) | Toggle icon grid/list; list rows start with one click |
-| Files row / double-click | Select / open directory or file |
-| Files Parent / Open / ^ / v | Parent directory / open / scroll selection |
+| File icon or list row / double-click | Select / open directory or file |
+| Files Parent / Open / List or Icons | Parent directory / open / change view |
+| Files FD98 (F) | Open the two-pane filer in this directory |
+| Scrollbar arrows / track / thumb drag | Scroll a row / page / to a position |
 | Memo Save / Copy / Cut / Paste / All | Save NOTE.TXT / use the text clipboard |
 | Save / Discard / Cancel dialog | Resolve unsaved changes |
 
@@ -41,15 +43,28 @@ including over text. A mouse driver is not required; keyboard controls also work
 | Escape | Close the active window |
 | F10 | Exit to DOS |
 
-The launcher opens the file manager, text editor, settings panel, installed
-BASIC, DOS shell, image viewer, image editor, calculator or clock. Calculator
-and Clock are built-in windows that work alongside Memo. See the
+The launcher opens the built-in icon file manager, text editor, settings panel, installed
+BASIC, DOS shell, image viewer, image editor, calculator or clock.
+Files, Calculator and Clock are built-in windows that work alongside Memo. See the
 [utility and icon launcher guide](kdesk-utilities.md). KVIEW/KPAINT inherit and return the desktop mouse position, so switching
 between them and KDESK needs no mouse resync. External DOS programs run one at
 a time in the foreground.
 Exit the program (use `EXIT` for the shell), then press any key or click to return to the
 desktop. Each DOS tool retains its own controls (usually keyboard input). The Files window navigates directories and opens COM/EXE programs,
 TXT files in the text editor, BAS files in the installed BASIC, and BMP files in KVIEW.
+
+Files defaults to file-type icons: click selects, double-click/Enter opens, and
+Backspace/Parent goes up. V or List/Icons toggles the list view. Arrows select
+items, Page Up/Down moves a page, and Home/End selects an end. F or FD98 opens
+the existing filer for copy, move, rename, delete and directory creation; the
+button is hidden in narrow windows but F still works.
+
+Launcher, Files, Memo, Help and About show a vertical scrollbar when content
+overflows. Each window keeps its own scroll position. Icons reflow and text
+wraps as you resize; Calculator and Clock fit their minimum window sizes.
+Memo/Help/About also accept arrows, Page Up/Down and Home/End for scrolling.
+Memo editing reveals the final line again and scrolling never changes or saves
+text. See [scrollbar and file icon details](kdesk-explorer.md).
 
 The built-in memo accepts 1023 ASCII characters. Ctrl+S saves `NOTE.TXT` with
 CRLF line endings in the starting directory. Closing or exiting with unsaved

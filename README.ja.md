@@ -15,7 +15,7 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 
 - **公開ページ**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-f531228021b5.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&run=1>
 - **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
@@ -299,7 +299,8 @@ F9でアプリやBASICサンプルを起動、F10でDOSに戻ります。F1で�
 PC-98用の独自ウィンドウデスクトップKDESKが自動起動します。
 F10でDOSに戻り、`KDESK` で再度開けます。
 ランチャー・ファイル一覧・メモ・ヘルプを表示し、キーボードでウィンドウの切り替え、
-移動・サイズ変更・最小化ができます。[操作説明](docs/window-desktop.md)を参照してください。
+移動・サイズ変更・最小化と、内容に応じたスクロールバーに対応します。
+Filesはアイコンの選択・ダブルクリックで操作できます。[操作説明](docs/window-desktop.md)を参照してください。
 
 `CPANEL` で XMS/EMS、FILES/BUFFERS、FD98 の自動起動を設定できます。
 `S` で保存し、CONFIG.SYS の変更は再起動後に反映されます。
