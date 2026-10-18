@@ -1,6 +1,7 @@
 // Guest shell/process tests against the real NP2kai CPU. Host code only supplies
 // keys, prepares an isolated DOS fixture and reads actual memory/disk/framebuffer.
 import assert from 'node:assert/strict';
+import { inspectK386 } from './k386-inspect.mjs';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -23,23 +24,7 @@ const memory=async(at,n)=>Buffer.from(await page.evaluate(({at,n})=>window.np2de
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 const file=async name=>Buffer.from(await page.evaluate(async name=>Array.from(await window.np2debug.np2.diskReadFile('fd1',name)),name));
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const snapshot=()=>page.evaluate(()=>{
-  const np2=window.np2debug.np2;
-  if(!window.shellMailbox){
-    const bytes=atob(np2.readMemoryBase64(0x10000,0x90000).base64);let at=-1;
-    while((at=bytes.indexOf('K386ABI1',at+1))>=0){
-      const w=o=>bytes.charCodeAt(at+o)|bytes.charCodeAt(at+o+1)<<8;
-      if(w(8)===1&&w(10)===4240&&(w(170)||w(2214))){window.shellMailbox=0x10000+at;break;}
-    }
-  }
-  if(!window.shellMailbox)return null;
-  const b=atob(np2.readMemoryBase64(window.shellMailbox,4240).base64);
-  const w=o=>b.charCodeAt(o)|b.charCodeAt(o+1)<<8;
-  const d=o=>(w(o)|w(o+2)<<16)>>>0;
-  return [0,1].map(id=>{const at=152+2044*id;return {state:w(at),exitCode:w(at+2),fault:w(at+4),
-    ticks:d(at+8),cr3:d(at+12),physical:d(at+16),eip:d(at+20),eflags:d(at+24),counter:d(at+32),
-    row:w(at+38),screen:b.slice(at+44,at+2044)};});
-});
+const snapshot=async()=>(await inspectK386(page))?.views.map(v=>({...v,exitCode:v.exit}));
 const rows=view=>Array.from({length:25},(_,i)=>view.screen.slice(i*80,i*80+80).trim());
 const shell=view=>view.state===2&&/^A:\\[^>]*>$/.test(rows(view).filter(Boolean).at(-1)??'');
 const line=(view,needle)=>rows(view).includes(needle);
@@ -66,7 +51,7 @@ const visibleText=(id,row=0)=>page.waitForFunction(({id,row})=>{
 
 try{
   await mkdir(output,{recursive:true});
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
   await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
   // Prepare a directory through real DOS, on this browser's disposable disk.
   // The distributed image itself remains immutable; VM operations are compared
@@ -138,8 +123,9 @@ try{
     const at=raw.readUInt16LE(24)+i*4,target=raw.readUInt16LE(at)+16*raw.readUInt16LE(at+2);
     module.writeUInt16LE((module.readUInt16LE(target)+0x8010)&0xffff,target);
   }
-  assert.deepEqual(await memory(views[1].physical+0x100,module.length),module);
-  assert.deepEqual(await memory(views[1].physical+0x80,9),Buffer.from([7,...Buffer.from(' DIRECT'),13]));
+  const diagnostic=(await inspectK386(page)).diagnostics[1];
+  assert.deepEqual(Buffer.from(diagnostic.memory.slice(256,256+module.length)),module);
+  assert.deepEqual(Buffer.from(diagnostic.memory.slice(0x80,0x89)),Buffer.from([7,...Buffer.from(' DIRECT'),13]));
   snapshots.push({stage:'relocated-physical-image',views});
   done('bad MZ is rejected before replacing live RAM; actual loaded bytes, relocations and PSP arguments match');
 

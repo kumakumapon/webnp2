@@ -43,15 +43,14 @@ while such a tool runs, GUI-driven VM quanta pause.
 `tools/k386/DESIGN.md` in the pinned MS-DOS source specifies the mailbox, GDT/IDT,
 TSS, page ownership, CPU/segment preservation, timer/EMM386 guards and file broker.
 The monitor requires real mode and a masked, unowned IRQ0. It does not coexist
-with an existing EMM386/V86 owner. The experimental boot profile omits XMS/EMS
-loaders; the normal profile is preserved. Session memory uses DOS-owned conventional
-blocks, so available memory limits foreground tools and guest COM sizes (60 KiB).
-Small MZ modules and their minimum memory must fit a
-64 KiB PSP block; one child EXEC level uses another 68 KiB parent snapshot.
-Environment blocks, extra heap, FCBs and nonstandard handle inheritance are
-unsupported. Virtual flags and private software interrupt vectors are supported;
-asynchronous virtual hardware interrupts remain unimplemented.
-The monitor is resident until reboot; ending sessions releases their allocations.
+with an existing EMM386/V86 owner. The experimental profile loads FDXMS286 and selects 16MiB extended memory,
+without EMM386; the normal profile is preserved. Each VM has XMS-backed private
+conventional RAM and TVRAM, with a trusted DOS paragraph allocator, PSP and
+copied environment. Four EXEC process levels retain parent memory and inherit
+read-only handles. PC-98 BIOS interval callbacks can wake an input-waiting VM
+and respect virtual IF; full PIC/PIT/IRQ virtualization remains incomplete.
+See the [process compatibility guide](k386-processes.md) for the current limits.
+The monitor is resident until reboot; ending sessions releases their XMS backing.
 Only general/segment registers, flags and stack are saved. x87/SIMD context
 virtualization is not implemented; CR0 EM/TS/MP contains FPU instructions as a
 per-session #NM instead of sharing that hardware state.
@@ -101,13 +100,19 @@ its source and bytes; builds with different GCC versions can have different hash
 | PM/V86, paging, timer preemption, exception containment | Implemented and tested |
 | Two private contexts, retained state and background progress | Implemented and tested |
 | Guest DOS windows, focus, native window operations, GUI coexistence | Implemented and tested |
-| KSH, bounded COM/MZ, one child EXEC, virtual flags/IRET | Implemented; browser regression required in CI |
+| KSH, bounded COM/MZ, four EXEC levels, private DOS allocator and virtual flags/IRET | Implemented; browser regression required in CI |
 | Private input/cwd/DTA and read-only files | Implemented; whole-disk integrity checked in CI |
-| Two complete independently booted DOS environments | **Unimplemented** |
-| General COMMAND.COM / full DOS and BIOS compatibility | **Unimplemented** |
+| Two DOS sessions with general DOS/BIOS compatibility | **Unimplemented** |
+| Original COMMAND.COM VER/ECHO and external COM execution | Implemented; full DOS/BIOS compatibility incomplete |
 | Full virtual interrupt delivery, TSRs and direct graphics virtualization | **Unimplemented** |
 | Shared disk writes | **Unavailable**; explicitly denied |
 
 Completing the remaining DOS-session requirements needs a DOS/BIOS and device
 virtualization layer. CPU-mode transitions alone do not provide those services.
 Keep the continuation PRs in draft until those acceptance conditions are met.
+
+Continuation [MS-DOS #18](https://github.com/kumakumapon/MS-DOS/pull/18) and
+[webnp2 #18](https://github.com/kumakumapon/webnp2/pull/18) add XMS private RAM,
+DOS memory/PSP/environment, nested processes, inherited handles, BIOS interval
+timers and original COMMAND probes. The process E2E adds actual per-level CPU
+contexts, memory cookies and firmware-write faults; CI records final evidence.

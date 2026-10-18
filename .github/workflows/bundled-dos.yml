@@ -93,6 +93,37 @@ jobs:
           path: test-results/k386-shell/
           if-no-files-found: ignore
 
+  k386-processes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned DOS process and XMS images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Playwright XMS, nested DOS processes and BIOS timer validation
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/k386-processes-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-k386-processes.mjs http://127.0.0.1:4173/webnp2/ test-results/k386-processes
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k386-processes-playwright-validation
+          path: test-results/k386-processes/
+          if-no-files-found: ignore
+
   k386:
     runs-on: ubuntu-latest
     timeout-minutes: 10

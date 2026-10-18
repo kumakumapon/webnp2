@@ -120,3 +120,11 @@ progression, 12/24-hour switching, minimize/restore and icon/list navigation,
 including narrow windows. The media suite covers text/image clipboard, BMP decoding, drawing, undo/redo,
 fill/selection, file protection and the visible browser import/export controls. Screenshots and results are available
 in the `bundled-dos-browser-validation` Actions artifact.
+
+## Experimental concurrent DOS windows
+
+The separate KDESK/386 boot choice adds guest-owned DOS windows with XMS-backed
+private RAM, process memory/EXEC and BIOS interval timers. See the
+[process and compatibility guide](k386-processes.md) for boot requirements,
+original COMMAND.COM probes, controls, build checks and remaining restrictions.
+The ordinary desktop and foreground tools described above remain available.

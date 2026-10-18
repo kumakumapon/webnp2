@@ -1,0 +1,92 @@
+// Runs original guest binaries on the shipped NP2 CPU; no host DOS interpreter.
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {chromium} from 'playwright';
+import {inspectK386} from './k386-inspect.mjs';
+const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-processes']=process.argv.slice(2);
+const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url),'utf8'));
+assert.equal(manifest.enabled,true);assert.equal(manifest.extended_memory_mb,16);
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
+const page=await browser.newPage(),results=[],snapshots=[],errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+const pause=ms=>page.waitForTimeout(ms),snapshot=()=>inspectK386(page);
+const wait=needle=>page.waitForFunction(needle=>{try{return window.np2debug.np2.getScreenText().text.includes(needle);}catch{return false;}},needle,{timeout:60000});
+const key=async value=>{await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await pause(200);};
+const type=async value=>{await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await pause(200);};
+const run=async(id,program)=>{await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');await type(program+'\r');};
+const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const until=async(predicate,label,observe)=>{let s;for(let i=0;i<600;i++){s=await snapshot();if(s){observe?.(s);if(predicate(s.views))return s;}await pause(observe?30:100);}throw Error(label+': '+JSON.stringify(s));};
+const save=(stage,s)=>{snapshots.push({stage,...s});};
+const done=label=>{results.push(label);console.log('PASS '+label);};
+try{
+  await mkdir(output,{recursive:true});
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
+  await run(0,'MEMORY.COM A');await until(v=>v[0].screen.includes('DOS MEMORY PASS'),'First arena');
+  await run(1,'MEMORY.COM B');let s=await until(v=>v.every(x=>x.counter>100&&x.screen.includes('DOS MEMORY PASS')),'Two arenas');
+  assert.notEqual(s.views[0].physical,s.views[1].physical);assert.notEqual(s.views[0].cr3,s.views[1].cr3);
+  assert.ok(s.diagnostics.every(d=>d.frame.eflags&0x20000));save('two-private-arenas',s);
+  const before=s;await key('CTRL+P');s=await until(v=>v[1].state===3,'Pause second arena');
+  const stopped=s.views[1].counter;s=await until(v=>v[0].counter>before.views[0].counter+20,'First arena continues');
+  assert.equal(s.views[1].counter,stopped);await key('CTRL+R');await until(v=>v[1].counter>stopped,'Resume private cookie check');
+  done('two private >64KiB allocations, MCB ownership/resize/coalescing checks and retained RAM after pause/resume');
+
+  await run(1,'TIMER.COM');await key('F4');await type('GUI WHILE TIMER WAITS');await wait('GUI WHILE TIMER WAITS');
+  s=await until(v=>v[1].state===2&&v[1].counter===3,'Callbacks while input waits');
+  assert.ok(s.views[0].counter>before.views[0].counter);save('timer-with-memo',s);
+  await key('CTRL+O');await type('Z');s=await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Timer completion');save('timer-completed',s);
+  done('PC-98 INT 1Ch callbacks respect CLI, rearm, and wake a waiting background VM while Memo remains usable');
+  await run(1,'TIMER.COM EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
+  await type('q');s=await until(v=>v[1].state===2&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT'),'Timer parent resumes');
+  const callbacks=s.views[1].counter;s=await until(v=>v[1].state===2&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
+  await type('Z');await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Rearmed parent timer completion');
+  done('a parent-owned timer continues across child EXEC, callback rearm and child exit');
+  await run(1,'BADTIMER.COM');s=await until(v=>v[1].state===4&&v[1].fault===13,'Tampered IRQ callback contained');
+  const survivor=s.views[0].counter;await until(v=>v[0].counter>survivor,'Other VM survives bad callback');save('invalid-callback-contained',s);
+  done('a corrupted private IRQ vector faults only its owning VM');
+
+  await run(1,'PROCESS.COM');const children=new Map();
+  s=await until(v=>v[1].state===0&&v[1].screen.includes('NESTED PROCESS PASS'),'Nested processes',state=>{
+    const v=state.views[1],d=state.diagnostics[1];if(v.state===1)children.set(v.psp,{psp:v.psp,frame:d.frame,environment:d.memory[44]|d.memory[45]<<8});
+  });
+  assert.equal(s.views[1].exit,0);assert.ok(children.size>=3,'Observe multiple live child PSP/CPU contexts');
+  save('four-exec-levels',s);snapshots.push({stage:'observed-process-contexts',contexts:[...children.values()]});
+  done('four nested EXEC levels restore distinct PSP/environment, DTA, per-level IVT, CPU/stack, inherited file cursor and duplicated console handles');
+
+  await run(1,'COMMAND.COM /C VER');
+  s=await until(v=>v[1].state===0&&v[1].screen.includes('MS-DOS Version 4.00'),'Original COMMAND.COM probe');
+  save('original-command-ver',s);
+  assert.equal(s.views[1].state,0);assert.match(s.views[1].screen,/MS-DOS Version 4\.00/);
+  const rows=v=>Array.from({length:25},(_,i)=>v.screen.slice(i*80,i*80+80).trim()).filter(Boolean);
+  const prompt=v=>v.state===2&&rows(v).at(-1)==='A:\\>';
+  await run(1,'COMMAND.COM');await until(v=>prompt(v[1]),'Interactive COMMAND prompt');
+  await type('ECHO COMMAND-INTERACTIVE\r');await until(v=>prompt(v[1])&&rows(v[1]).includes('COMMAND-INTERACTIVE'),'Original ECHO');
+  await type('P98TEST.COM\r');s=await until(v=>prompt(v[1])&&v[1].screen.includes('DOS4 EXEC OK'),'COMMAND external program and parent return');save('original-command-exec',s);
+  await type('COUNTER.COM\r');s=await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'COMMAND background child');
+  const firstCounter=s.views[1].counter;
+  await run(0,'COMMAND.COM');await until(v=>prompt(v[0])&&v[1].counter>firstCounter,'Second original COMMAND while first child runs');
+  await type('COUNTER.COM\r');s=await until(v=>v.every(x=>x.state===1&&x.psp!==0x8000&&x.counter>0),'Two original COMMAND child programs');save('two-command-children',s);
+  assert.ok(s.diagnostics.every(d=>d.frame.eflags&0x20000));assert.notEqual(s.views[0].physical,s.views[1].physical);
+  const counters=s.views.map(v=>v.counter);await key('F4');await type(' TWO COMMAND CHILDREN');
+  await until(v=>v.every((x,i)=>x.counter>counters[i]),'Both original COMMAND children run in background');
+  await key('CTRL+N');await type('q');await until(v=>prompt(v[0]),'First COMMAND resumes');
+  const other=(await snapshot()).views[1].counter;await type('ECHO COMMAND-PARENT-RESTORED\r');
+  await until(v=>prompt(v[0])&&rows(v[0]).includes('COMMAND-PARENT-RESTORED')&&v[1].counter>other,'Independent COMMAND parent while other child continues');
+  await key('CTRL+O');await type('q');await until(v=>prompt(v[1]),'Second COMMAND resumes');
+  done('two original interactive COMMAND.COM sessions run external DOS programs concurrently and restore their parent shells independently');
+  await run(1,'ROMWRITE.COM');s=await until(v=>v[1].state===4&&v[1].fault===14,'Firmware is CPU read-only');
+  assert.equal(s.views[1].cr2,0xffffe);assert.equal(s.diagnostics[1].frame.error&7,7);save('firmware-write-protected',s);
+  done('actual CPU page fault rejects firmware writes without changing the other DOS session');
+  await run(1,'KSH.COM');await until(v=>v[1].state===2&&v[1].screen.includes('K386 DOS shell'),'Recovery to guest shell');
+  await type('ECHO PROCESS-RECOVERY\r');s=await until(v=>v[1].screen.includes('PROCESS-RECOVERY'),'Shell after process tests');save('recovered-shell',s);
+  done('KSH can restart after a fault and coexist with the other original COMMAND session');
+
+  await page.screenshot({path:join(output,'process-windows.png')});
+  await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');
+  assert.ok((await snapshot()).views.every(v=>v.state===0));await type('XMSCHK\r');await wait('XMS allocation/move/free OK');assert.equal(hash(await disk()),manifest.sha256);
+  assert.deepEqual(errors,[]);done('GUI shutdown releases XMS sessions and the complete FAT12 image remains byte-identical');
+  await writeFile(join(output,'verification.json'),JSON.stringify({browser:browser.version(),source:manifest.source_commit,image_sha256:manifest.sha256,results,snapshots},null,2)+'\n');
+}catch(error){console.error(await snapshot().catch(()=>null));console.error(await page.evaluate(()=>window.np2debug.np2.getScreenText().text).catch(()=>''));await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw error;}finally{await browser.close();}

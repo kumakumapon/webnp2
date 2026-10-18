@@ -24,7 +24,7 @@ def main():
     assert hashlib.sha256(original).hexdigest() == manifest['sha256']
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM')
+    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     malformed = bytearray(files['MZTEST.EXE'])
@@ -34,8 +34,8 @@ def main():
     files['KDATA.TXT'] = b'READ ONLY DATA\r\n'
     files['K386LIC.TXT'] = (source / 'tools/k386/LICENSE').read_bytes()
     files['LICENSE.TXT'] += b'\r\nK386 original extension\r\n' + files['K386LIC.TXT']
-    # Explicitly isolated boot profile: no EMM386/XMS protected-mode owner.
-    files['CONFIG.SYS'] = b'FILES=30\r\nBUFFERS=10\r\n'
+    # XMS backing coexists with the monitor; EMM386 would already own V86 mode.
+    files['CONFIG.SYS'] = b'FILES=40\r\nBUFFERS=8\r\nDEVICE=FDXMS286.SYS\r\n'
     autoexec = b'@ECHO OFF\r\nECHO KDESK/386 experimental guest shell\r\nK386\r\nKDESK\r\n'
     helper = module('k386_pc98_image', source / 'ports/pc98/image.py')
     excluded = {'IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT'}
@@ -51,7 +51,7 @@ def main():
     (destination / 'manifest.json').write_text(json.dumps({
         'enabled': True, 'experimental': True, 'image': name, 'sha256': sha,
         'source_commit': commit, 'base_image_sha256': manifest['sha256'],
-        'files': entries, 'dos_files_read_only': True,
+        'files': entries, 'dos_files_read_only': True, 'extended_memory_mb': 16,
         'compatibility': 'experimental V86 shell and bounded COM/MZ services; not a complete virtual DOS machine',
     }, indent=2) + '\n')
     (destination / 'LICENSE.txt').write_bytes(files['LICENSE.TXT'])
