@@ -6,10 +6,12 @@ const readSnapshot = page => page.evaluate(() => {
   let addresses=window.k386InspectAddresses;
   if(!addresses){
     const scan=atob(n.readMemoryBase64(0x10000,0x90000).base64);
-    const find=(signature,version,size)=>{let at=-1;while((at=scan.indexOf(signature,at+1))>=0){
-      if(word(scan,at+8)===version&&word(scan,at+10)===size)return at+0x10000;
+    const find=(signature,version,size,live)=>{let at=-1;while((at=scan.indexOf(signature,at+1))>=0){
+      if(word(scan,at+8)===version&&word(scan,at+10)===size&&live(at))return at+0x10000;
     }};
-    addresses={mailbox:find('K386ABI1',1,4240),diagnostics:find('K386DOS1',2,2348)};
+    // DOS file buffers can retain an uninitialized copy of the executable.
+    addresses={mailbox:find('K386ABI1',1,4240,at=>dword(scan,at+168)||dword(scan,at+2212)),
+      diagnostics:find('K386DOS1',2,2348,at=>dword(scan,at+12)||dword(scan,at+16))};
     if(!addresses.mailbox||!addresses.diagnostics)return null;
     window.k386InspectAddresses=addresses;
   }
