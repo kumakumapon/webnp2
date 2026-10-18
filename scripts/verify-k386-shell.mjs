@@ -111,7 +111,7 @@ try{
   await type('X');await until(v=>shell(v[0])&&line(v[0],'PC98 KEY PEEK PASS'),'Non-consuming BH keyboard status');
   await focus(0);await type('DTA C\r');await until(v=>v[0].state===2&&rows(v[0]).some(s=>/^DTA FIRST: .*\.COM$/.test(s)),'COM search suspended');
   await focus(1);await type('DTA E\r');await until(v=>v[1].state===2&&rows(v[1]).some(s=>/^DTA FIRST: .*\.EXE$/.test(s)),'EXE search suspended');
-  views=await snapshot();assert.ok(views.every(v=>line(v,'DTA RESERVED GUARD PASS')));
+  await until(v=>v.every(s=>s.state===2&&line(s,'DTA RESERVED GUARD PASS')),'Both reserved-state rejection checks complete');
   await focus(0);await type('Z');await until(v=>shell(v[0])&&line(v[0],'DTA PRIVATE SEARCH PASS')&&rows(v[0]).some(s=>/^DTA NEXT: .*\.COM$/.test(s)),'COM search state retained');
   await focus(1);await type('Z');await until(v=>shell(v[1])&&line(v[1],'DTA PRIVATE SEARCH PASS')&&rows(v[1]).some(s=>/^DTA NEXT: .*\.EXE$/.test(s)),'EXE search state retained');
   done('PC-98 BIOS peek preserves input; interleaved searches retain private DTAs and reject modified drive/network/cluster state');
