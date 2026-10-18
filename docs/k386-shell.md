@@ -45,25 +45,13 @@ Escape is forwarded to the guest unless editing the GUI Run field.
 
 ## Execution boundary
 
-- COM payloads are limited to 60 KiB. MZ files are at most 64 KiB, have no
-  overlay and must fit the 64 KiB private PSP allocation, including minimum
-  memory. Header/relocations/entry/stack are checked before replacing a VM.
-  MZ modules load at 8010h:0000h; DS/ES and standard command tails use PSP 8000h.
-- One child EXEC level saves the parent's CPU, 64 KiB program/stack, private
-  low page, DTA and virtual IF. It consumes another 68 KiB of conventional DOS
-  memory and can fail with error 8. Nonstandard open-handle inheritance is
-  unsupported (error 4); nested child EXEC and environment blocks are unsupported.
-- PUSHF/PUSHFD, POPF/POPFD, IRET/IRETD and private software interrupt vectors
-  are handled. CLI/STI affect virtual IF without disabling timer preemption.
-  Guest changes cannot obtain IOPL/NT or hardware ownership. PC-98 BIOS keyboard
-  status peeks retain the queued key and return BH according to the BIOS API.
-- This is a defined DOS-service runtime, not two independently booted DOS
-  kernels. General COMMAND.COM, full DOS/BIOS/FCB/internal structures, additional
-  heap allocation, TSRs and asynchronous virtual IRQ delivery remain unfinished.
-  Disk writes, direct graphics/port I/O and shared x87/SIMD state are unavailable.
-- K386 requires real mode and a masked, unowned IRQ0. Use its separate boot
-  profile without EMM386/XMS loaders. The normal image retains its drivers and
-  ordinary KDESK fallback. Existing foreground launcher EXECs pause VM quanta.
+The current XMS-backed memory, four-level EXEC, inherited handles, private BIOS
+interval timers and original COMMAND probes are described in the
+[process compatibility guide](k386-processes.md). COM supports FF00h bytes;
+MZ allocations are bounded by the private DOS arena. General DOS/BIOS/TSR,
+disk writes and direct graphics/port I/O remain incomplete. Use the experimental
+FDXMS286 profile with 16MiB extended memory and no EMM386. The ordinary profile
+retains its drivers and KDESK fallback. Foreground launcher EXECs pause VM quanta.
 
 ## Build and actual-browser validation
 

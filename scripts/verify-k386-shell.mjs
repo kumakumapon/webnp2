@@ -1,6 +1,7 @@
 // Guest shell/process tests against the real NP2kai CPU. Host code only supplies
 // keys, prepares an isolated DOS fixture and reads actual memory/disk/framebuffer.
 import assert from 'node:assert/strict';
+import { inspectK386 } from './k386-inspect.mjs';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -66,7 +67,7 @@ const visibleText=(id,row=0)=>page.waitForFunction(({id,row})=>{
 
 try{
   await mkdir(output,{recursive:true});
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
   await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
   // Prepare a directory through real DOS, on this browser's disposable disk.
   // The distributed image itself remains immutable; VM operations are compared
@@ -138,8 +139,9 @@ try{
     const at=raw.readUInt16LE(24)+i*4,target=raw.readUInt16LE(at)+16*raw.readUInt16LE(at+2);
     module.writeUInt16LE((module.readUInt16LE(target)+0x8010)&0xffff,target);
   }
-  assert.deepEqual(await memory(views[1].physical+0x100,module.length),module);
-  assert.deepEqual(await memory(views[1].physical+0x80,9),Buffer.from([7,...Buffer.from(' DIRECT'),13]));
+  const diagnostic=(await inspectK386(page)).diagnostics[1];
+  assert.deepEqual(Buffer.from(diagnostic.memory.slice(256,256+module.length)),module);
+  assert.deepEqual(Buffer.from(diagnostic.memory.slice(0x80,0x89)),Buffer.from([7,...Buffer.from(' DIRECT'),13]));
   snapshots.push({stage:'relocated-physical-image',views});
   done('bad MZ is rejected before replacing live RAM; actual loaded bytes, relocations and PSP arguments match');
 

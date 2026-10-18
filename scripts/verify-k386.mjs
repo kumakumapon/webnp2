@@ -1,5 +1,6 @@
 // Real PC-98 guest validation; host code only supplies input and inspects state.
 import assert from 'node:assert/strict';
+import { inspectK386 } from './k386-inspect.mjs';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -26,26 +27,7 @@ const type=async value=>{await page.evaluate(v=>window.np2debug.np2.typeText(v),
 const disk=async()=>Buffer.from(await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))
   .then(result=>result.base64),'base64');
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
-const snapshot=()=>page.evaluate(()=>{
-  const np2=window.np2debug.np2;
-  if(!window.k386Address){
-    const bytes=atob(np2.readMemoryBase64(0x10000,0x90000).base64);let at=-1;
-    while((at=bytes.indexOf('K386ABI1',at+1))>=0){
-      const u16=off=>bytes.charCodeAt(at+off)|bytes.charCodeAt(at+off+1)<<8;
-      if(u16(8)===1&&u16(10)===4240&&(u16(170)||u16(2214))){window.k386Address=0x10000+at;break;}
-    }
-  }
-  if(!window.k386Address)return null;
-  const bytes=atob(np2.readMemoryBase64(window.k386Address,4240).base64);
-  const u16=off=>bytes.charCodeAt(off)|bytes.charCodeAt(off+1)<<8;
-  const u32=off=>(u16(off)|(u16(off+2)<<16))>>>0;
-  return [0,1].map(id=>{
-    const at=152+id*2044;
-    return {state:u16(at),fault:u16(at+4),ticks:u32(at+8),cr3:u32(at+12),physical:u32(at+16),
-      eip:u32(at+20),eflags:u32(at+24),cr2:u32(at+28),counter:u32(at+32),
-      screen:bytes.slice(at+44,at+2044)};
-  });
-});
+const snapshot=async()=>(await inspectK386(page))?.views;
 const until=async(predicate,label)=>{
   let states;
   for(let i=0;i<200;i++){
@@ -65,7 +47,7 @@ try{
   await page.goto(new URL('?lang=ja',base).href);
   await page.waitForSelector('.start-btn-k386');
   assert.equal(await page.locator('.start-btn-k386').innerText(),'KDESK/386（実験版）で起動');
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
   await wait('Ready');assert.equal(digest(await disk()),manifest.sha256);
   assert.equal(await page.locator('.start-btn-k386').count(),0);
   await key('F10');await wait('KDESK exited.');await prompt();
@@ -114,10 +96,19 @@ try{
     const np2=window.np2debug.np2;
     const u32=at=>{const b=atob(np2.readMemoryBase64(at,4).base64);
       return (b.charCodeAt(0)|b.charCodeAt(1)<<8|b.charCodeAt(2)<<16|b.charCodeAt(3)<<24)>>>0;};
-    return {counter:u32(v.physical+0x800),pte:u32(v.cr3+4096+0x80*4)};
+    return {directory:u32(v.cr3),supervisor:u32(v.cr3+4),low:u32(v.cr3+4096),pte:u32(v.cr3+4096+0x80*4),rom:u32(v.cr3+4096+0xf0*4)};
   }),states);
-  for(let i=0;i<2;i++){assert.equal(physical[i].counter,states[i].counter);assert.equal(physical[i].pte&0xfffff000,states[i].physical);}
-  snapshots.push({stage:'stopped-physical-check',states,physical});
+  const contexts=await inspectK386(page);
+  for(let i=0;i<2;i++){
+    assert.equal(physical[i].pte&0xfffff000,states[i].physical);
+    assert.equal(physical[i].low&0xfffff000,states[i].physical-states[i].psp*16);
+    assert.equal(physical[i].directory&7,7);assert.equal(physical[i].supervisor&7,3);assert.equal(physical[i].rom&7,5);
+    const cpu=contexts.diagnostics[i];assert.equal(cpu.frame.cs,states[i].psp);assert.equal(cpu.frame.ss,states[i].psp);
+    assert.ok(cpu.frame.eflags&0x20000);assert.equal(cpu.memory[0],0xcd);assert.equal(cpu.memory[1],0x20);
+    const code=await page.evaluate(async()=>Array.from(await window.np2debug.np2.diskReadFile('fd1','COUNTER.COM')));
+    assert.deepEqual(cpu.memory.slice(256,256+code.length),code);
+  }
+  snapshots.push({stage:'stopped-physical-check',states,physical,contexts});
   await key('CTRL+N');await key('CTRL+R');await key('CTRL+O');await key('CTRL+R');
   await until(s=>s.every((v,i)=>v.counter>states[i].counter),'Resume both VMs');
   results.push('actual V86 flags, separate physical PTEs/registers/screens; background progress and independent stop/resume');
@@ -137,7 +128,7 @@ try{
   results.push('native DOS window move/resize/minimize/restore, retained state, focused input and existing GUI coexistence');
 
   await run(1,'FAULT.COM');states=await until(s=>s[1].state===4,'Isolated page violation');
-  assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0x30000);
+  assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0xe0000);
   before=states;await until(s=>s[0].counter>before[0].counter,'Other VM survives the fault');
   await run(1,'PORT.COM');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
   await run(1,'FPU.COM');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
