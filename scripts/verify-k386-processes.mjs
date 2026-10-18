@@ -39,6 +39,11 @@ try{
   assert.ok(s.views[0].counter>before.views[0].counter);save('timer-with-memo',s);
   await key('CTRL+O');await type('Z');s=await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Timer completion');save('timer-completed',s);
   done('PC-98 INT 1Ch callbacks respect CLI, rearm, and wake a waiting background VM while Memo remains usable');
+  await run(1,'TIMER.COM EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
+  await type('q');s=await until(v=>v[1].state===2&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT'),'Timer parent resumes');
+  const callbacks=s.views[1].counter;s=await until(v=>v[1].state===2&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
+  await type('Z');await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Rearmed parent timer completion');
+  done('a parent-owned timer continues across child EXEC, callback rearm and child exit');
   await run(1,'BADTIMER.COM');s=await until(v=>v[1].state===4&&v[1].fault===13,'Tampered IRQ callback contained');
   const survivor=s.views[0].counter;await until(v=>v[0].counter>survivor,'Other VM survives bad callback');save('invalid-callback-contained',s);
   done('a corrupted private IRQ vector faults only its owning VM');
@@ -52,7 +57,7 @@ try{
   done('four nested EXEC levels restore distinct PSP/environment, DTA, per-level IVT, CPU/stack, inherited file cursor and duplicated console handles');
 
   await run(1,'COMMAND.COM /C VER');
-  s=await until(v=>v[1].state===0||v[1].state===4,'Original COMMAND.COM probe');
+  s=await until(v=>v[1].state===0&&v[1].screen.includes('MS-DOS Version 4.00'),'Original COMMAND.COM probe');
   save('original-command-ver',s);
   assert.equal(s.views[1].state,0);assert.match(s.views[1].screen,/MS-DOS Version 4\.00/);
   const rows=v=>Array.from({length:25},(_,i)=>v.screen.slice(i*80,i*80+80).trim()).filter(Boolean);

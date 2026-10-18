@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { K386_BOOT_URL } from '../src/bundled-k386';
+import { fatReadFile, openDiskImage } from '../src/api/fat';
 
 const manifest = JSON.parse(readFileSync('public/k386/manifest.json', 'utf8'));
 describe('optional experimental K386 disk', () => {
@@ -19,5 +20,22 @@ describe('optional experimental K386 disk', () => {
       'K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.COM', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
       'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'FDXMS286.SYS',
     ]));
+  });
+  it('boots XMS without an existing V86 owner and preserves kernel provenance', () => {
+    if (!manifest.enabled) return;
+    const disk = openDiskImage(readFileSync(`public/k386/${manifest.image}`), manifest.image);
+    const normal = JSON.parse(readFileSync('public/msdos4/manifest.json', 'utf8'));
+    const baseline = openDiskImage(readFileSync(`public/msdos4/${normal.image}`), normal.image);
+    const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
+    expect(config).toContain('DEVICE=FDXMS286.SYS');
+    expect(config).not.toContain('DEVICE=EMM386');
+    expect(new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'))).toContain('K386\r\nKDESK\r\n');
+    for (const name of ['IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'FDXMS286.SYS']) {
+      expect(fatReadFile(disk, name)).toEqual(fatReadFile(baseline, name));
+    }
+    const pin = readFileSync('scripts/prepare-msdos4-cpanel-ci.sh', 'utf8').match(/source_commit=([a-f0-9]{40})/);
+    expect(manifest.source_commit).toBe(pin?.[1]);
+    expect(normal.sources.window.commit).toBe(manifest.source_commit);
+    expect(manifest.base_image_sha256).toBe(normal.sha256);
   });
 });
