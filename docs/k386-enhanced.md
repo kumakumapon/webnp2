@@ -4,9 +4,9 @@ This is a guest-side implementation. The browser only loads an explicitly
 selected experimental disk and provides ordinary PC-98 hardware/input/debugging.
 It does not implement DOS tasks in HTML windows or change the NP2kai CPU core.
 
-The current boundary is two isolated **V86 COM execution sessions**, using a
+The current boundary is two isolated **V86 COM/MZ execution sessions**, using a
 subset of DOS console/time/read-only file services through a serialized real-mode
-broker. General COMMAND.COM/MZ EXE compatibility, a fully virtualized DOS kernel
+broker. General COMMAND.COM compatibility, a fully virtualized DOS kernel
 and BIOS, resident drivers, shared writes and direct graphics I/O are unfinished.
 The development PRs remain drafts until the requested complete DOS-session
 acceptance is met. A passing experimental test is not a claim of full DOS-machine
@@ -20,14 +20,18 @@ and ordinary KDESK fallback.
 
 - Ctrl+T / Tasks: task manager, with task IDs/states and Switch/Stop/Start/End.
 - Ctrl+N / Ctrl+O: DOS 1 / DOS 2 windows.
-- Ctrl+L / Run: type a COM path and press Enter; Escape cancels path entry.
+- Ctrl+L / Run: replace the root program with a COM/MZ path and arguments;
+  Escape cancels path entry. Each new window automatically starts `KSH.COM`.
 - Ctrl+P / Pause, Ctrl+R / Resume, Ctrl+E / End: control the selected VM.
 - DOS window arrows/track/thumb and Page Up/Down: vertical viewport; `<` / `>`
   buttons: horizontal viewport. Move/resize/minimize/restore use normal controls.
 - Ordinary ASCII keys go to the active DOS window. Escape goes to its program;
   the title close button ends that session. KDESK function keys/Tab stay reserved.
 
-Run `COUNTER.COM` in both DOS windows to observe independent background execution.
+At the `A:\>` prompts, type `COUNTER` in both DOS windows to observe independent
+background execution. `q` returns to each saved parent shell. KSH also provides
+HELP/VER/DIR/TYPE/CD/ECHO/CLS/TIME/EXIT and external COM/small MZ execution.
+See [shell usage and exact limits](k386-shell.md).
 `ECHO.COM` waits for input and exits on Escape. `KFILE.COM` demonstrates a real
 DOS read and denial of file writes/creation. `FAULT.COM` and `PORT.COM` deliberately
 fault inside an isolated VM and are test programs. Run these through a DOS window.
@@ -42,6 +46,11 @@ The monitor requires real mode and a masked, unowned IRQ0. It does not coexist
 with an existing EMM386/V86 owner. The experimental boot profile omits XMS/EMS
 loaders; the normal profile is preserved. Session memory uses DOS-owned conventional
 blocks, so available memory limits foreground tools and guest COM sizes (60 KiB).
+Small MZ modules and their minimum memory must fit a
+64 KiB PSP block; one child EXEC level uses another 68 KiB parent snapshot.
+Environment blocks, extra heap, FCBs and nonstandard handle inheritance are
+unsupported. Virtual flags and private software interrupt vectors are supported;
+asynchronous virtual hardware interrupts remain unimplemented.
 The monitor is resident until reboot; ending sessions releases their allocations.
 Only general/segment registers, flags and stack are saved. x87/SIMD context
 virtualization is not implemented; CR0 EM/TS/MP contains FPU instructions as a
@@ -69,42 +78,36 @@ The Playwright suite inspects guest CPU-generated mode/exception records,
 private physical pages/CR3s/register frames/screens, continued background
 execution, input focus, window lifecycle, isolated memory/I/O faults,
 restart, serialized read-only files and the unchanged exported disk hash.
-The existing full desktop, image, calculator/clock, clipboard, persistence,
+`scripts/verify-k386-shell.mjs` additionally checks visible shell prompts, full
+command lines, private cwd/DTA, actual relocated MZ bytes, EXEC/parent return and
+virtual flags/IRET. Prepared fixture disk hashes and the original distributed
+image are checked independently. The existing full desktop, image, calculator/clock,
+clipboard, persistence,
 Japanese-input, DOS memory and normal boot suites remain required.
 
 ## Verification record and incomplete acceptance
 
-The local Playwright run on native commit
-`40ee404ade6ec3758f2f721fa0b592176d0b5e91` passed the complete experimental suite
-in Chromium 151.0.7922.173. Its generated image SHA-256 was
-`46b3283210b2e40e24b683363a428547fe6eaf33d6295249624e4cc24a54b78c`.
-The test inspected CPU-written PM/V86/exception records and actual physical
-PTE/counter values, not host-simulated task progress. It also exercised an existing
-DOS COM (`P98TEST.COM`), guest direction-flag preservation, rejected device paths,
-read-only file services and a byte-identical disk export after all sessions ended.
-Builds with a different GCC may produce a different image hash; each generated
-manifest and test result identifies its own source and bytes.
-Subsequent boundary hardening adds zero-length DOS line input at private offset
-FFFEh and explicit FPU/#NM containment. The E2E now also checks Calculator,
-Clock and Memo while both V86 contexts run; final pinned results are in the PR.
-
-`npm test`: 486 passed, 2 existing skips. Production build passes. The separate
-normal-image suite and GitHub CI results are recorded on the two draft PRs:
-[MS-DOS #16](https://github.com/kumakumapon/MS-DOS/pull/16) and
-[webnp2 #16](https://github.com/kumakumapon/webnp2/pull/16).
+The original PM/V86 implementation was merged in PR #16 in each repository.
+Continuation [MS-DOS #17](https://github.com/kumakumapon/MS-DOS/pull/17) and
+[webnp2 #17](https://github.com/kumakumapon/webnp2/pull/17) fixes initial `?` cells
+and adds the guest shell, bounded MZ loader, one-level EXEC, private directory
+state and virtual flags. Final source/image hashes and browser/CI evidence are
+recorded on those PRs and in their artifacts. Each generated manifest identifies
+its source and bytes; builds with different GCC versions can have different hashes.
 
 | Requested feature | State |
 | --- | --- |
 | Internal task queues, IDs, states and task manager | Implemented and tested |
 | PM/V86, paging, timer preemption, exception containment | Implemented and tested |
-| Two private COM contexts, retained state and background progress | Implemented and tested |
+| Two private contexts, retained state and background progress | Implemented and tested |
 | Guest DOS windows, focus, native window operations, GUI coexistence | Implemented and tested |
-| Disk safety | Read-only broker tested; shared writes intentionally denied |
+| KSH, bounded COM/MZ, one child EXEC, virtual flags/IRET | Implemented; browser regression required in CI |
+| Private input/cwd/DTA and read-only files | Implemented; whole-disk integrity checked in CI |
 | Two complete independently booted DOS environments | **Unimplemented** |
-| General COMMAND.COM / MZ EXE / DOS and BIOS compatibility | **Unimplemented** |
+| General COMMAND.COM / full DOS and BIOS compatibility | **Unimplemented** |
 | Full virtual interrupt delivery, TSRs and direct graphics virtualization | **Unimplemented** |
+| Shared disk writes | **Unavailable**; explicitly denied |
 
 Completing the remaining DOS-session requirements needs a DOS/BIOS and device
-virtualization layer, including process/PSP/EXEC state and virtual interrupt
-delivery. CPU-mode transitions alone do not provide those services. Keep the PRs
-in draft until those acceptance conditions are met.
+virtualization layer. CPU-mode transitions alone do not provide those services.
+Keep the continuation PRs in draft until those acceptance conditions are met.

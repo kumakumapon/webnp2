@@ -141,7 +141,7 @@ try{
   before=states;await until(s=>s[0].counter>before[0].counter,'Other VM survives the fault');
   await run(1,'PORT.COM');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
   await run(1,'FPU.COM');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
-  await run(1,'CON.COM');await wait('Cannot load COM');
+  await run(1,'CON.COM');await wait('Cannot load program');
   await key('ESC'); // Cancel the rejected path, leaving the GUI usable.
   await run(1,'DF.COM');await until(s=>s[1].state===0&&s[1].screen.includes('V86 DIRECTION FLAG PASS'),'Empty input at private RAM boundary and guest DF are safe');
   await run(1,'P98TEST.COM');await until(s=>s[1].state===0&&s[1].screen.includes('DOS4 EXEC OK'),'Existing DOS COM binary');
