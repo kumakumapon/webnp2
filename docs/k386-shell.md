@@ -32,6 +32,10 @@ the other window remains usable. On normal exit or a contained child fault,
 the same parent shell returns. `EXIT` ends the shell. Files are read-only.
 CD and directory-search state are private to each session; host DOS's current
 directory and DTA are restored. The viewport follows new console output.
+One directory search per process is active at a time. Its reserved 21-byte DTA
+continuation must match a broker-issued result; modified drive/network/cluster
+state is rejected before host DOS is called. Child EXEC saves the parent's
+trusted search continuation and restores it on return.
 
 Ctrl+L / Run replaces the selected session's root program, accepting a path and
 arguments, for example `MZTEST.EXE DIRECT` or `KSH.COM` to restart the shell.
@@ -80,7 +84,8 @@ CHROMIUM=/usr/bin/chromium WEBNP2_NO_SANDBOX=1 \
 ```
 
 The shell suite checks visible initial prompts, a 126-character command, private
-input/cwd/DTA, actual relocated MZ bytes and PSP arguments, virtual flags and
+input/cwd/DTA, rejected reserved search-state edits, actual relocated MZ bytes
+and PSP arguments, virtual flags and
 IRET, child fault/return, two background children, and an interactive parent
 while the other child continues. Invalid MZ must preserve the running program.
 CPU frames, CR3/PTE and physical RAM are inspected, not simulated task counters.
