@@ -56,13 +56,13 @@ const command=async(id,value,expected)=>{
   return until(v=>shell(v[id])&&(typeof expected==='function'?expected(v[id]):line(v[id],expected)),value);
 };
 const replace=async(id,value)=>{await focus(id);await key('CTRL+L');await type(value+'\r');};
-const visibleText=id=>page.waitForFunction(id=>{
+const visibleText=(id,row=0)=>page.waitForFunction(({id,row})=>{
   const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=640;c.height=400;
   const g=c.getContext('2d');g.drawImage(source,0,0);
-  const pixels=g.getImageData(id?272:32,id?128:80,216,16).data;let ink=0;
+  const pixels=g.getImageData(id?272:32,(id?128:80)+row*16,216,16).data;let ink=0;
   for(let i=0;i<pixels.length;i+=4)if(pixels[i]<100&&pixels[i+1]<100&&pixels[i+2]<100)ink++;
   return ink>50;
-},id,{timeout:60000});
+},{id,row},{timeout:60000});
 
 try{
   await mkdir(output,{recursive:true});
@@ -144,7 +144,9 @@ try{
 
   await replace(1,'KSH.COM');await until(v=>shell(v[1])&&v[1].screen.includes('K386 DOS shell'),'Restart second shell');
   await command(1,'ECHO RESTARTED','RESTARTED');
-  await wait('RESTARTED');await visibleText(1);await page.screenshot({path:join(output,'independent-shells.png')});
+  // Text VRAM labels precede the graphical copy. Wait for the new bottom
+  // prompt row, rather than the unchanged shell banner, before taking a shot.
+  await wait('RESTARTED');await visibleText(1,4);await page.screenshot({path:join(output,'independent-shells.png')});
   await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');
   await type('CD\r');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(s=>s.trim()==='A:\\'),null,{timeout:60000});
   assert.equal(hash(await disk()),preparedHash,'VM services leave every FAT/directory/file byte unchanged');
