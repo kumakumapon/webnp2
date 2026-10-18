@@ -16,6 +16,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
       'K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.COM', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
+      'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM',
     ]));
   });
 });

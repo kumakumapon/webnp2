@@ -24,16 +24,19 @@ def main():
     assert hashlib.sha256(original).hexdigest() == manifest['sha256']
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM')
+    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
+    malformed = bytearray(files['MZTEST.EXE'])
+    malformed[28:32] = b'\xff\xff\xff\xff'
+    files['BADMZ.EXE'] = bytes(malformed)
     files['K386.TXT'] = (source / 'tools/k386/DESIGN.md').read_bytes().replace(b'\n', b'\r\n')
     files['KDATA.TXT'] = b'READ ONLY DATA\r\n'
     files['K386LIC.TXT'] = (source / 'tools/k386/LICENSE').read_bytes()
     files['LICENSE.TXT'] += b'\r\nK386 original extension\r\n' + files['K386LIC.TXT']
     # Explicitly isolated boot profile: no EMM386/XMS protected-mode owner.
     files['CONFIG.SYS'] = b'FILES=30\r\nBUFFERS=10\r\n'
-    autoexec = b'@ECHO OFF\r\nECHO KDESK/386 experimental V86 COM sessions\r\nK386\r\nKDESK\r\n'
+    autoexec = b'@ECHO OFF\r\nECHO KDESK/386 experimental guest shell\r\nK386\r\nKDESK\r\n'
     helper = module('k386_pc98_image', source / 'ports/pc98/image.py')
     excluded = {'IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
@@ -49,7 +52,7 @@ def main():
         'enabled': True, 'experimental': True, 'image': name, 'sha256': sha,
         'source_commit': commit, 'base_image_sha256': manifest['sha256'],
         'files': entries, 'dos_files_read_only': True,
-        'compatibility': 'experimental V86 COM services; not a complete virtual DOS machine',
+        'compatibility': 'experimental V86 shell and bounded COM/MZ services; not a complete virtual DOS machine',
     }, indent=2) + '\n')
     (destination / 'LICENSE.txt').write_bytes(files['LICENSE.TXT'])
     (destination / 'K386.txt').write_bytes(files['K386.TXT'])
