@@ -58,3 +58,38 @@ jobs:
             public/msdos4/CPANEL.txt
             public/msdos4/KDESK.txt
             public/msdos4/KIMAGE.txt
+            public/k386/*.xdf
+            public/k386/manifest.json
+            public/k386/LICENSE.txt
+            public/k386/K386.txt
+
+  k386:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned normal and experimental images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Playwright PC-98 K386 validation
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/k386-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-k386.mjs http://127.0.0.1:4173/webnp2/ test-results/k386
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k386-playwright-validation
+          path: test-results/k386/
+          if-no-files-found: ignore
