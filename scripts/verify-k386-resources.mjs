@@ -24,6 +24,15 @@ const click=async(x,y)=>{
   await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await pause(200);
   await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(200);
 };
+const tasksPresented=async()=>{
+  // Guest TVRAM is a mirror and can update before the composed PEGC frame.
+  await page.waitForFunction(()=>{
+    const c=document.createElement('canvas');c.width=640;c.height=400;
+    const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0);
+    const p=g.getImageData(500,45,1,1).data;
+    return p[0]<80&&p[1]>70&&p[1]<160&&p[2]>120;
+  },null,{timeout:60000});await pause(200);
+};
 const until=async(predicate,label)=>{
   let record;
   for(let attempt=0;attempt<400;attempt++){
@@ -76,6 +85,7 @@ try{
   assert.equal(record.resources.usage[0].cpuTicks,stopped.resources.usage[0].cpuTicks);
   assert.deepEqual(record.cpu.diagnostics[0].frame,stopped.cpu.diagnostics[0].frame);
   assert.deepEqual(record.cpu.diagnostics[0].memory,stopped.cpu.diagnostics[0].memory);
+  await wait('Reason: CPU limit');await tasksPresented();
   await page.screenshot({path:join(output,'budget-stopped.png')});
   await type('R');await wait('Cannot resume; raise or disable the CPU limit in Tasks');
   record=await until(r=>r.cpu.views[0].state===3,'exhausted resume denied');
@@ -107,6 +117,7 @@ try{
   assert.equal(fault.type,3);assert.equal(fault.cr2,0xe0000);assert.equal(fault.cs,0x8000);
   assert.equal(fault.ip,record.cpu.diagnostics[0].frame.eip);
   await key('CTRL+T');await wait('Reason: Fault');await wait('Fault: 14');
+  await tasksPresented();
   await page.screenshot({path:join(output,'fault-journal.png')});
   const generation=record.resources.usage[0].generation;
   await type('K');record=await until(r=>r.cpu.views[0].state===0&&r.resources.usage[0].memoryKiB===0,'End frees the XMS reservation');
