@@ -19,6 +19,11 @@ const text=()=>page.evaluate(()=>window.np2debug.np2.getScreenText().text);
 const wait=needle=>page.waitForFunction(needle=>{try{return window.np2debug.np2.getScreenText().text.includes(needle);}catch{return false;}},needle,{timeout:90000});
 const key=async value=>{await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await pause(200);};
 const type=async value=>{await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await pause(200);};
+const click=async(x,y)=>{
+  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(200);
+  await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await pause(200);
+  await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(200);
+};
 const until=async(predicate,label)=>{
   let record;
   for(let attempt=0;attempt<400;attempt++){
@@ -44,7 +49,7 @@ try{
   let record=await until(r=>r.cpu.views.every(v=>v.state===2&&v.screen.includes('K386 DOS shell')),'two guest shells');
   assert.notEqual(record.resources.usage[0].generation,record.resources.usage[1].generation);
   await key('CTRL+T');for(let i=0;i<8;i++)await key('DOWN');
-  await type('P');await wait('Priority: High');
+  await click(352,344);await wait('Priority: High');
   await key('DOWN');await type('PP');await wait('Priority: Low');
   record=await until(r=>r.resources.usage[0].priority===2&&r.resources.usage[1].priority===0,'GUI priority controls');
   const previous=record.resources.events.at(-2).sequence;
@@ -59,7 +64,7 @@ try{
   assert.ok(record.cpu.views.every((v,i)=>v.counter>before.cpu.views[i].counter));
   assert.notEqual(record.cpu.views[0].physical,record.cpu.views[1].physical);
   snapshots.push({stage:'weighted-background',runs,...record});
-  pass('task-manager priority/history controls and actual 4:1 background CPU progress with Memo active');
+  pass('PC-98 mouse priority button, keyboard/history controls and actual 4:1 background CPU progress with Memo active');
 
   await key('CTRL+T');await key('UP');await type('L');await wait('Limit: 1000 ms');
   record=await until(r=>r.cpu.views[0].state===3&&r.resources.usage[0].reason===4,'CPU budget automatically suspends DOS 1');
