@@ -18,7 +18,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
       'K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.COM', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
-      'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'FDXMS286.SYS',
+      'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.COM',
     ]));
   });
   it('boots XMS without an existing V86 owner and preserves kernel provenance', () => {

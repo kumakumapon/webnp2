@@ -1,5 +1,8 @@
 # KDESK/386 Enhanced (experimental)
 
+Guest scheduling priorities, CPU budgets, resource diagnostics and interruption:
+[K386 resource control](k386-resources.md).
+
 This is a guest-side implementation. The browser only loads an explicitly
 selected experimental disk and provides ordinary PC-98 hardware/input/debugging.
 It does not implement DOS tasks in HTML windows or change the NP2kai CPU core.
