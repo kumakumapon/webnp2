@@ -146,7 +146,7 @@ try{
   await run(1,'ECHO.COM');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Restart after faults');
   results.push('hardware #PF and I/O #GP containment; other VM continues; guest read succeeds and writes/create are denied');
 
-  await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[3]?.indexOf('Tasks')===10);await pause(200);
+  await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>/^\s+Tasks\s+_\s+x/.test(line)));await pause(200);
   await page.screenshot({path:join(output,'task-manager.png')});
   await key('CTRL+N');await wait('V86 COUNTER');await key('CTRL+O');await wait('V86 ECHO');await pause(200);
   await page.waitForFunction(()=>{

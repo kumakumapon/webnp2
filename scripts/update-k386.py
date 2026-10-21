@@ -24,13 +24,14 @@ def main():
     assert hashlib.sha256(original).hexdigest() == manifest['sha256']
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM')
+    names = ('K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'KRESCHK.COM', 'INTWAIT.COM')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     malformed = bytearray(files['MZTEST.EXE'])
     malformed[28:32] = b'\xff\xff\xff\xff'
     files['BADMZ.EXE'] = bytes(malformed)
-    files['K386.TXT'] = (source / 'tools/k386/DESIGN.md').read_bytes().replace(b'\n', b'\r\n')
+    guide = (source / 'tools/k386/DESIGN.md').read_bytes() + b'\n\n' + (source / 'tools/k386/RESOURCES.md').read_bytes()
+    files['K386.TXT'] = guide.replace(b'\n', b'\r\n')
     files['KDATA.TXT'] = b'READ ONLY DATA\r\n'
     files['K386LIC.TXT'] = (source / 'tools/k386/LICENSE').read_bytes()
     files['LICENSE.TXT'] += b'\r\nK386 original extension\r\n' + files['K386LIC.TXT']
