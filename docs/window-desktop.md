@@ -17,8 +17,9 @@ Click Apps/Files/Memo/Help/About to open a window, and click a window to focus i
 | --- | --- |
 | Drag title bar | Move the full window at pixel resolution while held |
 | Drag lower-right grip | Preview size, then resize on release |
-| `_` / `x` title button | Minimize / close |
-| Taskbar button | Restore and focus |
+| `_` / `+` / `=` / `x` title button | Minimize / maximize / restore / close |
+| Double-click title | Maximize or restore the exact previous position and size |
+| Taskbar button | Focus/restore; clicking the active task minimizes it |
 | Launcher icon | Select; double-click or Open starts it |
 | Launcher List/Icons (V) | Toggle icon grid/list; list rows start with one click |
 | File icon or list row / double-click | Select / open directory or file |
@@ -28,7 +29,8 @@ Click Apps/Files/Memo/Help/About to open a window, and click a window to focus i
 | Memo Save / Copy / Cut / Paste / All | Save NOTE.TXT / use the text clipboard |
 | Save / Discard / Cancel dialog | Resolve unsaved changes |
 
-A teal desktop, light windows, blue focused titles, shadows and raised buttons
+A navy gradient desktop, white content surfaces, blue focused titles with heavier
+CG-ROM lettering, soft button edges and gold selection accents
 make the controls easier to distinguish. The guest draws its own pointer,
 including over text. A mouse driver is not required; keyboard controls also work.
 
@@ -36,6 +38,7 @@ including over text. A mouse driver is not required; keyboard controls also work
 | --- | --- |
 | F1 / F2 / F3 / F4 / F5 | Help / Launcher / Files / Memo / About |
 | Tab | Switch windows; restore a minimized window |
+| Ctrl+G | Maximize/restore the active window |
 | F6, then arrows, then Enter | Move the active window |
 | F7, then arrows, then Enter | Resize the active window |
 | F8 | Minimize the active window |

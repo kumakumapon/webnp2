@@ -71,7 +71,7 @@ try {
     if (!manifest.desktop_autostart) return;
     await page.waitForFunction(() => {
       const {text,lines}=window.np2debug.np2.getScreenText();
-      return text.includes('Ready') && lines[24]?.slice(25,29)==='Apps';
+      return text.includes('Ready') && lines[24]?.includes('Apps');
     },{timeout:60000});
     await new Promise(resolve=>setTimeout(resolve,150));
     if(output) await page.screenshot({path:join(output,'desktop-autostart.png')});

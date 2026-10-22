@@ -1,5 +1,6 @@
 // Real PC-98 guest validation; host code only supplies input and inspects state.
 import assert from 'node:assert/strict';
+import { clickTask } from './verify-window.mjs';
 import { inspectK386 } from './k386-inspect.mjs';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -118,8 +119,7 @@ try{
   await page.evaluate(()=>window.np2debug.np2.mouseDrag({x:300,y:102},{x:324,y:118}));
   await key('F7');await key('LEFT');await key('UP');await key('ENTER');
   await key('F8');await wait('Window minimized');
-  await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(612,376));await pause(200);
-  await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(200);
+  await clickTask(page,'DOS 2');
   before=await snapshot();await until(s=>s[1].counter>before[1].counter,'Minimized/restored VM keeps running');
   await run(1,'ECHO.COM');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Echo waits for input');
   await type('SECOND ONLY');states=await until(s=>s[1].screen.includes('SECOND ONLY'),'Input to DOS 2');
@@ -146,7 +146,7 @@ try{
   await run(1,'ECHO.COM');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Restart after faults');
   results.push('hardware #PF and I/O #GP containment; other VM continues; guest read succeeds and writes/create are denied');
 
-  await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>/^\s+Tasks\s+_\s+x/.test(line)));await pause(200);
+  await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>/^\s+Tasks\s+_\s+[+=]\s+x/.test(line)));await pause(200);
   await page.screenshot({path:join(output,'task-manager.png')});
   await key('CTRL+N');await wait('V86 COUNTER');await key('CTRL+O');await wait('V86 ECHO');await pause(200);
   await page.waitForFunction(()=>{
