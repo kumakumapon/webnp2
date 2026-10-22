@@ -8,7 +8,7 @@ import { fatList, fatReadFile, openDiskImage } from '../src/api/fat.ts';
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const image = readFileSync(new URL(`../public/msdos4/${manifest.image}`, import.meta.url));
 const hasCpanel = manifest.files.some(file => file.name === 'CPANEL.COM');
-const hasWindow = manifest.files.some(file => file.name === 'KDESK.COM');
+const hasWindow = manifest.files.some(file => file.name === 'KDESK.EXE');
 
 describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
   it('ships the clean release disk, both FATs, all recorded files and full MIT notices', () => {
@@ -65,6 +65,13 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
         .toMatch(/^[a-f0-9]{40}$/);
     }
     if (hasWindow) {
+      expect(manifest.files.some(file=>file.name==='KDESK.COM')).toBe(false);
+      const exe=fatReadFile(disk,'KDESK.EXE');
+      const word=(at:number)=>exe[at]|exe[at+1]<<8;
+      expect(word(0)).toBe(0x5a4d);
+      expect(word(6)).toBe(1);
+      expect(word(14)).toBeGreaterThan(word(22));
+      expect(word(10)).toBe(word(12));
       expect(notices.includes(fatReadFile(disk, 'KDLIC.TXT'))).toBe(true);
       expect(fatReadFile(disk, 'KDESK.TXT')).toEqual(
         new Uint8Array(readFileSync(new URL('../public/msdos4/KDESK.txt', import.meta.url))),
@@ -83,13 +90,13 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
       'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
       ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
-      ...(hasWindow ? ['KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT', 'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP'] : []),
+      ...(hasWindow ? ['KDESK.EXE', 'KDESK.TXT', 'KDLIC.TXT', 'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP'] : []),
     ]));
     if ((manifest as unknown as { desktop_autostart?: boolean }).desktop_autostart) {
       expect(hasWindow).toBe(true);
       const startup = new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'));
       expect(startup.split('REM KDESK AUTO START')).toHaveLength(2);
-      expect(startup.split('IF EXIST KDESK.COM KDESK')).toHaveLength(2);
+      expect(startup.split('IF EXIST KDESK.EXE KDESK.EXE')).toHaveLength(2);
     }
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');

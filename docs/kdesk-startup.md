@@ -8,10 +8,10 @@ AUTOEXEC.BATには次のブロックを一つだけ追加します。
 
 ```bat
 REM KDESK AUTO START
-IF EXIST KDESK.COM KDESK
+IF EXIST KDESK.EXE KDESK.EXE
 ```
 
-KDESK.COMがない場合はDOSへ進みます。自動起動を止める場合は、
+KDESK.EXEがない場合はDOSへ進みます。自動起動を止める場合は、
 `EDIT AUTOEXEC.BAT` でこの2行を削除して保存し、ディスクの変更を保持して再起動します。
 CPANELはこのブロックを保持したまま、ドライバーやFD98自動起動の設定を変更します。
 FD98自動起動も有効にした場合、そのコマンドはKDESK終了後に実行されます。

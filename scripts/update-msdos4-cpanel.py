@@ -95,7 +95,7 @@ def main():
         window = dos / 'tools/window'
         subprocess.run(['make', '-C', str(window), 'all'], check=True)
         apps.update({name: (window / 'build' / name).read_bytes()
-                     for name in ('KDESK.COM', 'KDESK.TXT', 'KDLIC.TXT',
+                     for name in ('KDESK.EXE', 'KDESK.TXT', 'KDLIC.TXT',
                                   'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP')})
         verifier = (webnp2 / 'scripts/verify-window.mjs').read_bytes()
         if verifier != (window / 'verify-ui.mjs').read_bytes():
@@ -111,7 +111,7 @@ def main():
         *apps,
     }
     if args.with_window:
-        excluded.update(('WIN98.COM', 'WIN98.TXT', 'WINLIC.TXT'))
+        excluded.update(('WIN98.COM', 'WIN98.TXT', 'WINLIC.TXT', 'KDESK.COM'))
     extra = [(name, notices if name == 'LICENSE.TXT' else data)
              for name, data in files.items() if name not in excluded]
     extra.extend(apps.items())
@@ -125,10 +125,10 @@ def main():
         if startup not in autoexec:
             autoexec += startup
         # Own only this marked block; keep user commands and CPANEL's FD98 block.
-        autoexec = re.sub(rb'(?im)^REM KDESK AUTO START\r?\nIF EXIST KDESK.COM KDESK\r?\n', b'', autoexec)
+        autoexec = re.sub(rb'(?im)^REM KDESK AUTO START\r?\nIF EXIST KDESK\.(?:COM|EXE) KDESK(?:\.EXE)?\r?\n', b'', autoexec)
         if autoexec and not autoexec.endswith(b'\n'):
             autoexec += b'\r\n'
-        autoexec += b'REM KDESK AUTO START\r\nIF EXIST KDESK.COM KDESK\r\n'
+        autoexec += b'REM KDESK AUTO START\r\nIF EXIST KDESK.EXE KDESK.EXE\r\n'
         manifest['desktop_autostart'] = True
 
     helper_path = dos / 'ports/pc98/image.py'

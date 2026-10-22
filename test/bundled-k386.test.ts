@@ -17,7 +17,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.extended_memory_mb).toBe(16);
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
-      'K386.COM', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.COM', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
+      'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
       'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.COM',
     ]));
   });
@@ -26,10 +26,22 @@ describe('optional experimental K386 disk', () => {
     const disk = openDiskImage(readFileSync(`public/k386/${manifest.image}`), manifest.image);
     const normal = JSON.parse(readFileSync('public/msdos4/manifest.json', 'utf8'));
     const baseline = openDiskImage(readFileSync(`public/msdos4/${normal.image}`), normal.image);
+    const names=manifest.files.map((file: {name: string})=>file.name);
+    expect(names).not.toContain('KDESK.COM');
+    expect(names).not.toContain('K386.COM');
+    for(const name of ['KDESK.EXE','K386.EXE']) {
+      const exe=fatReadFile(disk,name);
+      const word=(at:number)=>exe[at]|exe[at+1]<<8;
+      expect(word(0)).toBe(0x5a4d);
+      expect((word(4)-1)*512+(word(2)||512)).toBe(exe.length);
+      expect(word(10)).toBe(word(12));
+      expect(word(6)).toBe(name==='KDESK.EXE'?1:0);
+      if(name==='KDESK.EXE')expect(word(14)).toBeGreaterThan(word(22));
+    }
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');
     expect(config).not.toContain('DEVICE=EMM386');
-    expect(new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'))).toContain('K386\r\nKDESK\r\n');
+    expect(new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'))).toContain('K386.EXE\r\nKDESK.EXE\r\n');
     for (const name of ['IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'FDXMS286.SYS']) {
       expect(fatReadFile(disk, name)).toEqual(fatReadFile(baseline, name));
     }
