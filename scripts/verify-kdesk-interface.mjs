@@ -8,13 +8,14 @@ import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {clickTask} from './verify-window.mjs';
 
-const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-interface']=process.argv.slice(2);
+const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-interface',only]=process.argv.slice(2);
+assert.ok(!only||['msdos4','k386'].includes(only),'Optional profile must be msdos4 or k386');
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',
   args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
 const results=[];
 try{
  await mkdir(output,{recursive:true});
- for(const profile of ['msdos4','k386']){
+ for(const profile of only?[only]:['msdos4','k386']){
   const manifest=JSON.parse(await readFile(new URL(`../public/${profile}/manifest.json`,import.meta.url),'utf8'));
   const page=await browser.newPage(),errors=[],snapshots=[];
   page.on('pageerror',error=>errors.push(error.message));
@@ -86,7 +87,11 @@ try{
     await key('F3');await key('F8');await key('F2');await key('F8');
     await click(500,80);await wait('K386 DOS shell');await type('COUNTER\r');
     await click(588,80);await title('DOS 2',6,34);await type('COUNTER\r');
-    const before=await until(r=>r.cpu.views.every(v=>v.counter>0));snapshots.push({stage:'before',...before});
+    // KSH also has bytes at the counter probe address. Wait for actual EXEC
+    // completion before recording the child program's initial counter values.
+    const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.COM'&&u.depth===2)&&
+      r.cpu.views.every(v=>v.state===1&&v.counter>0&&v.screen.includes('V86 COUNTER')));
+    snapshots.push({stage:'before',...before});
     await key('CTRL+G');await title('DOS 2',2,2);
     await key('CTRL+N');await key('CTRL+O');await key('CTRL+G');await title('DOS 2',6,34);
     await clickTask(page,'DOS 2');await wait('Window minimized');
@@ -114,6 +119,7 @@ try{
    },labels,{timeout:60000})).jsonValue();
    for(const label of labels)assert.ok(bar.includes(label),`Taskbar shows ${label}: ${bar}`);
    await clickTask(page,'Memo');await title('Memo',5,13);await type('KDESK 1.8\rA calmer desktop.\rWindows keep their place.');
+   await wait('Windows keep their place.');
    await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(630,360));await pause(600);
    await page.screenshot({path:join(output,profile+'-desktop.png')});
    await key('CTRL+T');await pause(600);await page.screenshot({path:join(output,profile+'-tasks.png')});
@@ -122,10 +128,11 @@ try{
    assert.equal(createHash('sha256').update(Buffer.from(disk.base64,'base64')).digest('hex'),manifest.sha256);
    assert.deepEqual(errors,[]);
    results.push(`${profile}: compact taskbar reaches every open window; confirmation protects text; exported disk unchanged`);
-   await writeFile(join(output,profile+'.json'),JSON.stringify({results,snapshots,image:manifest.image,sha256:manifest.sha256,errors},null,2)+'\n');
+   await writeFile(join(output,profile+'.json'),JSON.stringify({results,snapshots,taskbar:bar,image:manifest.image,sha256:manifest.sha256,errors},null,2)+'\n');
    console.log('PASS '+profile);
   }catch(error){
    await writeFile(join(output,profile+'-failure.txt'),`${error.stack}\n${await text().catch(()=> '')}`);
+   if(profile==='k386')await writeFile(join(output,profile+'-failure.json'),JSON.stringify({snapshots,cpu:await inspectK386(page).catch(()=>null),resources:await inspectResources(page).catch(()=>null)},null,2));
    await page.screenshot({path:join(output,profile+'-failure.png')}).catch(()=>{});throw error;
   }finally{await page.close();}
  }

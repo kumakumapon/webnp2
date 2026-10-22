@@ -12,7 +12,8 @@ A muted underline indicates a minimized window and gold marks the active one.
 
 The title controls are `_` minimize, `+` maximize, `=` restore and `x` close.
 Double-click the title or use Ctrl+G to maximize/restore. The previous size and
-pixel position return exactly; text, scroll state and DOS execution are retained.
+pixel position return exactly; text and DOS execution are retained, and scroll
+ranges adjust to the viewport size.
 Restore before dragging a maximized window. F6/F7 restore first and then enter
 the existing keyboard move/resize mode. The menu and taskbar stay accessible.
 Ctrl+G is reserved by KDESK, including while a DOS window is focused.
