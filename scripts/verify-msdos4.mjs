@@ -144,12 +144,12 @@ try {
   if(manifest.desktop_autostart) {
     const auto=(await readGuest('AUTOEXEC.BAT')).toString();
     assert.equal(auto.split('REM KDESK AUTO START').length-1,1);
-    assert.ok(auto.includes('IF EXIST KDESK.COM KDESK'));
+    assert.ok(auto.includes('IF EXIST KDESK.EXE KDESK.EXE'));
   }
   results.push('CPANEL changes and restores XMS/EMS, FILES/BUFFERS and FD98 autostart');
   }
 
-  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
+  if (manifest.files.some(file => file.name === 'KDESK.EXE')) {
     results.push(...await verifyWindowPointer(page, {
       screenshot: output ? join(output, 'desktop-pointer.png') : undefined,
     }));
@@ -207,7 +207,7 @@ try {
   await page.reload({ waitUntil: 'networkidle2' });
   await exitAutostart(); await line('A>');
   assert.deepEqual(await readGuest('PROOF.BAS'), programBytes);
-  if (manifest.files.some(file => file.name === 'KDESK.COM')) {
+  if (manifest.files.some(file => file.name === 'KDESK.EXE')) {
     assert.equal((await readGuest('NOTE.TXT')).toString(), 'WINDOW MEMO OK\r\nSECOND LINE');
     results.push('Window desktop memo persists after browser reload');
   }

@@ -31,8 +31,9 @@ CR3 and generation IDs. It also checks the whole exported disk hash is unchanged
 Existing file/editor/image/clipboard/clock/calculator and K386 suites remain in CI.
 
 The memo's 1 KiB text buffer is stored after the directory buffer in a DOS-owned
-allocation. This leaves the COM's existing 12 KiB stack guard intact. No guest
-kernel, browser window manager or emulator CPU change is required.
+allocation. KDESK.EXE reserves a 12 KiB stack in its separate data segment;
+see the [MZ executable layout](kdesk-exe.md). No guest kernel, browser window
+manager or emulator CPU change is required.
 
 General DOS/BIOS compatibility, shared disk writes and external graphics
 virtualization retain the limits described in [K386 Enhanced](k386-enhanced.md).

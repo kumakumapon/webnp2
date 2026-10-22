@@ -7,6 +7,7 @@ import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {clickTask} from './verify-window.mjs';
+import {inspectNativeMZ} from './kdesk-mz-inspect.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-interface',only]=process.argv.slice(2);
 assert.ok(!only||['msdos4','k386'].includes(only),'Optional profile must be msdos4 or k386');
@@ -46,6 +47,9 @@ try{
   try{
    await page.goto(new URL(`?fd1=./${profile}/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
    await wait('Ready');await title('Launcher',3,5);
+   const mz=await inspectNativeMZ(page,profile==='k386');
+   snapshots.push({stage:'native-mz',...mz});
+   results.push(`${profile}: actual MZ relocation, distinct code/data CPU registers, bounded PSP/MCB and resident monitor`);
    await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(300);
    await page.evaluate(()=>window.np2debug.np2.mouseDrag({x:100,y:52},{x:113,y:61}));
    await title('Launcher',3,6);
