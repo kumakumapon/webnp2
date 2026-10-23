@@ -24,7 +24,7 @@ and ordinary KDESK fallback.
 - Ctrl+T / Tasks: task manager, with task IDs/states and Switch/Stop/Start/End.
 - Ctrl+N / Ctrl+O: DOS 1 / DOS 2 windows.
 - Ctrl+L / Run: replace the root program with a COM/MZ path and arguments;
-  Escape cancels path entry. Each new window automatically starts `KSH.COM`.
+  Escape cancels path entry. Each new window automatically starts `KSH.EXE`.
 - Ctrl+P / Pause, Ctrl+R / Resume, Ctrl+E / End: control the selected VM.
 - DOS window arrows/track/thumb and Page Up/Down: vertical viewport; `<` / `>`
   buttons: horizontal viewport. Move/resize/minimize/restore use normal controls.
@@ -35,8 +35,8 @@ At the `A:\>` prompts, type `COUNTER` in both DOS windows to observe independent
 background execution. `q` returns to each saved parent shell. KSH also provides
 HELP/VER/DIR/TYPE/CD/ECHO/CLS/TIME/EXIT and external COM/small MZ execution.
 See [shell usage and exact limits](k386-shell.md).
-`ECHO.COM` waits for input and exits on Escape. `KFILE.COM` demonstrates a real
-DOS read and denial of file writes/creation. `FAULT.COM` and `PORT.COM` deliberately
+`ECHO.EXE` waits for input and exits on Escape. `KFILE.EXE` demonstrates a real
+DOS read and denial of file writes/creation. `FAULT.EXE` and `PORT.EXE` deliberately
 fault inside an isolated VM and are test programs. Run these through a DOS window.
 External tools launched through the ordinary launcher still use foreground EXEC;
 while such a tool runs, GUI-driven VM quanta pause.

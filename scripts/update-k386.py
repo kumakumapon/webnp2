@@ -25,12 +25,17 @@ def main():
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
     files.pop('K386.COM', None)
-    names = ('K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KSH.COM', 'COUNTER.COM', 'ECHO.COM', 'FAULT.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'KRESCHK.COM', 'INTWAIT.COM')
+    for stem in ['KSH', 'COUNTER', 'ECHO', 'FAULT', 'KFILE', 'PORT', 'DF', 'FPU', 'FLAGS', 'DTA', 'KEYCHK', 'TIMER', 'MEMORY', 'PROCESS', 'BADTIMER', 'ROMWRITE', 'INTWAIT']:
+        files.pop(stem + '.COM', None)
+    names = ('K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KSH.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'FAULT.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'KRESCHK.COM', 'INTWAIT.EXE', 'KHELLO.EXE')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     malformed = bytearray(files['MZTEST.EXE'])
     malformed[28:32] = b'\xff\xff\xff\xff'
     files['BADMZ.EXE'] = bytes(malformed)
+    malformed = bytearray(files['KHELLO.EXE'])
+    malformed[37] = 2  # unsupported application ABI, rejected before VM replacement
+    files['BADAPP.EXE'] = bytes(malformed)
     guide = (source / 'tools/k386/DESIGN.md').read_bytes() + b'\n\n' + (source / 'tools/k386/RESOURCES.md').read_bytes()
     files['K386.TXT'] = guide.replace(b'\n', b'\r\n')
     files['KDATA.TXT'] = b'READ ONLY DATA\r\n'

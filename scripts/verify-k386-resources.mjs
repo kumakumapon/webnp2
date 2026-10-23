@@ -60,14 +60,14 @@ try{
   await key('CTRL+T');for(let i=0;i<8;i++)await key('DOWN');
   // Mouse edges are handled before queued keyboard input in the guest. Wait
   // for the eighth arrow to select DOS 1 before clicking its resource button.
-  await wait(`ID ${record.resources.usage[0].generation}  KSH.COM  Priority: Normal`);
+  await wait(`ID ${record.resources.usage[0].generation}  KSH.EXE  Priority: Normal`);
   await tasksPresented();
   await click(352,344);await wait('Priority: High');
   await key('DOWN');await type('PP');await wait('Priority: Low');
   record=await until(r=>r.resources.usage[0].priority===2&&r.resources.usage[1].priority===0,'GUI priority controls');
   const previous=record.resources.events.at(-2).sequence;
   await type('[');await wait(`Event #${previous}`);await type(']');
-  await run(0,'COUNTER.COM');await run(1,'COUNTER.COM');
+  await run(0,'COUNTER.EXE');await run(1,'COUNTER.EXE');
   record=await until(r=>r.resources.usage.every(u=>u.runs>2),'both real CPU loops');
   const before=record;
   await key('F4');await type('GUI WHILE PRIORITIES RUN');await wait('GUI WHILE PRIORITIES RUN');
@@ -103,22 +103,22 @@ try{
   snapshots.push({stage:'quota-resume',...record});
   pass('GUI CPU budget, automatic stop, unchanged frame/RAM/counter, other VM progress, denied exhausted resume and explicit recovery');
 
-  await run(0,'INTWAIT.COM');
-  record=await until(r=>r.resources.usage[0].depth===2&&r.resources.usage[0].program==='COUNTER.COM','nested child ready for Ctrl+C');
+  await run(0,'INTWAIT.EXE');
+  record=await until(r=>r.resources.usage[0].depth===2&&r.resources.usage[0].program==='COUNTER.EXE','nested child ready for Ctrl+C');
   const child=record.resources.usage[0];await key('CTRL+C');
   record=await until(r=>r.cpu.views[0].state===0&&r.cpu.views[0].screen.includes('INTERRUPT PARENT PASS'),'Ctrl+C restores and executes the real parent');
   assert.ok(record.resources.events.some(e=>e.type===7&&e.generation===child.generation&&e.psp===child.psp));
-  await run(0,'KSH.COM');await until(r=>r.cpu.views[0].state===2,'KSH waits');
+  await run(0,'KSH.EXE');await until(r=>r.cpu.views[0].state===2,'KSH waits');
   await type('COUNTER\r');await until(r=>r.resources.usage[0].depth===2,'KSH child runs');
   await key('CTRL+T');await type('B');
-  record=await until(r=>r.resources.usage[0].depth===1&&r.resources.usage[0].program==='KSH.COM'&&r.cpu.views[0].state===2,'task-manager Break returns to KSH');
+  record=await until(r=>r.resources.usage[0].depth===1&&r.resources.usage[0].program==='KSH.EXE'&&r.cpu.views[0].state===2,'task-manager Break returns to KSH');
   pass('Ctrl+C reports AH=4Dh 0103h to actual EXEC parent; task-manager Break returns from child to live KSH');
 
-  await run(0,'FAULT.COM');
+  await run(0,'FAULT.EXE');
   record=await until(r=>r.cpu.views[0].state===4&&r.resources.usage[0].lastFault===14,'actual page fault journal');
   assert.equal(record.resources.usage[0].lastCR2,0xe0000);
   const fault=record.resources.events.at(-1);
-  assert.equal(fault.type,3);assert.equal(fault.cr2,0xe0000);assert.equal(fault.cs,0x8000);
+  assert.equal(fault.type,3);assert.equal(fault.cr2,0xe0000);assert.equal(fault.cs,0x8010);
   assert.equal(fault.ip,record.cpu.diagnostics[0].frame.eip);
   await key('CTRL+T');await wait('Reason: Fault');await wait('Fault: 14');
   await tasksPresented();

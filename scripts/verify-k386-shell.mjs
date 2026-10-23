@@ -129,7 +129,7 @@ try{
   snapshots.push({stage:'relocated-physical-image',views});
   done('bad MZ is rejected before replacing live RAM; actual loaded bytes, relocations and PSP arguments match');
 
-  await replace(1,'KSH.COM');await until(v=>shell(v[1])&&v[1].screen.includes('K386 DOS shell'),'Restart second shell');
+  await replace(1,'KSH.EXE');await until(v=>shell(v[1])&&v[1].screen.includes('K386 DOS shell'),'Restart second shell');
   await command(1,'ECHO RESTARTED','RESTARTED');
   // Text VRAM labels precede the graphical copy. Wait for the new bottom
   // prompt row, rather than the unchanged shell banner, before taking a shot.
