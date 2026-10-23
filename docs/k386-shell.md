@@ -26,8 +26,8 @@ FLAGS
 COUNTER
 ```
 
-Commands are ASCII and filenames use A: DOS paths. The shell tries `.COM`, then
-`.EXE` for an external name without an extension. `COUNTER` runs until `q`;
+Commands are ASCII and filenames use A: DOS paths. The shell tries `.EXE`, then
+`.COM` for an external name without an extension. `COUNTER` runs until `q`;
 the other window remains usable. On normal exit or a contained child fault,
 the same parent shell returns. `EXIT` ends the shell. Files are read-only.
 CD and directory-search state are private to each session; host DOS's current

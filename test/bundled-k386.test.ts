@@ -17,9 +17,32 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.extended_memory_mb).toBe(16);
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
-      'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.COM', 'ECHO.COM', 'KFILE.COM', 'PORT.COM', 'DF.COM', 'FPU.COM',
-      'KSH.COM', 'MZTEST.EXE', 'FLAGS.COM', 'DTA.COM', 'KEYCHK.COM', 'TIMER.COM', 'MEMORY.COM', 'PROCESS.COM', 'BADTIMER.COM', 'ROMWRITE.COM', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.COM',
+      'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
+      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE',
     ]));
+  });
+  it('packages the V86 apps as tagged MZ executables with valid relocations', () => {
+    if (!manifest.enabled) return;
+    const disk = openDiskImage(readFileSync(`public/k386/${manifest.image}`), manifest.image);
+    const names=manifest.files.map((file: {name: string})=>file.name);
+    for(const stem of 'KSH KHELLO COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT'.split(' ')) {
+      expect(names).not.toContain(stem+'.COM');
+      const exe=fatReadFile(disk,stem+'.EXE');
+      const word=(at:number)=>exe[at]|exe[at+1]<<8;
+      expect(word(0)).toBe(0x5a4d);
+      expect(new TextDecoder().decode(exe.slice(28,36))).toBe('K386APP1');
+      expect(word(36)).toBe(0x0100);expect(word(38)).toBe(1);
+      expect(word(24)).toBe(72);expect(word(6)).toBeGreaterThan(0);
+      expect(word(24)+4*word(6)).toBeLessThanOrEqual(word(8)*16);
+      expect((word(4)-1)*512+(word(2)||512)).toBe(exe.length);
+      const moduleSize=exe.length-word(8)*16;
+      expect(word(22)*16+word(20)).toBeLessThan(moduleSize);
+      expect((Math.ceil(moduleSize/16)+word(10))*16).toBe(0x10000);
+      for(let i=0;i<word(6);i++) {
+        const at=word(24)+i*4;
+        expect(word(at)+word(at+2)*16+2).toBeLessThanOrEqual(moduleSize);
+      }
+    }
   });
   it('boots XMS without an existing V86 owner and preserves kernel provenance', () => {
     if (!manifest.enabled) return;
