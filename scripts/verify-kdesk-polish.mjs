@@ -4,7 +4,6 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {join} from 'node:path';
 import {chromium} from 'playwright';
-import {clickTask} from './verify-window.mjs';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectNativeMZ} from './kdesk-mz-inspect.mjs';
@@ -25,6 +24,9 @@ try{
   const key=async k=>{await page.evaluate(k=>window.np2debug.np2.sendKeys(k),k);await pause(180);};
   const type=async s=>{await page.evaluate(s=>window.np2debug.np2.typeText(s),s);await pause(180);};
   const click=async(x,y)=>{
+   // Absolute test targets are implemented by a relative bus mouse. Re-home
+   // after long keyboard/paint batches instead of accumulating estimates.
+   await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(300);
    await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await pause(200);
    await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(200);
   };
@@ -60,7 +62,7 @@ try{
    await screenshot('desktop');
    const original=await pixels(24,32,389,261);
    // Find button is in the guest launcher, not an HTML control.
-   await click(216,264);await wait('Find apps');await screenshot('search');
+   await click(232,264);await wait('Find apps');await screenshot('search');
    await type('MaTH');await wait('Calculator');await wait('1 results');
    await key('CTRL+A');await type('zz no such app');await wait('No matching apps');
    await key('ENTER');await wait('No matching apps');
@@ -68,7 +70,9 @@ try{
    assert.equal(await page.evaluate(()=>window.np2debug.np2.getScreenText().lines[5].split('z').length-1),31);
    await key('CTRL+U');await wait(profile==='k386'?'21 results':'19 results');
    await key('ROLLDOWN');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('Image viewer'));
-   await key('HOME');await click(512,328); // Footer's next-page button.
+   await key('HOME');
+   await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('File manager'));
+   await click(512,328); // Click after HOME has actually reached the guest.
    await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('Image viewer'));
    await click(620,350);await wait('App search closed');await title('Launcher',3,5);
    assert.deepEqual(await pixels(24,32,389,261),original,'Panel cancellation restores the composed window pixels');
