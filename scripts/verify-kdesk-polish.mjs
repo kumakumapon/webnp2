@@ -42,8 +42,17 @@ try{
   };
   const command=async(query,mouse=false)=>{
    await key('CTRL+K');await wait('Find apps');await type(query);
-   await wait('1 results');await pause(150);
+   await page.waitForFunction(query=>{
+    const l=window.np2debug.np2.getScreenText().lines;
+    return l[5]?.trim().replace(/_$/, '')===query&&l[20]?.trim().startsWith('1 results -');
+   },query,{timeout:60000});
    if(mouse)await click(240,124);else await key('ENTER');
+   // Wait for the completed guest composition, not a stale title beneath
+   // the modal panel. Its footer used to match '1 results' inside '21 results'.
+   await page.waitForFunction(()=>{
+    const l=window.np2debug.np2.getScreenText().lines;
+    return !l[3]?.includes('Find apps')&&/App search closed|Window tiled|Window maximized|Window restored|No active window/.test(l[23]??'');
+   },null,{timeout:60000});
   };
   const until=async(predicate,label)=>{
    for(let i=0;i<300;i++){
