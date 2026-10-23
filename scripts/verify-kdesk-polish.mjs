@@ -44,7 +44,7 @@ try{
    await key('CTRL+K');await wait('Find apps');await type(query);
    await page.waitForFunction(query=>{
     const l=window.np2debug.np2.getScreenText().lines;
-    return l[5]?.trim().replace(/_$/, '')===query&&l[20]?.trim().startsWith('1 results -');
+    return l[5]?.slice(15,64).trim().replace(/_$/, '')===query&&l[20]?.slice(14,59).trim().startsWith('1 results -');
    },query,{timeout:60000});
    if(mouse)await click(240,124);else await key('ENTER');
    // Wait for the completed guest composition, not a stale title beneath
