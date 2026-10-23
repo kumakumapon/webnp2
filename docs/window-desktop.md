@@ -131,3 +131,6 @@ private RAM, process memory/EXEC and BIOS interval timers. See the
 [process and compatibility guide](k386-processes.md) for boot requirements,
 original COMMAND.COM probes, controls, build checks and remaining restrictions.
 The ordinary desktop and foreground tools described above remain available.
+
+KDESK 1.9 adds native app search, window tiling and grouped desktop restoration.
+See [the desktop guide](kdesk-polish.md) for controls and validation.

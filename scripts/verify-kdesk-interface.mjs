@@ -122,7 +122,7 @@ try{
     return labels.every(label=>line?.includes(label))?line:false;
    },labels,{timeout:60000})).jsonValue();
    for(const label of labels)assert.ok(bar.includes(label),`Taskbar shows ${label}: ${bar}`);
-   await clickTask(page,'Memo');await title('Memo',5,13);await type('KDESK 1.8\rA calmer desktop.\rWindows keep their place.');
+   await clickTask(page,'Memo');await title('Memo',5,13);await type('KDESK 1.9\rA calmer desktop.\rWindows keep their place.');
    await wait('Windows keep their place.');
    await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(630,360));await pause(600);
    await page.screenshot({path:join(output,profile+'-desktop.png')});

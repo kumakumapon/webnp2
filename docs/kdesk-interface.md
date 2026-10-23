@@ -1,4 +1,6 @@
-# KDESK 1.8: appearance and window navigation
+# KDESK 1.9: appearance and window navigation
+
+New in 1.9: [color artwork, native app search, window layouts and desktop restoration](kdesk-polish.md).
 
 The normal MS-DOS 4 image and the experimental KDESK/386 image share this native
 PC-98 interface. The guest draws the navy background, white content surfaces,
