@@ -20,7 +20,7 @@ const wait=needle=>page.waitForFunction(needle=>{try{return window.np2debug.np2.
 const key=async value=>{await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await pause(200);};
 const type=async value=>{await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await pause(200);};
 const click=async(x,y)=>{
-  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(200);
+  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(300);
   await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await pause(200);
   await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(200);
 };
@@ -58,6 +58,10 @@ try{
   let record=await until(r=>r.cpu.views.every(v=>v.state===2&&v.screen.includes('K386 DOS shell')),'two guest shells');
   assert.notEqual(record.resources.usage[0].generation,record.resources.usage[1].generation);
   await key('CTRL+T');for(let i=0;i<8;i++)await key('DOWN');
+  // Mouse edges are handled before queued keyboard input in the guest. Wait
+  // for the eighth arrow to select DOS 1 before clicking its resource button.
+  await wait(`ID ${record.resources.usage[0].generation}  KSH.COM  Priority: Normal`);
+  await tasksPresented();
   await click(352,344);await wait('Priority: High');
   await key('DOWN');await type('PP');await wait('Priority: Low');
   record=await until(r=>r.resources.usage[0].priority===2&&r.resources.usage[1].priority===0,'GUI priority controls');
