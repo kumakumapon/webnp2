@@ -30,6 +30,18 @@ try{
  await key('F4');await type('HIGH COLOR MEMO');await wait('HIGH COLOR MEMO');
  await find('math');await wait('Value: 0');await type('6*7=');await wait('Value: 42');
  await key('CTRL+G');await pause(600);await key('CTRL+G');await wait('Value: 42');
+ const title=await page.evaluate(()=>{const lines=window.np2debug.np2.getScreenText().lines;const row=lines.findIndex(s=>s.includes('Calculator'));return {x:lines[row].indexOf('Calculator')*8+24,y:row*16+8};});
+ await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
+ await page.evaluate(async title=>{
+  const api=window.np2debug.np2;await api.mouseMoveTo(title.x,title.y);
+  window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]);
+ },title);await pause(400);
+ await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(780,540));await pause(600);
+ const statusPixel=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=800;c.height=600;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0);return Array.from(g.getImageData(790,561,1,1).data).slice(0,3);});
+ await page.evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]));await pause(600);
+ assert.ok(statusPixel[0]>50&&statusPixel[0]<120&&statusPixel[1]>60&&statusPixel[1]<140,'Live drag shadow stays above the status row');
+ await wait('Value: 42');
+ results.push('RGB565 window dragging reaches the extended desktop and preserves the status row');
  await key('CTRL+D');await wait('Desktop shown');await key('CTRL+D');await wait('Desktop windows restored');
  results.push('Memo, Calculator, maximize/restore and Desk preserve state');
  await key('CTRL+N');await wait('K386 DOS shell');await type('COUNTER\r');
