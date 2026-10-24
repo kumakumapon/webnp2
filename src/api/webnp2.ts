@@ -12,6 +12,7 @@ import {
   coreStatLoad,
   coreKey,
   coreReadTvram,
+  coreGraphicsInfo,
   coreReadMemory,
   coreWriteMemory,
   corePushKeyBuffer,
@@ -338,8 +339,9 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
   private persistTimer: ReturnType<typeof setInterval> | null = null;
   private boundOnVisibilityChange = (): void => this.onVisibilityChange();
   private boundOnPageHide = (): void => void this.persistNow({ force: true });
-  /** ホスト側が推定するバスマウスのカーソル位置(0-639, 0-399)。null=未ホーミング(未確定)。 */
+  /** ホスト側が推定するバスマウスのカーソル位置(現在のcanvas内)。null=未ホーミング(未確定)。 */
   private mousePos: { x: number; y: number } | null = null;
+  private mouseSize = '';
 
   constructor(canvas: HTMLCanvasElement) {
     super();
@@ -539,6 +541,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
     fd1?: { file: DiskFile; sourceKey: string; url?: string; alreadyPersisted?: boolean };
     fd2?: { file: DiskFile; sourceKey: string; url?: string; alreadyPersisted?: boolean };
     latencyMs?: number;
+    graphicsAdapter?: 'cirrus';
     extMemMB?: number;
     clkMult?: number;
     /** 登録済みROM/素材ファイル。読み取り専用扱いで、mount管理・永続化ループの対象にはしない。 */
@@ -563,6 +566,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
       fds: fds.map((f) => f.file),
       latencyMs: params.latencyMs,
       extMemMB: params.extMemMB,
+      graphicsAdapter: params.graphicsAdapter,
       clkMult: params.clkMult,
       roms: params.roms,
       hostdrv: params.hostdrv,
@@ -1403,6 +1407,12 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
     }
   }
 
+  /** Actual emulated graphics device and frontend geometry. */
+  getGraphicsInfo(): ReturnType<typeof coreGraphicsInfo> {
+    if (!this.isBooted()) throw new Error('not booted');
+    return coreGraphicsInfo();
+  }
+
   /** テキストVRAMを読み出し、SJISデコード済みの画面テキストとカーソル位置を返す。 */
   getScreenText(): {
     text: string;
@@ -1528,19 +1538,22 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
    */
   async mouseHome(): Promise<void> {
     if (!this.isBooted()) throw new Error('not booted');
-    await this.mouseStep(-1600, -1000);
+    await this.mouseStep(-Math.max(1600, this.canvas.width * 2), -Math.max(1000, this.canvas.height * 2));
+    this.mouseSize = `${this.canvas.width}:${this.canvas.height}`;
     this.mousePos = { x: 0, y: 0 };
   }
 
   /**
-   * マウスカーソルを画面座標(x,y)へ移動する。x,yは0-639/0-399にクランプされる。
+   * マウスカーソルを画面座標(x,y)へ移動する。x,yは現在のcanvasの範囲にクランプされる。
    * 現在位置が未確定(未ホーミング)なら先に mouseHome() する。
    * 戻り値は移動後のホスト側推定位置。
    */
   async mouseMoveTo(x: number, y: number): Promise<{ x: number; y: number }> {
     if (!this.isBooted()) throw new Error('not booted');
-    const clampedX = Math.min(Math.max(Math.round(x), 0), 639);
-    const clampedY = Math.min(Math.max(Math.round(y), 0), 399);
+    const width = this.canvas.width || 640, height = this.canvas.height || 400;
+    if (this.mouseSize !== `${this.canvas.width}:${this.canvas.height}`) this.mousePos = null;
+    const clampedX = Math.min(Math.max(Math.round(x), 0), width - 1);
+    const clampedY = Math.min(Math.max(Math.round(y), 0), height - 1);
     if (!this.mousePos) {
       await this.mouseHome();
     }

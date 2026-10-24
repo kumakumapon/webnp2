@@ -1,0 +1,10 @@
+{
+  "source_repository": "https://github.com/uraraworks/NP2kai-wasm",
+  "source_commit": "714f0bef3a24aa419d4cdb0dac9ad02d30855280",
+  "patch_sha256": "b5d8864cbe05bf0fb04f8c28f343b3538e084300a3efd42a28654340ba3545af",
+  "compiler": "Emscripten 3.1.64",
+  "files": {
+    "emnp21kai_sdl2.js": "2619f0b997716e1dbb71b8baae7cce3ed530c049a0792de28b0536abb0266281",
+    "emnp21kai_sdl2.wasm": "7004497237b3266a97ce99891d165fe2399a8a3fd85b4e7f13b2ae3500f46dc7"
+  }
+}

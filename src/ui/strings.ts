@@ -48,6 +48,7 @@ interface Dict {
   startBtnMsDos2(): string;
   startBtnMsDos4(): string;
   startBtnK386(): string;
+  startBtnK386HighColor(): string;
   toolbarReset(): string;
   toolbarFullscreen(): string;
   toolbarMachineReset(): string;
@@ -499,6 +500,7 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnMsDos2: () => 'MS-DOS 2.0 で起動',
     startBtnMsDos4: () => 'MS-DOS 4.0 + RetroBasic で起動',
     startBtnK386: () => 'KDESK/386（実験版）で起動',
+    startBtnK386HighColor: () => 'KDESK/386（800×600・65,536色）で起動',
     toolbarReset: () => '初期状態に戻す',
     toolbarFullscreen: () => 'フルスクリーン',
     toolbarMachineReset: () => 'マシンリセット',
@@ -872,6 +874,7 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnMsDos2: () => 'Start with MS-DOS 2.0',
     startBtnMsDos4: () => 'Start with MS-DOS 4.0 + RetroBasic',
     startBtnK386: () => 'Start KDESK/386 (experimental)',
+    startBtnK386HighColor: () => 'Start KDESK/386 (800×600, 65,536 colors)',
     toolbarReset: () => 'Reset to Original',
     toolbarFullscreen: () => 'Fullscreen',
     toolbarMachineReset: () => 'Reset Machine',
