@@ -53,7 +53,21 @@ try{
  await page.evaluate(()=>window.np2debug.np2.mouseClick());await wait('Desktop windows restored');
  await until(r=>r.cpu.views.every((v,i)=>v.counter>after.cpu.views[i].counter),'Hidden sessions keep running');
  results.push('actual software cursor reaches x720/y500; mouse clicks the taskbar beyond the old 400-line boundary');
+ await page.waitForFunction(()=>{
+  const c=document.createElement('canvas');c.width=800;c.height=600;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0);
+  const p=g.getImageData(500,397,1,1).data;return p[0]===255&&p[1]===255&&p[2]===255;
+ },null,{timeout:60000}); // No task-button indicator may remain inside the DOS window at the old y397.
  await page.screenshot({path:join(output,'dos-windows.png')});
+ // Exercise the high-resolution parent / indexed foreground child handoff.
+ await key('F9');await wait('KPAINT - Image editor');await wait('Ready');
+ await page.waitForFunction(()=>document.querySelector('#canvas').width===640&&document.querySelector('#canvas').height===400);
+ await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
+ await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(600,350));await pause(350);
+ await key('F10');await wait('Press any key or click to return to KDESK');
+ await page.evaluate(()=>window.np2debug.np2.mouseClick());await wait('Program returned to desktop');
+ await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600);
+ assert.equal((await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo())).deviceBpp,16);
+ results.push('indexed KPAINT opens from the high-coordinate desktop and returns to RGB565');
  await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');
  await page.waitForFunction(()=>document.querySelector('#canvas').width===640&&document.querySelector('#canvas').height===400,null,{timeout:60000});
  assert.equal(hash(await disk()),initial);assert.deepEqual(errors,[]);results.push('DOS return restores 640x400; entire disk is unchanged');
