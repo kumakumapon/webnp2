@@ -25,8 +25,8 @@ try{
   await mkdir(output,{recursive:true});
   await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
   await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
-  await run(0,'MEMORY.COM A');await until(v=>v[0].screen.includes('DOS MEMORY PASS'),'First arena');
-  await run(1,'MEMORY.COM B');let s=await until(v=>v.every(x=>x.counter>100&&x.screen.includes('DOS MEMORY PASS')),'Two arenas');
+  await run(0,'MEMORY.EXE A');await until(v=>v[0].screen.includes('DOS MEMORY PASS'),'First arena');
+  await run(1,'MEMORY.EXE B');let s=await until(v=>v.every(x=>x.counter>100&&x.screen.includes('DOS MEMORY PASS')),'Two arenas');
   assert.notEqual(s.views[0].physical,s.views[1].physical);assert.notEqual(s.views[0].cr3,s.views[1].cr3);
   assert.ok(s.diagnostics.every(d=>d.frame.eflags&0x20000));save('two-private-arenas',s);
   const before=s;await key('CTRL+P');s=await until(v=>v[1].state===3,'Pause second arena');
@@ -34,21 +34,21 @@ try{
   assert.equal(s.views[1].counter,stopped);await key('CTRL+R');await until(v=>v[1].counter>stopped,'Resume private cookie check');
   done('two private >64KiB allocations, MCB ownership/resize/coalescing checks and retained RAM after pause/resume');
 
-  await run(1,'TIMER.COM');await key('F4');await type('GUI WHILE TIMER WAITS');await wait('GUI WHILE TIMER WAITS');
+  await run(1,'TIMER.EXE');await key('F4');await type('GUI WHILE TIMER WAITS');await wait('GUI WHILE TIMER WAITS');
   s=await until(v=>v[1].state===2&&v[1].counter===3,'Callbacks while input waits');
   assert.ok(s.views[0].counter>before.views[0].counter);save('timer-with-memo',s);
   await key('CTRL+O');await type('Z');s=await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Timer completion');save('timer-completed',s);
   done('PC-98 INT 1Ch callbacks respect CLI, rearm, and wake a waiting background VM while Memo remains usable');
-  await run(1,'TIMER.COM EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
+  await run(1,'TIMER.EXE EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
   await type('q');s=await until(v=>v[1].state===2&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT'),'Timer parent resumes');
   const callbacks=s.views[1].counter;s=await until(v=>v[1].state===2&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
   await type('Z');await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Rearmed parent timer completion');
   done('a parent-owned timer continues across child EXEC, callback rearm and child exit');
-  await run(1,'BADTIMER.COM');s=await until(v=>v[1].state===4&&v[1].fault===13,'Tampered IRQ callback contained');
+  await run(1,'BADTIMER.EXE');s=await until(v=>v[1].state===4&&v[1].fault===13,'Tampered IRQ callback contained');
   const survivor=s.views[0].counter;await until(v=>v[0].counter>survivor,'Other VM survives bad callback');save('invalid-callback-contained',s);
   done('a corrupted private IRQ vector faults only its owning VM');
 
-  await run(1,'PROCESS.COM');const children=new Map();
+  await run(1,'PROCESS.EXE');const children=new Map();
   s=await until(v=>v[1].state===0&&v[1].screen.includes('NESTED PROCESS PASS'),'Nested processes',state=>{
     const v=state.views[1],d=state.diagnostics[1];if(v.state===1)children.set(v.psp,{psp:v.psp,frame:d.frame,environment:d.memory[44]|d.memory[45]<<8});
   });
@@ -65,10 +65,10 @@ try{
   await run(1,'COMMAND.COM');await until(v=>prompt(v[1]),'Interactive COMMAND prompt');
   await type('ECHO COMMAND-INTERACTIVE\r');await until(v=>prompt(v[1])&&rows(v[1]).includes('COMMAND-INTERACTIVE'),'Original ECHO');
   await type('P98TEST.COM\r');s=await until(v=>prompt(v[1])&&v[1].screen.includes('DOS4 EXEC OK'),'COMMAND external program and parent return');save('original-command-exec',s);
-  await type('COUNTER.COM\r');s=await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'COMMAND background child');
+  await type('COUNTER.EXE\r');s=await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'COMMAND background child');
   const firstCounter=s.views[1].counter;
   await run(0,'COMMAND.COM');await until(v=>prompt(v[0])&&v[1].counter>firstCounter,'Second original COMMAND while first child runs');
-  await type('COUNTER.COM\r');s=await until(v=>v.every(x=>x.state===1&&x.psp!==0x8000&&x.counter>0),'Two original COMMAND child programs');save('two-command-children',s);
+  await type('COUNTER.EXE\r');s=await until(v=>v.every(x=>x.state===1&&x.psp!==0x8000&&x.counter>0),'Two original COMMAND child programs');save('two-command-children',s);
   assert.ok(s.diagnostics.every(d=>d.frame.eflags&0x20000));assert.notEqual(s.views[0].physical,s.views[1].physical);
   const counters=s.views.map(v=>v.counter);await key('F4');await type(' TWO COMMAND CHILDREN');
   await until(v=>v.every((x,i)=>x.counter>counters[i]),'Both original COMMAND children run in background');
@@ -77,10 +77,10 @@ try{
   await until(v=>prompt(v[0])&&rows(v[0]).includes('COMMAND-PARENT-RESTORED')&&v[1].counter>other,'Independent COMMAND parent while other child continues');
   await key('CTRL+O');await type('q');await until(v=>prompt(v[1]),'Second COMMAND resumes');
   done('two original interactive COMMAND.COM sessions run external DOS programs concurrently and restore their parent shells independently');
-  await run(1,'ROMWRITE.COM');s=await until(v=>v[1].state===4&&v[1].fault===14,'Firmware is CPU read-only');
+  await run(1,'ROMWRITE.EXE');s=await until(v=>v[1].state===4&&v[1].fault===14,'Firmware is CPU read-only');
   assert.equal(s.views[1].cr2,0xffffe);assert.equal(s.diagnostics[1].frame.error&7,7);save('firmware-write-protected',s);
   done('actual CPU page fault rejects firmware writes without changing the other DOS session');
-  await run(1,'KSH.COM');await until(v=>v[1].state===2&&v[1].screen.includes('K386 DOS shell'),'Recovery to guest shell');
+  await run(1,'KSH.EXE');await until(v=>v[1].state===2&&v[1].screen.includes('K386 DOS shell'),'Recovery to guest shell');
   await type('ECHO PROCESS-RECOVERY\r');s=await until(v=>v[1].screen.includes('PROCESS-RECOVERY'),'Shell after process tests');save('recovered-shell',s);
   done('KSH can restart after a fault and coexist with the other original COMMAND session');
 

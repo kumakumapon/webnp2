@@ -77,7 +77,7 @@ try{
    await key('ENTER');await wait('No matching apps');
    await key('CTRL+A');await type('z'.repeat(40));await wait('No matching apps');
    assert.equal(await page.evaluate(()=>window.np2debug.np2.getScreenText().lines[5].split('z').length-1),31);
-   await key('CTRL+U');await wait(profile==='k386'?'21 results':'19 results');
+   await key('CTRL+U');await wait(profile==='k386'?'24 results':'19 results');
    await key('ROLLDOWN');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('Image viewer'));
    await key('HOME');
    await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('File manager'));
@@ -130,7 +130,7 @@ try{
     assert.equal(afterShell.cpu.views[0].keys,0);snapshots.push({stage:'modal-input',before:shell,after:afterShell});
     await command('dos 2');await wait('K386 DOS shell');
     await key('CTRL+N');await type('COUNTER\r');await key('CTRL+O');await type('COUNTER\r');
-    const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.COM'&&u.depth===2)&&
+    const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.EXE'&&u.depth===2)&&
       r.cpu.views.every(v=>v.state===1&&v.counter>0&&v.screen.includes('V86 COUNTER')),'Both child counters run');
     snapshots.push({stage:'before-background',...before});
     await key('CTRL+D');await wait('Desktop shown');

@@ -1,6 +1,6 @@
 # Guest DOS windows and shell
 
-Opening DOS 1/2 in the experimental profile now starts the original `KSH.COM`
+Opening DOS 1/2 in the experimental profile now starts the original `KSH.EXE`
 inside its V86 context. A fresh text buffer contains spaces; control bytes also
 render blank. This fixes the rows of `?` caused by drawing uninitialized NULs.
 The shell and program execution belong to the PC-98 guest, using the existing
@@ -26,8 +26,8 @@ FLAGS
 COUNTER
 ```
 
-Commands are ASCII and filenames use A: DOS paths. The shell tries `.COM`, then
-`.EXE` for an external name without an extension. `COUNTER` runs until `q`;
+Commands are ASCII and filenames use A: DOS paths. The shell tries `.EXE`, then
+`.COM` for an external name without an extension. `COUNTER` runs until `q`;
 the other window remains usable. On normal exit or a contained child fault,
 the same parent shell returns. `EXIT` ends the shell. Files are read-only.
 CD and directory-search state are private to each session; host DOS's current
@@ -38,7 +38,7 @@ state is rejected before host DOS is called. Child EXEC saves the parent's
 trusted search continuation and restores it on return.
 
 Ctrl+L / Run replaces the selected session's root program, accepting a path and
-arguments, for example `MZTEST.EXE DIRECT` or `KSH.COM` to restart the shell.
+arguments, for example `MZTEST.EXE DIRECT` or `KSH.EXE` to restart the shell.
 Ctrl+P / Ctrl+R / Ctrl+E pause, resume or end a session. Ctrl+T opens Tasks.
 Closing a window ends its session. Function keys and Tab remain KDESK controls;
 Escape is forwarded to the guest unless editing the GUI Run field.

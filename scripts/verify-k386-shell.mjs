@@ -13,6 +13,7 @@ assert.equal(manifest.enabled,true,'Generate the pinned experimental image first
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',
   args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
 const page=await browser.newPage(),results=[],snapshots=[],errors=[];
+let preparedBytes;
 page.on('pageerror',e=>errors.push(e.message));
 const pause=ms=>page.waitForTimeout(ms);
 const text=()=>page.evaluate(()=>window.np2debug.np2.getScreenText().text);
@@ -60,7 +61,13 @@ try{
   await page.waitForFunction(async()=>{try{await window.np2debug.np2.diskListFiles('fd1','K386DIR');return true;}catch{return false;}},null,{timeout:60000});
   await type('ECHO PRIVATE DIRECTORY > K386DIR\\INFO.TXT\r');
   await page.waitForFunction(async()=>{try{return new TextDecoder().decode(await window.np2debug.np2.diskReadFile('fd1','K386DIR/INFO.TXT')).trim()==='PRIVATE DIRECTORY';}catch{return false;}},null,{timeout:60000});
-  const preparedHash=hash(await disk());assert.notEqual(preparedHash,manifest.sha256);
+  // File data can be visible before redirected ECHO closes its handle and
+  // updates the directory timestamp. A subsequent DOS command acknowledges
+  // the completed writer before we take the immutable-disk baseline.
+  await type('ECHO K386 FIXTURE READY\r');
+  await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(s=>s.trim()==='K386 FIXTURE READY'),null,{timeout:60000});
+  preparedBytes=await disk();
+  const preparedHash=hash(preparedBytes);assert.notEqual(preparedHash,manifest.sha256);
   await type('KDESK\r');await wait('Ready');
   await focus(0);let views=await until(v=>shell(v[0])&&v[0].screen.includes('K386 DOS shell'),'Initial DOS 1 shell');
   assert.ok(!views[0].screen.includes('\0'));assert.ok(!views[0].screen.includes('????????'));
@@ -129,7 +136,7 @@ try{
   snapshots.push({stage:'relocated-physical-image',views});
   done('bad MZ is rejected before replacing live RAM; actual loaded bytes, relocations and PSP arguments match');
 
-  await replace(1,'KSH.COM');await until(v=>shell(v[1])&&v[1].screen.includes('K386 DOS shell'),'Restart second shell');
+  await replace(1,'KSH.EXE');await until(v=>shell(v[1])&&v[1].screen.includes('K386 DOS shell'),'Restart second shell');
   await command(1,'ECHO RESTARTED','RESTARTED');
   // Text VRAM labels precede the graphical copy. Wait for the new bottom
   // prompt row, rather than the unchanged shell banner, before taking a shot.
@@ -146,5 +153,13 @@ try{
     image_sha256:manifest.sha256,prepared_sha256:preparedHash,results,snapshots},null,2)+'\n');
 }catch(error){
   console.error(await text().catch(()=>''));console.error(await snapshot().catch(()=>null));
+  if(preparedBytes){
+    const actual=await disk().catch(()=>null);
+    if(actual){
+      await writeFile(join(output,'prepared.xdf'),preparedBytes);await writeFile(join(output,'actual.xdf'),actual);
+      const offsets=[];for(let i=0;i<actual.length;i++)if(actual[i]!==preparedBytes[i])offsets.push(i);
+      await writeFile(join(output,'disk-diff.json'),JSON.stringify({count:offsets.length,first:offsets.slice(0,128)},null,2));
+    }
+  }
   await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw error;
 }finally{await browser.close();}

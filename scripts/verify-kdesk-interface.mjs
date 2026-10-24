@@ -93,7 +93,7 @@ try{
     await click(588,80);await title('DOS 2',6,34);await type('COUNTER\r');
     // KSH also has bytes at the counter probe address. Wait for actual EXEC
     // completion before recording the child program's initial counter values.
-    const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.COM'&&u.depth===2)&&
+    const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.EXE'&&u.depth===2)&&
       r.cpu.views.every(v=>v.state===1&&v.counter>0&&v.screen.includes('V86 COUNTER')));
     snapshots.push({stage:'before',...before});
     await key('CTRL+G');await title('DOS 2',2,2);

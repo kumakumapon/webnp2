@@ -72,7 +72,7 @@ try{
   await type('K386TEST\r');await wait('K386 CHECK PASS');await prompt();
   results.push('guest native test driver: timer quanta, dual CR3/RAM, stop/resume, isolated #PF and input');
   await type('KDESK\r');await wait('Ready');
-  await run(0,'COUNTER.COM');await run(1,'COUNTER.COM');
+  await run(0,'COUNTER.EXE');await run(1,'COUNTER.EXE');
   let states=await until(s=>s.every(v=>v.counter>0&&v.ticks>0),'Both native counters start');
   assert.notEqual(states[0].physical,states[1].physical);assert.notEqual(states[0].cr3,states[1].cr3);
   assert.ok(states.every(v=>v.eflags&0x20000));snapshots.push({stage:'dual-running',states});
@@ -104,10 +104,15 @@ try{
     assert.equal(physical[i].pte&0xfffff000,states[i].physical);
     assert.equal(physical[i].low&0xfffff000,states[i].physical-states[i].psp*16);
     assert.equal(physical[i].directory&7,7);assert.equal(physical[i].supervisor&7,3);assert.equal(physical[i].rom&7,5);
-    const cpu=contexts.diagnostics[i];assert.equal(cpu.frame.cs,states[i].psp);assert.equal(cpu.frame.ss,states[i].psp);
+    const cpu=contexts.diagnostics[i];assert.equal(cpu.frame.cs,states[i].psp+16);assert.equal(cpu.frame.ss,states[i].psp+16);
     assert.ok(cpu.frame.eflags&0x20000);assert.equal(cpu.memory[0],0xcd);assert.equal(cpu.memory[1],0x20);
-    const code=await page.evaluate(async()=>Array.from(await window.np2debug.np2.diskReadFile('fd1','COUNTER.COM')));
-    assert.deepEqual(cpu.memory.slice(256,256+code.length),code);
+    const raw=Buffer.from(await page.evaluate(async()=>Array.from(await window.np2debug.np2.diskReadFile('fd1','COUNTER.EXE'))));
+    const code=Buffer.from(raw.subarray(raw.readUInt16LE(8)*16));
+    for(let r=0;r<raw.readUInt16LE(6);r++){
+      const table=raw.readUInt16LE(24)+r*4,at=raw.readUInt16LE(table)+raw.readUInt16LE(table+2)*16;
+      code.writeUInt16LE((code.readUInt16LE(at)+states[i].psp+16)&65535,at);
+    }
+    assert.deepEqual(Buffer.from(cpu.memory.slice(256,256+code.length)),code);
   }
   snapshots.push({stage:'stopped-physical-check',states,physical,contexts});
   await key('CTRL+N');await key('CTRL+R');await key('CTRL+O');await key('CTRL+R');
@@ -121,29 +126,29 @@ try{
   await key('F8');await wait('Window minimized');
   await clickTask(page,'DOS 2');
   before=await snapshot();await until(s=>s[1].counter>before[1].counter,'Minimized/restored VM keeps running');
-  await run(1,'ECHO.COM');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Echo waits for input');
+  await run(1,'ECHO.EXE');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Echo waits for input');
   await type('SECOND ONLY');states=await until(s=>s[1].screen.includes('SECOND ONLY'),'Input to DOS 2');
   assert.ok(!states[0].screen.includes('SECOND ONLY'));
   before=states;await key('F2');await until(s=>s[0].counter>before[0].counter,'Counter continues with launcher active');
   results.push('native DOS window move/resize/minimize/restore, retained state, focused input and existing GUI coexistence');
 
-  await run(1,'FAULT.COM');states=await until(s=>s[1].state===4,'Isolated page violation');
+  await run(1,'FAULT.EXE');states=await until(s=>s[1].state===4,'Isolated page violation');
   assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0xe0000);
   before=states;await until(s=>s[0].counter>before[0].counter,'Other VM survives the fault');
-  await run(1,'PORT.COM');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
-  await run(1,'FPU.COM');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
+  await run(1,'PORT.EXE');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
+  await run(1,'FPU.EXE');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
   await run(1,'CON.COM');await wait('Cannot load program');
   await key('ESC'); // Cancel the rejected path, leaving the GUI usable.
-  await run(1,'DF.COM');await until(s=>s[1].state===0&&s[1].screen.includes('V86 DIRECTION FLAG PASS'),'Empty input at private RAM boundary and guest DF are safe');
+  await run(1,'DF.EXE');await until(s=>s[1].state===0&&s[1].screen.includes('V86 DIRECTION FLAG PASS'),'Empty input at private RAM boundary and guest DF are safe');
   await run(1,'P98TEST.COM');await until(s=>s[1].state===0&&s[1].screen.includes('DOS4 EXEC OK'),'Existing DOS COM binary');
-  await run(1,'KFILE.COM');states=await until(s=>s[1].state===0&&s[1].screen.includes('READ ONLY FILE PASS'),'DOS file broker');
+  await run(1,'KFILE.EXE');states=await until(s=>s[1].state===0&&s[1].screen.includes('READ ONLY FILE PASS'),'DOS file broker');
   assert.ok(states[1].screen.includes('READ ONLY DATA'));
   const names=await page.evaluate(async()=> (await window.np2debug.np2.diskListFiles('fd1')).entries.map(e=>e.name));
   assert.ok(!names.includes('DENIED.TXT'));
   const data=await page.evaluate(async()=>Array.from(await window.np2debug.np2.diskReadFile('fd1','KDATA.TXT')));
   assert.equal(Buffer.from(data).toString(),'READ ONLY DATA\r\n');
   snapshots.push({stage:'readonly-file-result',states});
-  await run(1,'ECHO.COM');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Restart after faults');
+  await run(1,'ECHO.EXE');await until(s=>s[1].state===2&&s[1].screen.includes('V86 ECHO'),'Restart after faults');
   results.push('hardware #PF and I/O #GP containment; other VM continues; guest read succeeds and writes/create are denied');
 
   await key('CTRL+T');await wait('Switch');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>/^\s+Tasks\s+_\s+[+=]\s+x/.test(line)));await pause(200);
@@ -156,7 +161,7 @@ try{
   },null,{timeout:60000}); // Wait for the foreground DOS 2 title in the actual framebuffer.
   await page.screenshot({path:join(output,'dos-windows.png')});
   await key('ESC');await until(s=>s[1].state===0,'Guest Escape exits Echo');
-  await run(1,'ECHO.COM');await until(s=>s[1].state===2,'Restart exited guest');
+  await run(1,'ECHO.EXE');await until(s=>s[1].state===2,'Restart exited guest');
   await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');await prompt();
   states=await snapshot();assert.ok(states.every(v=>v.state===0));
   assert.equal(digest(await disk()),manifest.sha256,'Entire FAT12 image is byte-identical after all read-only VM operations');
@@ -164,7 +169,7 @@ try{
   assert.deepEqual(errors,[]);
   await writeFile(join(output,'verification.json'),JSON.stringify({browser:browser.version(),source:manifest.source_commit,
     image_sha256:manifest.sha256,probe,snapshots,results,limitations:manifest.compatibility},null,2)+'\n');
-  console.log('PASS K386 (experimental COM scope):\n'+results.join('\n'));
+  console.log('PASS K386 (experimental EXE/COM scope):\n'+results.join('\n'));
 }catch(error){
   console.error(await text().catch(()=>''));
   console.error((await snapshot().catch(()=>null))?.map(({screen,...state})=>state));

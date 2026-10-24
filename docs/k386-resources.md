@@ -40,7 +40,7 @@ EXECの親にはAH=4Dhで0103hを返し、親のメモリ・CPU・ファイル�
 詳しいABIと計測範囲はMS-DOSの `tools/k386/RESOURCES.md` に記載しています。
 
 `scripts/prepare-msdos4-cpanel-ci.sh` がネイティブ実装の完全SHAを固定し、通常版と実験版の
-両方を生成します。実験版には操作説明と実DOS用のKRESCHK.COM / INTWAIT.COMを同梱します。
+両方を生成します。実験版には操作説明と実DOS用のKRESCHK.COM / INTWAIT.EXEを同梱します。
 `scripts/verify-k386-resources.mjs` は実CPU・ページテーブル・CPU時間・私有RAM・画面・
 親復帰・資源解放をPlaywrightで検査し、ディスク全体のSHA-256が変わらないことも確認します。
 既存の通常GUI・K386基盤・シェル・プロセスのCIも維持します。

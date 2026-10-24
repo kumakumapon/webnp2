@@ -247,3 +247,34 @@ jobs:
           name: kdesk-polish-playwright-validation
           path: test-results/kdesk-polish/
           if-no-files-found: ignore
+
+  k386-apps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned guest shell and DOS images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Playwright native EXE application launch and ABI validation
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/k386-apps-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-k386-apps.mjs http://127.0.0.1:4173/webnp2/ test-results/k386-apps
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k386-apps-playwright-validation
+          path: test-results/k386-apps/
+          if-no-files-found: ignore
