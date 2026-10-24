@@ -23,7 +23,7 @@ const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exp
 const hash=b=>createHash('sha256').update(b).digest('hex');
 try{
  await page.goto(new URL(`?fd1=${image??'./k386/'+manifest.image}&run=1&mem=16&clk=8&worklet=0&video=cirrus`,base).href);
- await wait('Ready');await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600,null,{timeout:60000});
+ await wait('Ready');assert.ok((await page.evaluate(()=>window.np2debug.np2.getScreenText().text)).includes('Ready'),'Text inspection API matches actual TVRAM');await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600,null,{timeout:60000});
  const initial=hash(await disk());
  const info=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());assert.equal(info.width,800);assert.equal(info.height,600);assert.equal(info.deviceBpp,16);
  await page.screenshot({path:join(output,'desktop.png')});results.push('native 800x600 RGB565 desktop boots with original app icons');

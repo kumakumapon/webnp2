@@ -142,7 +142,13 @@ export function resolveAudioContext(): AudioContext | undefined {
   return window.Module?.SDL2?.audioContext ?? window.SDL2?.audioContext;
 }
 
+let runtimeReady = false;
+
 function requireCcall(): CCallFn {
+  // Emscripten lazy export wrappers replace themselves on the first call.
+  // Before instantiation createWasm() returns {}, so calling one would cache
+  // undefined permanently. Polling debug APIs during boot must not call it.
+  if (!runtimeReady) throw new Error('core runtime is not initialized');
   const ccall = resolveCcall();
   if (!ccall) {
     throw new Error('ccall is not available (core not booted yet?)');
@@ -369,6 +375,7 @@ export function boot(config: BootConfig, canvas: HTMLCanvasElement): Promise<Ems
       if (settled) return;
       settled = true;
       booted = false;
+      runtimeReady = false;
       reject(err instanceof Error ? err : new Error(String(err)));
     };
 
@@ -430,6 +437,7 @@ export function boot(config: BootConfig, canvas: HTMLCanvasElement): Promise<Ems
       arguments: config.fds.map((fd) => `/disk/${fd.name}`),
       onRuntimeInitialized: () => {
         if (settled) return;
+        runtimeReady = true;
         settled = true;
         const FS = resolveFS();
         if (!FS) {

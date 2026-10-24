@@ -43,6 +43,42 @@ index 2e5016f..41feb23 100755
 +    return info;
 +}
 +#endif
+diff --git a/sdl/webnp2api.c b/sdl/webnp2api.c
+index b8391a1..7239177 100644
+--- a/sdl/webnp2api.c
++++ b/sdl/webnp2api.c
+@@ -241,18 +241,19 @@ EMSCRIPTEN_KEEPALIVE void webnp2_mouse_move(int dx, int dy) {
+ }
+ 
+ EMSCRIPTEN_KEEPALIVE int webnp2_mouse_pending(void) {
+-	int	x;
+-	int	y;
+-
+-	x = mousemng.x;
+-	y = mousemng.y;
+-	if (x < 0) {
+-		x = -x;
+-	}
+-	if (y < 0) {
+-		y = -y;
+-	}
+-	return (x > y) ? x : y;
++ /* Movement passes through the host queue, frame interpolation and the
++    8255 counters. Waiting only for mousemng loses steps when a slow guest
++    has not latched those counters yet (the bus protocol clamps to 8 bits).
++    Latched nibbles are already committed; do not wait on them. */
++ int values[6] = {mousemng.x, mousemng.y, mouseif.rx, mouseif.ry,
++                  mouseif.x, mouseif.y};
++ int pending = 0;
++ int i;
++ for (i = 0; i < 6; i++) {
++  int magnitude = values[i] < 0 ? -values[i] : values[i];
++  if (magnitude > pending) pending = magnitude;
++ }
++ return pending;
+ }
+ 
+ /* button: 0=left, 1=right. A cleared bit means "pressed". */
 diff --git a/wab/cirrus_vga.c b/wab/cirrus_vga.c
 index e0a3ccf..c4c9d0b 100755
 --- a/wab/cirrus_vga.c
