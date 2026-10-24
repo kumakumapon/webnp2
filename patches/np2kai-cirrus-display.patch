@@ -1,0 +1,93 @@
+diff --git a/sdl/scrnmng.c b/sdl/scrnmng.c
+index 2e5016f..41feb23 100755
+--- a/sdl/scrnmng.c
++++ b/sdl/scrnmng.c
+@@ -692,6 +692,12 @@ scrnmng_update(void)
+ 
+ // fullscreen resolution
+ void scrnmng_updatefsres(void) {
++#if defined(__EMSCRIPTEN__) && defined(SUPPORT_WAB)
++    if ((np2wab.relay & 3) && np2wab.wndWidth >= 32 && np2wab.wndHeight >= 32) {
++        if (scrnmng.width != np2wab.wndWidth) scrnmng_setwidth(0, np2wab.wndWidth);
++        if (scrnmng.height != np2wab.wndHeight) scrnmng_setheight(0, np2wab.wndHeight);
++    }
++#endif
+ }
+ 
+ // transmit WAB display
+@@ -700,6 +706,12 @@ void scrnmng_blthdc(void) {
+ 
+ void scrnmng_bltwab(void) {
+ #if defined(SUPPORT_WAB)
++#if defined(__EMSCRIPTEN__)
++    if (np2wab.realWidth < 32 || np2wab.realHeight < 32 ||
++        np2wab.realWidth > WAB_MAX_WIDTH || np2wab.realHeight > WAB_MAX_HEIGHT) return;
++    if (scrnmng.width != np2wab.realWidth) scrnmng_setwidth(0, np2wab.realWidth);
++    if (scrnmng.height != np2wab.realHeight) scrnmng_setheight(0, np2wab.realHeight);
++#endif
+ 	if(scrnmng.pc98surf) {
+ #if !defined(__LIBRETRO__)
+ 		SDL_LockSurface(scrnmng.pc98surf);
+@@ -720,3 +732,14 @@ void scrnmng_bltwab(void) {
+ 	}
+ #endif
+ }
++
++#if defined(__EMSCRIPTEN__) && defined(SUPPORT_WAB)
++/* Actual frontend/device state for graphics-mode verification. */
++EMSCRIPTEN_KEEPALIVE UINT32 *webnp2_graphics_info(void) {
++    static UINT32 info[8];
++    info[0]=scrnmng.width;info[1]=scrnmng.height;info[2]=scrnmng.bpp;
++    info[3]=draw32bit;info[4]=np2cfg.usegd5430;info[5]=np2wab.relay;
++    info[6]=np2wab.realWidth;info[7]=np2wab.realHeight;
++    return info;
++}
++#endif
+diff --git a/wab/cirrus_vga.c b/wab/cirrus_vga.c
+index e0a3ccf..c4c9d0b 100755
+--- a/wab/cirrus_vga.c
++++ b/wab/cirrus_vga.c
+@@ -1706,6 +1706,12 @@ static int cirrus_get_bpp(VGAState *s1)
+     return ret;
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++EMSCRIPTEN_KEEPALIVE int webnp2_cirrus_bpp(void) {
++    return cirrusvga ? cirrus_get_bpp((VGAState *)cirrusvga) : 0;
++}
++#endif
++
+ static void cirrus_get_resolution(VGAState *s, int *pwidth, int *pheight)
+ {
+     int width, height;
+@@ -5721,9 +5727,10 @@ int cirrusvga_drawGraphic(){
+ 				} else if(bpp == 16) {
+ 					for(j = 0; j < height; j++) {
+ 						for(i = 0; i < width; i++) {
+-							p[(j * width + i) * 4 + 2] = (((((UINT16*)vram_ptr)[j * width + i]) & 0xF800) >> 8) & 0xFF;
+-							p[(j * width + i) * 4 + 1] = (((((UINT16*)vram_ptr)[j * width + i]) & 0x07C0) >> 3) & 0xFF;
+-							p[(j * width + i) * 4    ] = (((((UINT16*)vram_ptr)[j * width + i]) & 0x001F) << 3) & 0xFF;
++							UINT16 value = ((UINT16*)vram_ptr)[j * width + i];
++                            unsigned r = (value >> 11) & 31, g = (value >> 5) & 63, b = value & 31;
++                            ((UINT32*)VRAMBuf)[j*width+i] = 0xff000000u |
++                                (((r<<3)|(r>>2))<<16) | (((g<<2)|(g>>4))<<8) | (b<<3)|(b>>2);
+ 						}
+ 					}
+ 				} else if(bpp == 32) {
+@@ -5814,9 +5821,13 @@ int cirrusvga_drawGraphic(){
+ 			} else if(bpp == 16) {
+ 				for(j = 0; j < height; j++) {
+ 					for(i = 0; i < width; i++) {
+-						p[(j * width + i) * 4    ] = ((*(UINT16*)(vram_ptr + j * scanW + i * 2) & 0xF800) >> 8) & 0xFF;
+-						p[(j * width + i) * 4 + 1] = ((*(UINT16*)(vram_ptr + j * scanW + i * 2) & 0x07C0) >> 3) & 0xFF;
+-						p[(j * width + i) * 4 + 2] = ((*(UINT16*)(vram_ptr + j * scanW + i * 2) & 0x001F) << 3) & 0xFF;
++						/* SDL surface is BGRA; preserve all six RGB565 green bits. */
++                        UINT16 value = *(UINT16*)(vram_ptr + j * scanW + i * 2);
++                        unsigned r = (value >> 11) & 31, g = (value >> 5) & 63, b = value & 31;
++                        p[(j * width + i) * 4    ] = (b << 3) | (b >> 2);
++                        p[(j * width + i) * 4 + 1] = (g << 2) | (g >> 4);
++                        p[(j * width + i) * 4 + 2] = (r << 3) | (r >> 2);
++                        p[(j * width + i) * 4 + 3] = (char)255;
+ 					}
+ 				}
+ 			} else if(bpp == 24) {

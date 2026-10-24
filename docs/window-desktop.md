@@ -134,3 +134,6 @@ The ordinary desktop and foreground tools described above remain available.
 
 KDESK 1.9 adds native app search, window tiling and grouped desktop restoration.
 See [the desktop guide](kdesk-polish.md) for controls and validation.
+
+800×600・RGB565の選択、ビルドと検証については
+[高解像度・65,536色表示](kdesk-highcolor.md)を参照してください。

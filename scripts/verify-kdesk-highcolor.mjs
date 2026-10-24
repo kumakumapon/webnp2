@@ -1,0 +1,61 @@
+// Exercise the real native desktop on the Cirrus RGB565 framebuffer.
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {inspectK386} from './k386-inspect.mjs';
+import {inspectResources} from './k386-resources.mjs';
+const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-highcolor',image]=process.argv.slice(2);
+const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
+await mkdir(output,{recursive:true});
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
+const page=await browser.newPage({viewport:{width:1280,height:1000}}),errors=[],results=[],snapshots=[];
+page.on('pageerror',e=>errors.push(e.message));
+const pause=ms=>page.waitForTimeout(ms);
+const text=()=>page.evaluate(()=>{const b=atob(window.np2debug.np2.readMemoryBase64(0xa0000,4000).base64);return Array.from({length:25},(_,y)=>Array.from({length:80},(_,x)=>String.fromCharCode(b.charCodeAt((y*80+x)*2))).join('')).join('\n');});
+const wait=async s=>{console.log('WAIT',s);for(let i=0;i<600;i++){if((await text().catch(()=>'' )).includes(s))return;await pause(200);}throw new Error('Missing guest text: '+s);};
+const key=async s=>{await page.evaluate(s=>window.np2debug.np2.sendKeys(s),s);await pause(220);};
+const type=async s=>{await page.evaluate(s=>window.np2debug.np2.typeText(s),s);await pause(220);};
+const until=async(predicate,label)=>{console.log('UNTIL',label);for(let end=Date.now()+90000;Date.now()<end;){const cpu=await inspectK386(page),resources=await inspectResources(page);if(cpu&&resources&&predicate({cpu,resources}))return {cpu,resources};await pause(150);}throw new Error(label);};
+const find=async q=>{await key('CTRL+K');await wait('Find apps');await type(q);await wait('1 results -');await key('ENTER');};
+const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
+const hash=b=>createHash('sha256').update(b).digest('hex');
+try{
+ await page.goto(new URL(`?fd1=${image??'./k386/'+manifest.image}&run=1&mem=16&clk=8&worklet=0&video=cirrus`,base).href);
+ await wait('Ready');await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600,null,{timeout:60000});
+ const initial=hash(await disk());
+ const info=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());assert.equal(info.width,800);assert.equal(info.height,600);assert.equal(info.deviceBpp,16);
+ await page.screenshot({path:join(output,'desktop.png')});results.push('native 800x600 RGB565 desktop boots with original app icons');
+ await key('F4');await type('HIGH COLOR MEMO');await wait('HIGH COLOR MEMO');
+ await find('math');await wait('Value: 0');await type('6*7=');await wait('Value: 42');
+ await key('CTRL+G');await pause(600);await key('CTRL+G');await wait('Value: 42');
+ await key('CTRL+D');await wait('Desktop shown');await key('CTRL+D');await wait('Desktop windows restored');
+ results.push('Memo, Calculator, maximize/restore and Desk preserve state');
+ await key('CTRL+N');await wait('K386 DOS shell');await type('COUNTER\r');
+ await key('CTRL+O');await wait('K386 DOS shell');await type('COUNTER\r');
+ const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.EXE')&&r.cpu.views.every(v=>v.counter>0),'Two real DOS EXEs');
+ await find('window left');await key('CTRL+N');await find('window right');
+ const after=await until(r=>r.cpu.views.every((v,i)=>v.counter>before.cpu.views[i].counter),'Background execution survives high-resolution tiling');
+ assert.notEqual(after.cpu.views[0].physical,after.cpu.views[1].physical);assert.notEqual(after.cpu.views[0].cr3,after.cpu.views[1].cr3);
+ for(let i=0;i<2;i++)assert.equal(after.resources.usage[i].generation,before.resources.usage[i].generation);
+ snapshots.push({stage:'before',...before},{stage:'after',...after});results.push('two isolated V86 EXEs keep running across high-resolution tiling');
+ await key('CTRL+D');await wait('Desktop shown');
+ await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
+ const position=await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(720,500));assert.deepEqual(position,{x:720,y:500});await pause(500);
+ await page.waitForFunction(()=>{
+  const c=document.createElement('canvas');c.width=800;c.height=600;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0);
+  const p=g.getImageData(721,502,1,1).data;return p[0]===255&&p[1]===255&&p[2]===255;
+ },null,{timeout:60000});
+ // Click Desk in the actual high-resolution taskbar (row36), beyond old y399.
+ await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
+ await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(24,584));await pause(350);
+ await page.evaluate(()=>window.np2debug.np2.mouseClick());await wait('Desktop windows restored');
+ await until(r=>r.cpu.views.every((v,i)=>v.counter>after.cpu.views[i].counter),'Hidden sessions keep running');
+ results.push('actual software cursor reaches x720/y500; mouse clicks the taskbar beyond the old 400-line boundary');
+ await page.screenshot({path:join(output,'dos-windows.png')});
+ await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');
+ await page.waitForFunction(()=>document.querySelector('#canvas').width===640&&document.querySelector('#canvas').height===400,null,{timeout:60000});
+ assert.equal(hash(await disk()),initial);assert.deepEqual(errors,[]);results.push('DOS return restores 640x400; entire disk is unchanged');
+ await writeFile(join(output,'verification.json'),JSON.stringify({source:manifest.source_commit,info,results,snapshots},null,2)+'\n');console.log(results.map(s=>'PASS '+s).join('\n'));
+}catch(e){console.error(await text().catch(()=>''));await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw e;}finally{await browser.close();}

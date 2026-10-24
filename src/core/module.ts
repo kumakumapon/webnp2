@@ -10,6 +10,8 @@ export interface DiskFile {
 }
 
 export interface BootConfig {
+  /** Experimental PC-9821 Cirrus graphics adapter; PEGC remains available. */
+  graphicsAdapter?: 'cirrus';
   hdd?: DiskFile;
   fds: DiskFile[];
   latencyMs?: number;
@@ -219,6 +221,9 @@ export function buildCfg(config: BootConfig): string {
   // A8000hのプレーンアクセスとROPが丸ごと無効化され、256色ソフトが
   // Packed Pixelのフォールバック描画に落ちる(実機9821は常にプレーン有り)。
   lines.push('PEGCPLNE=true');
+  if (config.graphicsAdapter === 'cirrus') {
+    lines.push('USE_CLGD=true', 'CLGDTYPE=90', 'WAB_ANSW=1');
+  }
   // ExMemory = 拡張メモリ(MB)。DOS用途では1MBで十分なので既定は小さく保つ。
   const extMem = Math.max(0, Math.min(230, Math.floor(config.extMemMB ?? 1)));
   lines.push(`ExMemory=${extMem}`);
@@ -821,4 +826,17 @@ export function coreDbgSetBreakpoint(
 /** 最大maxSteps命令を実行し、ヒットしたブレークポイントindex（無ヒットは-1）を返す。 */
 export function coreDbgRunUntilBreakpoint(maxSteps: number): number {
   return requireCcall()('webnp2_dbg_run_until_bp', 'number', ['number'], [maxSteps]) as number;
+}
+
+/** Live device/frontend state; the displayed colors are verified separately. */
+export function coreGraphicsInfo(): { width: number; height: number; hostBpp: number; accelerated: boolean; relay: number; deviceWidth: number; deviceHeight: number; deviceBpp: number } {
+  const ccall = requireCcall();
+  const ptr = ccall('webnp2_graphics_info', 'number', [], []) as number;
+  const heap = resolveHeapU8();
+  if (!heap) throw new Error('core not booted');
+  const view = new DataView(heap.buffer, heap.byteOffset + ptr, 32);
+  const n = (index: number) => view.getUint32(index * 4, true);
+  return { width: n(0), height: n(1), hostBpp: n(2), accelerated: n(4) !== 0,
+    relay: n(5), deviceWidth: n(6), deviceHeight: n(7),
+    deviceBpp: ccall('webnp2_cirrus_bpp', 'number', [], []) as number };
 }
