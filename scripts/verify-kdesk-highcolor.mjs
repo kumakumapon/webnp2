@@ -75,8 +75,7 @@ try{
  await page.waitForFunction(()=>document.querySelector('#canvas').width===640&&document.querySelector('#canvas').height===400);
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
  await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(600,350));await pause(350);
- await key('F10');await wait('Press any key or click to return to KDESK');
- await page.evaluate(()=>window.np2debug.np2.mouseClick());await wait('Program returned to desktop');
+ await key('F10');await wait('Program returned to desktop');
  await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600);
  assert.equal((await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo())).deviceBpp,16);
  results.push('indexed KPAINT opens from the high-coordinate desktop and returns to RGB565');

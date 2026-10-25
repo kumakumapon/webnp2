@@ -312,3 +312,37 @@ jobs:
             test-results/kdesk-highcolor/
             test-results/display-probe/
           if-no-files-found: ignore
+
+  native-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned native desktop tools and K386 images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Verify native MZ tools and measure interactive DOS latency
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+          K386_LATENCY_GATE: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/native-tools-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-native-tools.mjs http://127.0.0.1:4173/webnp2/ test-results/native-tools
+          node scripts/verify-native-tools.mjs http://127.0.0.1:4173/webnp2/ test-results/native-tools-cirrus cirrus
+          node scripts/measure-k386-shell.mjs http://127.0.0.1:4173/webnp2/ test-results/shell-latency
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-tools-playwright-validation
+          path: test-results/
+          if-no-files-found: ignore

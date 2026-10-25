@@ -107,7 +107,7 @@ CHROMIUM=/usr/bin/chromium WEBNP2_NO_SANDBOX=1 \
   node scripts/verify-msdos4.mjs http://127.0.0.1:4173/webnp2/ test-results/dos4
 ```
 
-The generated disk contains `KDESK.EXE`, `KDESK.TXT`, `KVIEW.COM`, `KPAINT.COM`,
+The generated disk contains `KDESK.EXE`, `KDESK.TXT`, `KVIEW.EXE`, `KPAINT.EXE`,
 `COLORS.BMP`, `KIMAGE.TXT` and `KDLIC.TXT`; the complete
 MIT notice is also included in `LICENSE.txt`. The importer checks that
 `scripts/verify-window.mjs` matches the verifier at the pinned source commit.
@@ -137,3 +137,5 @@ See [the desktop guide](kdesk-polish.md) for controls and validation.
 
 800×600・RGB565の選択、ビルドと検証については
 [高解像度・65,536色表示](kdesk-highcolor.md)を参照してください。
+
+See [native EXE tools and shell responsiveness](kdesk-native-tools.md).

@@ -17,7 +17,7 @@ broker calls select that PSP as their owner. It remains resident until reboot.
 The existing XMS/EMM386 and guest DOS/BIOS compatibility limits still apply.
 
 Child EXEC, clipboard/mouse inheritance and return to KDESK use the correct PSP
-and segment bounds. The image viewer/editor remain COM programs. See
+and segment bounds. The [native desktop tools](kdesk-native-tools.md), including the image viewer/editor, also use MZ executables. See
 [window controls](kdesk-interface.md) and [K386 limits](k386-enhanced.md).
 
 Build with `make -C tools/window all test` and `make -C tools/k386 all test` in
