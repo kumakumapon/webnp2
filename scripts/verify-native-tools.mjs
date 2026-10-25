@@ -62,7 +62,7 @@ try {
  let resumed=await until(r=>r.cpu.views.every((v,i)=>v.counter>running.cpu.views[i].counter),'counters resume after editing');
  assert.deepEqual(resumed.resources.usage.map(u=>u.generation),generations);
  pass('EDIT98 saves real file contents and returns directly; both V86 sessions retain their identity and continue');
- await find('file manager');await wait('FD Filer 1.0');
+ await find('file manager');await wait('Parent');await key('f');await wait('FD Filer 1.0');
  await key('F7');await wait('Create directory:');await type('NATIVE\r');await wait('Directory created');
  await page.waitForFunction(async()=>{try{await window.np2debug.np2.diskListFiles('fd1','NATIVE');return true;}catch{return false;}},null,{timeout:60000});
  await key('F10');await wait('Program returned to desktop');

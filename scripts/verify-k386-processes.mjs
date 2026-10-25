@@ -40,6 +40,8 @@ try{
   await key('CTRL+O');await type('Z');s=await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Timer completion');save('timer-completed',s);
   done('PC-98 INT 1Ch callbacks respect CLI, rearm, and wake a waiting background VM while Memo remains usable');
   await run(1,'TIMER.EXE EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
+  // Let the parent's timer interrupt the child repeatedly with the child's FS/PSP.
+  await pause(1500);
   await type('q');s=await until(v=>v[1].state===2&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT'),'Timer parent resumes');
   const callbacks=s.views[1].counter;s=await until(v=>v[1].state===2&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
   await type('Z');await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Rearmed parent timer completion');
