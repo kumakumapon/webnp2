@@ -38,7 +38,7 @@ files remain associated with EDIT98.
 
 ## Validation
 
-`make -C tools/window all test` builds the COM files and tests scrollbar bounds,
+`make -C tools/window all test` builds the native MZ tools and tests scrollbar bounds,
 monotonic thumb movement, endpoints and short tracks, alongside calculator tests.
 The linker continues to reserve at least 12 KiB of stack. Memo I/O uses temporary
 stack storage instead of occupying the COM's data segment throughout the session.

@@ -7,7 +7,9 @@ import { fatList, fatReadFile, openDiskImage } from '../src/api/fat.ts';
 
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const image = readFileSync(new URL(`../public/msdos4/${manifest.image}`, import.meta.url));
-const hasCpanel = manifest.files.some(file => file.name === 'CPANEL.COM');
+const nativeTools = manifest.files.some(file => file.name === 'FD98.EXE');
+const tool = (stem: string) => stem + (nativeTools ? '.EXE' : '.COM');
+const hasCpanel = manifest.files.some(file => file.name === tool('CPANEL'));
 const hasWindow = manifest.files.some(file => file.name === 'KDESK.EXE');
 
 describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
@@ -39,14 +41,14 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
     expect(notices.includes(fatReadFile(disk, 'EDITLIC.TXT'))).toBe(true);
-    expect(fatReadFile(disk, 'EDIT.COM')).toEqual(fatReadFile(disk, 'EDIT98.COM'));
+    expect(fatReadFile(disk, tool('EDIT'))).toEqual(fatReadFile(disk, tool('EDIT98')));
     expect(new TextDecoder('shift_jis').decode(fatReadFile(disk, 'JPHELLO.TXT'))).toContain('日本語表示のテスト');
     expect(fatReadFile(disk, 'EDIT.TXT')).toEqual(
       new Uint8Array(readFileSync(new URL('../public/msdos4/EDIT.txt', import.meta.url))),
     );
     expect(hash(readFileSync(new URL('../scripts/verify-editor.mjs', import.meta.url))))
       .toBe(manifest.editor_verifier_sha256);
-    expect(manifest.sources.editor.commit).toBe(manifest.sources.msdos.commit);
+    expect(manifest.sources.editor.commit).toBe(nativeTools ? (manifest.sources as Record<string, { commit: string }>).control.commit : manifest.sources.msdos.commit);
     expect(manifest.memory_drivers['FDXMS286.SYS'].license).toBe('GPL-2.0-only');
     expect(manifest.memory_drivers['EMM386.EXE'].license).toBe('Artistic-1.0');
     expect(manifest.license).toBe('MIT + GPL-2.0-only + Artistic-1.0');
@@ -55,7 +57,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     );
     expect(hash(readFileSync(new URL('../scripts/verify-filer.mjs', import.meta.url))))
       .toBe(manifest.filer_verifier_sha256);
-    expect(manifest.sources.filer.commit).toBe(manifest.sources.msdos.commit);
+    expect(manifest.sources.filer.commit).toBe(nativeTools ? (manifest.sources as Record<string, { commit: string }>).control.commit : manifest.sources.msdos.commit);
     if (hasCpanel) {
       expect(notices.includes(fatReadFile(disk, 'CPLIC.TXT'))).toBe(true);
       expect(fatReadFile(disk, 'CPANEL.TXT')).toEqual(
@@ -63,6 +65,16 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       );
       expect((manifest.sources as Record<string, { commit: string }>).control.commit)
         .toMatch(/^[a-f0-9]{40}$/);
+    }
+    if (nativeTools) for (const stem of ['FD98', 'EDIT98', 'EDIT', 'CPANEL', ...(hasWindow ? ['KVIEW', 'KPAINT'] : [])]) {
+      const exe = fatReadFile(disk, stem + '.EXE');
+      const word = (at: number) => exe[at] | exe[at + 1] << 8;
+      expect(word(0)).toBe(0x5a4d);
+      expect(new TextDecoder().decode(exe.slice(28, 36))).toBe('K386APP1');
+      expect(word(38)).toBe(2);
+      expect(word(6)).toBeGreaterThan(0);
+      expect(word(14)).toBeGreaterThan(word(22));
+      expect(manifest.files.some(file => file.name === stem + '.COM')).toBe(false);
     }
     if (hasWindow) {
       expect(manifest.files.some(file=>file.name==='KDESK.COM')).toBe(false);
@@ -86,11 +98,11 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     }
     expect(manifest.files.map(file => file.name)).toEqual(expect.arrayContaining([
       'MSDOS.SYS', 'COMMAND.COM', 'RBASIC.COM', 'P98TEST.COM', 'PRIMES.BAS',
-      'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', 'FD98.COM', 'FILER.TXT', 'FILERLIC.TXT',
-      'EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
+      'GRAPHICS.BAS', 'MANDEL.BAS', 'MANSMOKE.BAS', 'FILEIO.BAS', tool('FD98'), 'FILER.TXT', 'FILERLIC.TXT',
+      tool('EDIT98'), tool('EDIT'), 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT',
       'FDXMS286.SYS', 'EMM386.EXE', 'XMSCHK.COM', 'EMSCHK.COM', 'XMSLIC.TXT', 'EMM386L.TXT',
-      ...(hasCpanel ? ['CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT'] : []),
-      ...(hasWindow ? ['KDESK.EXE', 'KDESK.TXT', 'KDLIC.TXT', 'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP'] : []),
+      ...(hasCpanel ? [tool('CPANEL'), 'CPANEL.TXT', 'CPLIC.TXT'] : []),
+      ...(hasWindow ? ['KDESK.EXE', 'KDESK.TXT', 'KDLIC.TXT', tool('KVIEW'), tool('KPAINT'), 'KIMAGE.TXT', 'COLORS.BMP'] : []),
     ]));
     if ((manifest as unknown as { desktop_autostart?: boolean }).desktop_autostart) {
       expect(hasWindow).toBe(true);
