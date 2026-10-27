@@ -118,17 +118,17 @@ def main():
     filer = dos / 'tools/filer'
     subprocess.run(['make', '-C', str(filer), 'all'], check=True)
     applications = [(name, (filer / 'build' / name).read_bytes())
-                    for name in ('FD98.COM', 'FILER.TXT', 'FILERLIC.TXT')]
+                    for name in ('FD98.EXE', 'FILER.TXT', 'FILERLIC.TXT')]
     notices += b'\r\nFD Filer license\r\n' + (filer / 'LICENSE').read_bytes()
     editor = dos / 'tools/editor'
     subprocess.run(['make', '-C', str(editor), 'all'], check=True)
     applications += [(name, (editor / 'build' / name).read_bytes())
-                     for name in ('EDIT98.COM', 'EDIT.COM', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT')]
+                     for name in ('EDIT98.EXE', 'EDIT.EXE', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT')]
     notices += b'\r\nEDIT98 license\r\n' + (editor / 'LICENSE').read_bytes()
     control = dos / 'tools/control'
     subprocess.run(['make', '-C', str(control), 'all'], check=True)
     applications += [(name, (control / 'build' / name).read_bytes())
-                     for name in ('CPANEL.COM', 'CPANEL.TXT', 'CPLIC.TXT')]
+                     for name in ('CPANEL.EXE', 'CPANEL.TXT', 'CPLIC.TXT')]
     notices += b'\r\nCPANEL license\r\n' + (control / 'LICENSE').read_bytes()
     extra = [(file['name'], notices if file['name'] == 'LICENSE.TXT' else files[file['name']])
              for file in manifest['files'] if file['name'] not in

@@ -17,7 +17,7 @@ reader=module('display_disk_reader',root/'scripts/update-msdos4-cpanel.py')
 writer=module('display_disk_writer',source/'ports/pc98/image.py')
 raw=base.read_bytes();files=reader.disk_files(raw)
 files['KDISP.COM']=(source/'tools/display/build/KDISP.COM').read_bytes()
-for name in ('KDESK.EXE','KVIEW.COM','KPAINT.COM'):
+for name in ('KDESK.EXE','KVIEW.EXE','KPAINT.EXE'):
     files[name]=(source/'tools/window/build'/name).read_bytes()
 skip={'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
 image,_=writer.make_image(raw[:1024],files['IO.SYS'],[(n,d) for n,d in files.items() if n not in skip],kernel=files['MSDOS.SYS'],command=files['COMMAND.COM'],autoexec=(b'@ECHO OFF\r\n' if '--probe-only' in sys.argv[4:] else files['AUTOEXEC.BAT']))

@@ -87,16 +87,25 @@ def main():
     notices += b'\r\nCPANEL license\r\n' + (control / 'LICENSE').read_bytes()
 
     apps = {
-        'CPANEL.COM': (control / 'build/CPANEL.COM').read_bytes(),
+        'CPANEL.EXE': (control / 'build/CPANEL.EXE').read_bytes(),
         'CPANEL.TXT': (control / 'build/CPANEL.TXT').read_bytes(),
         'CPLIC.TXT': (control / 'build/CPLIC.TXT').read_bytes(),
     }
+    # Rebuild native tools from the same source commit, preserving kernel and
+    # user data while removing COM-first name collisions in the generated copy.
+    for directory, names in (
+        ('filer', ('FD98.EXE', 'FILER.TXT', 'FILERLIC.TXT')),
+        ('editor', ('EDIT98.EXE', 'EDIT.EXE', 'EDIT.TXT', 'EDITLIC.TXT', 'JPHELLO.TXT')),
+    ):
+        tool = dos / 'tools' / directory
+        subprocess.run(['make', '-C', str(tool), 'all'], check=True)
+        apps.update({name: (tool / 'build' / name).read_bytes() for name in names})
     if args.with_window:
         window = dos / 'tools/window'
         subprocess.run(['make', '-C', str(window), 'all'], check=True)
         apps.update({name: (window / 'build' / name).read_bytes()
                      for name in ('KDESK.EXE', 'KDESK.TXT', 'KDLIC.TXT',
-                                  'KVIEW.COM', 'KPAINT.COM', 'KIMAGE.TXT', 'COLORS.BMP')})
+                                  'KVIEW.EXE', 'KPAINT.EXE', 'KIMAGE.TXT', 'COLORS.BMP')})
         verifier = (webnp2 / 'scripts/verify-window.mjs').read_bytes()
         if verifier != (window / 'verify-ui.mjs').read_bytes():
             raise ValueError('KDESK browser verifier does not match its source')
@@ -110,7 +119,9 @@ def main():
         'IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT',
         *apps,
     }
+    excluded.update(('FD98.COM', 'EDIT98.COM', 'EDIT.COM', 'CPANEL.COM'))
     if args.with_window:
+        excluded.update(('KVIEW.COM', 'KPAINT.COM'))
         excluded.update(('WIN98.COM', 'WIN98.TXT', 'WINLIC.TXT', 'KDESK.COM'))
     extra = [(name, notices if name == 'LICENSE.TXT' else data)
              for name, data in files.items() if name not in excluded]
@@ -143,9 +154,11 @@ def main():
     sha256 = digest(image)
     commit = git(dos, 'rev-parse', 'HEAD')
     sources = manifest.setdefault('sources', {})
+    for component in ('filer', 'editor'):
+        sources[component]['commit'] = commit
     repository = 'https://github.com/kumakumapon/MS-DOS'
     # Only these applications are rebuilt. Preserve the provenance of the
-    # kernel, command shell, editor, filer and other bytes copied from the disk.
+    # kernel, command shell and other bytes copied from the disk.
     components = [('control', 'CPANEL', 'tools/control')]
     if args.with_window:
         components.append(('window', 'Kuma Desktop', 'tools/window'))
@@ -162,6 +175,8 @@ def main():
     (destination / manifest['image']).write_bytes(image)
     (destination / 'LICENSE.txt').write_bytes(notices)
     (destination / 'CPANEL.txt').write_bytes(apps['CPANEL.TXT'])
+    (destination / 'FILER.txt').write_bytes(apps['FILER.TXT'])
+    (destination / 'EDIT.txt').write_bytes(apps['EDIT.TXT'])
     if args.with_window:
         (destination / 'KDESK.txt').write_bytes(apps['KDESK.TXT'])
         (destination / 'KIMAGE.txt').write_bytes(apps['KIMAGE.TXT'])
