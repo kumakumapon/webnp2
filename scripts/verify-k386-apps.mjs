@@ -39,7 +39,7 @@ const pass=s=>{results.push(s);console.log('PASS '+s);};
 try{
  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
- const stems='KSH COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT KHELLO'.split(' ');
+ const stems='KSH COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT CASE KHELLO'.split(' ');
  const files=await page.evaluate(async()=> (await window.np2debug.np2.diskListFiles('fd1')).entries.map(e=>e.name));
  for(const stem of stems){
   assert.ok(!files.includes(stem+'.COM'));

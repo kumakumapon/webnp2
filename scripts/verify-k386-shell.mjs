@@ -108,6 +108,9 @@ try{
   await focus(1);await type('Z');await until(v=>shell(v[1])&&line(v[1],'DTA PRIVATE SEARCH PASS')&&rows(v[1]).some(s=>/^DTA NEXT: .*\.EXE$/.test(s)),'EXE search state retained');
   done('PC-98 BIOS peek preserves input; interleaved searches retain private DTAs and reject modified drive/network/cluster state');
 
+  await focus(0);await type('CASE\r');await until(v=>shell(v[0])&&line(v[0],'CASEMAP PASS'),'INT 21h AX=6521h/6522h case mapping');
+  done('INT 21h AX=6521h uppercases CX bytes past NUL; AX=6522h stops at the NUL and ignores CX');
+
   await focus(0);await type('COUNTER\r');await focus(1);await type('COUNTER\r');
   const children=await until(v=>v.every(s=>s.state===1&&s.counter>0&&s.screen.includes('V86 COUNTER:')),'Both child counters started');
   assert.ok(children.every(s=>s.eflags&0x20000));
