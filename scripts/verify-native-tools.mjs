@@ -55,10 +55,12 @@ try {
  const generations=running.resources.usage.map(u=>u.generation);
  pass('native tool kinds are rejected before replacing a V86 child or root; both original shell contexts survive');
  await find('text editor');await wait('[New file]');
- await type('NATIVE MZ SAVE\rPSP AND STACK');await key('F4');await wait('Save as:');
- await type('NEWMZ.TXT\r');await wait('Saved (Shift_JIS / CRLF)');
+ const editing=await until(r=>r.cpu.views.every((v,i)=>v.counter>running.cpu.views[i].counter),'DOS continues while editor is open');
+ assert.deepEqual(editing.resources.usage.map(u=>u.generation),generations);
+ await type('NATIVE MZ SAVE\rPSP AND STACK');await key('CTRL+S');await wait('Save as:');
+ await type('NEWMZ.TXT\r');await wait('Saved text (Shift_JIS / CRLF)');
  assert.equal((await file('NEWMZ.TXT')).toString(),'NATIVE MZ SAVE\r\nPSP AND STACK');
- await key('F10');await wait('Program returned to desktop');
+ await key('ESC');
  let resumed=await until(r=>r.cpu.views.every((v,i)=>v.counter>running.cpu.views[i].counter),'counters resume after editing');
  assert.deepEqual(resumed.resources.usage.map(u=>u.generation),generations);
  pass('EDIT98 saves real file contents and returns directly; both V86 sessions retain their identity and continue');
@@ -70,7 +72,7 @@ try {
  assert.match((await file('CONFIG.SYS')).toString(),/FILES=50/);
  assert.match((await file('CONFIG.SYS')).toString(),/DEVICE=FDXMS286.SYS/);
  assert.ok(!(await file('CONFIG.SYS')).toString().includes('DEVICE=EMM386'));
- await type('q');await wait('Program returned to desktop');
+ await key('ESC');
  pass('FD98 creates a directory and CPANEL saves CONFIG.SYS without losing the enhanced XMS configuration');
  await find('image editor');await wait('KPAINT - Image editor');await key('F3');await wait('Saved BMP');
  const bitmap=await file('DRAW.BMP');assert.equal(bitmap.toString('ascii',0,2),'BM');
