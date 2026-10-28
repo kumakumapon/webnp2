@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_commit=5fc55811c5d9ee8a56ed537f95d7859392a0e8d3
+source_commit=bf46774213a07aa834127b8d8e67a47476370769
 source_dir="$(mktemp -d)"
 trap 'rm -rf "$source_dir"' EXIT
 
