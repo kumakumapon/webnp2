@@ -80,7 +80,8 @@ try {
  await find('image editor');await wait('Pencil');await key('CTRL+S');await wait('Save as:');await key('ENTER');await wait('Saved BMP');
  let bitmap=await file('DRAW.BMP');assert.equal(bitmap.toString('ascii',0,2),'BM');
  const drawing=await until(r=>r.cpu.views.every((v,i)=>v.counter>resumed.cpu.views[i].counter),'DOS progresses with paint window open');
- const origin=await page.evaluate(()=>{const lines=window.np2debug.np2.getScreenText().lines;const row=lines.findIndex(l=>l.includes('Image editor'));return {x:(lines[row].indexOf('Image editor')-2)*8,y:(row-1)*16};});
+ await page.waitForFunction(()=>{const lines=window.np2debug.np2.getScreenText().lines;const row=lines.findIndex(l=>l.includes('Image editor'));if(row<1)return false;window.windowToolsTestOrigin={x:(lines[row].indexOf('Image editor')-2)*8,y:(row-1)*16};return true;},null,{timeout:60000});
+ const origin=await page.evaluate(()=>window.windowToolsTestOrigin);
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(250);
  await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x+24,p.y+72),origin);await pause(250);
  await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(450);
