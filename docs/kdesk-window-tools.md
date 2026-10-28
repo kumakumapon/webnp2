@@ -1,13 +1,56 @@
-# KDESK/386 window tool migration (in progress)
+# KDESK/386のウィンドウアプリ
 
-Text editing and system settings are being integrated into guest-side cooperative
-windows. The existing Files window remains the desktop file browser. Standalone
-EXEs remain available from real DOS.
+KDESK/386のランチャーやFilesから起動する標準ツールを、ゲスト側の
+ウィンドウとして操作できます。編集中も2つのDOSセッションは動き続けます。
 
-The initial text editor has an 8 KiB buffer; standalone EDIT98 retains 16 KiB.
-Image viewer/editor and BASIC still use their previous execution paths. Moving
-all tools into one KDESK code segment exceeds the 64 KiB limit; a separately
-loaded GUI module interface is needed before those ports are complete.
+| ツール | ウィンドウでの操作 |
+| --- | --- |
+| FD98 | Files内でコピー・移動・名前変更・フォルダ作成・削除 |
+| EDIT98 / EDIT | テキスト編集・保存・別名保存・Undo・クリップボード |
+| CPANEL | 設定変更・保存・再読込 |
+| KVIEW | BMP表示・スクロール・画像コピー |
+| KPAINT | マウス描画・線・矩形・塗りつぶし・選択・画像保存・Undo |
 
-This work stays in draft until the window operations, saved disk contents,
-background DOS progress and existing desktop regressions have been verified.
+通常のKDESKや実DOSから起動する単体EXEは従来の画面を使います。
+任意のDOSプログラムを自動的にGUIへ変換する仕組みではありません。
+
+各アプリは移動・サイズ変更・最大化・最小化・復元・タスク切替に対応します。
+各ツールにつき1ウィンドウで、保存先の入力と状態表示も個別に保持します。
+未保存の内容がある場合、閉じる操作とデスクトップ終了を防ぎます。
+
+## 使い方
+
+- FilesのFで操作メニュー。R: 名前変更、C: コピー、M: 移動、N: フォルダ作成、
+  D: 削除。Enterで確定、Escで取消。既存のコピー先を上書きしません。
+- 編集: FilesからTXTを開く。Ctrl+S: 保存、Ctrl+W: 別名保存、Ctrl+Z: Undo/Redo、
+  Ctrl+R: 再読込・破棄の確認、Ctrl+C: 文書コピー、Ctrl+V: 貼付。
+- 設定: X/E、+/-、[/]、Fで変更、Sで保存、Rで再読込。反映には再起動が必要です。
+- 画像編集: P/L/R/F/I/E/Sで鉛筆・線・矩形・塗りつぶし・色取得・消去・選択。
+  マウスで描画し、+/-とパレットで色を選択。Ctrl+C/X/Vで画像をコピー・切取・貼付、
+  Ctrl+ZでUndo/Redo、Ctrl+Sで保存、Ctrl+Wで別名保存、Ctrl+Rで再読込・破棄確認。
+  左右キーで横に移動、PgUp/PgDnで縦にスクロールします。
+- EscまたはタイトルのXで閉じます。F10はKDESK全体の終了です。
+
+## 構成と制限
+
+GUIとアプリのコードをバンクに分け、常駐する呼出し処理で切り替えます。
+前のバンクへ戻る前にコードを復元し、実際に実行する範囲を64 KiB以内に保ちます。
+各ウィンドウの状態とDOSセッションを維持し、画面やCPU状態の丸ごとの切替は行いません。
+バンクの境界・常駐関数・DOS再配置・12 KiBスタックをビルド時に検査します。
+
+編集バッファは8 KiB、テキストクリップボードは1023バイトです。
+単体EDIT98の16 KiB機能は引き続き利用できます。Shift_JIS・CRLF保存は既存コアを
+再利用します。BMPは非圧縮1/4/8/24ビット・最大320×200で、編集は256色パレットを
+使用します。新規画像は224×144です。パスはDOSのASCII名・8.3形式に従います。
+
+内部アプリは同じDOSプロセス内の協調実行で、個別の保護アドレス空間はありません。
+ファイル操作は直列実行され、同期ディスクI/O中はGUIの処理が遅れる場合があります。
+V86セッションのディスクは読み取り専用のままです。
+
+## 検証
+
+固定したMS-DOSコミットから既存のディスクをコピーして生成します。
+`make -C tools/window all test` と `npm test` / `npm run build` に加え、
+`verify-native-tools.mjs` で保存したテキスト・CONFIG・BMPの内容、マウス描画、
+Undo/Redo、未保存時の保護、ウィンドウ操作、DOSのCPU進捗と世代を検査します。
+256色と800×600 RGB565の両方をCIで検証します。
