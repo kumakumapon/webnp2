@@ -139,3 +139,6 @@ See [the desktop guide](kdesk-polish.md) for controls and validation.
 [高解像度・65,536色表示](kdesk-highcolor.md)を参照してください。
 
 See [native EXE tools and shell responsiveness](kdesk-native-tools.md).
+
+Enhanced-mode standard tools now use [native guest windows](kdesk-window-tools.md),
+including text editing, settings and images while both DOS sessions continue.
