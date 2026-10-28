@@ -55,10 +55,10 @@ try{
  await wait('Open this application in KDESK/386.');
  await type('COPY KHELLO.EXE 000APP.EXE\r');
  await page.waitForFunction(async()=>{try{return (await window.np2debug.np2.diskReadFile('fd1','000APP.EXE')).length>0;}catch{return false;}},null,{timeout:60000});
- assert.deepEqual(await file('000APP.EXE'),await file('KHELLO.EXE'));
  // A visible copied file can precede COPY's final close/metadata update.
  await type('ECHO K386 APP FIXTURE READY\r');
  await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(s=>s.trim()==='K386 APP FIXTURE READY'),null,{timeout:60000});
+ assert.deepEqual(await file('000APP.EXE'),await file('KHELLO.EXE'));
  const prepared=hash(await disk());
  await type('KDESK.EXE\r');await wait('Ready');
  await key('F3');await wait('Parent');await key('HELP');await wait('000APP.EXE');await key('ENTER');
