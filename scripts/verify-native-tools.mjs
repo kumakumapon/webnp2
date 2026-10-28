@@ -60,7 +60,11 @@ try {
  await type('NATIVE MZ SAVE\rPSP AND STACK');await key('ESC');await wait('Save window app changes');await key('CTRL+S');await wait('Save as:');
  await type('NEWMZ.TXT\r');await wait('Saved text (Shift_JIS / CRLF)');
  assert.equal((await file('NEWMZ.TXT')).toString(),'NATIVE MZ SAVE\r\nPSP AND STACK');
- await key('ESC');
+ await key('CTRL+W');await wait('Save as:');await key('CTRL+U');await type('CANCEL.TXT');
+ await find('clock');await wait('12-hour');await find('text editor');await wait('CANCEL.TXT');
+ await key('ESC');await key('ESC');
+ assert.ok(!(await page.evaluate(async()=> (await window.np2debug.np2.diskListFiles('fd1')).entries.map(f=>f.name))).includes('CANCEL.TXT'));
+
  let resumed=await until(r=>r.cpu.views.every((v,i)=>v.counter>running.cpu.views[i].counter),'counters resume after editing');
  assert.deepEqual(resumed.resources.usage.map(u=>u.generation),generations);
  pass('EDIT98 saves real file contents and returns directly; both V86 sessions retain their identity and continue');
@@ -90,6 +94,8 @@ try {
  await key('CTRL+G');await key('CTRL+G');await key('CTRL+C');
  assert.deepEqual((await until(r=>r.cpu.views.every((v,i)=>v.counter>drawing.cpu.views[i].counter),'DOS progresses while paint is minimized/restored')).resources.usage.map(u=>u.generation),generations);
  await page.screenshot({path:output+'/windowed-paint.png'});
+ await key('CTRL+W');await wait('Save as:');await key('CTRL+U');await type('COLORS.BMP\r');await wait('Replace existing file?');await key('ESC');
+ await key('CTRL+S');await savedPixel(196);assert.equal(hash(await file('COLORS.BMP')),protectedFiles['COLORS.BMP']);
  await key('ESC');
  await find('image viewer');await wait('BMP viewer');await key('ESC');
  if(video==='cirrus')await page.waitForFunction(()=>document.querySelector('#canvas').width===800);
