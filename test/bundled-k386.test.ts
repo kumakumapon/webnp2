@@ -18,14 +18,14 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
       'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
-      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE',
+      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE',
     ]));
   });
   it('packages the V86 apps as tagged MZ executables with valid relocations', () => {
     if (!manifest.enabled) return;
     const disk = openDiskImage(readFileSync(`public/k386/${manifest.image}`), manifest.image);
     const names=manifest.files.map((file: {name: string})=>file.name);
-    for(const stem of 'KSH KHELLO COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT CASE'.split(' ')) {
+    for(const stem of 'KSH KHELLO COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT CASE XMEM XCHILD'.split(' ')) {
       expect(names).not.toContain(stem+'.COM');
       const exe=fatReadFile(disk,stem+'.EXE');
       const word=(at:number)=>exe[at]|exe[at+1]<<8;
