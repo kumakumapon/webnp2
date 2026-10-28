@@ -39,7 +39,7 @@ const pass=s=>{results.push(s);console.log('PASS '+s);};
 try{
  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
- const stems='KSH COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT CASE KHELLO'.split(' ');
+ const stems='KSH COUNTER ECHO FAULT KFILE PORT DF FPU FLAGS DTA KEYCHK TIMER MEMORY PROCESS BADTIMER ROMWRITE INTWAIT CASE KHELLO XMEM XCHILD'.split(' ');
  const files=await page.evaluate(async()=> (await window.np2debug.np2.diskListFiles('fd1')).entries.map(e=>e.name));
  for(const stem of stems){
   assert.ok(!files.includes(stem+'.COM'));
@@ -48,7 +48,7 @@ try{
   assert.ok(exe.readUInt16LE(6)>0);assert.equal(exe.readUInt16LE(24),72);
   assert.equal((exe.readUInt16LE(4)-1)*512+(exe.readUInt16LE(2)||512),exe.length);
  }
- pass('18 shipped text applications are real MZ modules with relocations and ABI descriptors; old application COM files are absent');
+ pass('Shipped text applications are real MZ modules with relocations and ABI descriptors; old application COM files are absent');
  // Real DOS prepares a renamed app on a disposable browser disk, then tests
  // the safe error outside V86 even though the monitor TSR itself is installed.
  await key('F10');await wait('KDESK exited.');await type('KHELLO.EXE\r');
