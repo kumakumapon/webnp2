@@ -65,15 +65,16 @@ try{
   }
   assert.ok(ticks>0);
   r=await until(r=>r.xms.sessions[0].length===0,'blocks released after '+s.name);
-  const transfers=got.misses+got.writebacks;
-  measurements.push({scenario:s.name,...got,cpuTicks:ticks,seconds:+(ticks/ARTIC_HZ).toFixed(3),ticksPerTransfer:+(ticks/transfers).toFixed(1)});
+  // Upper bounds: the ticks also include the guest's own computation.
+  const transfers=got.misses+got.writebacks,accesses=got.hits+got.misses;
+  measurements.push({scenario:s.name,...got,cpuTicks:ticks,seconds:+(ticks/ARTIC_HZ).toFixed(3),ticksPerTransfer:+(ticks/transfers).toFixed(1),ticksPerCacheAccess:+(ticks/accesses).toFixed(1)});
   console.log('MEASURE '+JSON.stringify(measurements.at(-1)));
   snapshots.push({stage:'scenario-'+s.name,...r});
  }
  pass('fill, sequential, sort, boundary search and range scenarios pass in the guest; cache statistics match, and each scenario releases its XMS blocks');
  // Ending an application in the middle of a scenario must reclaim its blocks.
  await type('3');
- r=await until(r=>r.xms.sessions[0].length===2&&r.xms.sessions[0].every(b=>b.bytes===65536),'sort holds two 64 KiB blocks');
+ r=await until(r=>r.xms.sessions[0].length===2&&r.xms.sessions[0].every(b=>b.bytes===16384),'sort holds two 16 KiB blocks');
  snapshots.push({stage:'sort-blocks',...r});
  await key('CTRL+E');
  r=await until(r=>r.cpu.views[0].state===0&&r.xms.sessions[0].length===0,'End reclaims blocks');
