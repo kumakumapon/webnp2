@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
+import {counterPairReady,counterPairAdvanced} from './k386-counter-progress.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-highcolor',image]=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -17,7 +18,16 @@ const text=()=>page.evaluate(()=>{const b=atob(window.np2debug.np2.readMemoryBas
 const wait=async s=>{console.log('WAIT',s);for(let i=0;i<600;i++){if((await text().catch(()=>'' )).includes(s))return;await pause(200);}throw new Error('Missing guest text: '+s);};
 const key=async s=>{await page.evaluate(s=>window.np2debug.np2.sendKeys(s),s);await pause(220);};
 const type=async s=>{await page.evaluate(s=>window.np2debug.np2.typeText(s),s);await pause(220);};
-const until=async(predicate,label)=>{console.log('UNTIL',label);for(let end=Date.now()+90000;Date.now()<end;){const cpu=await inspectK386(page),resources=await inspectResources(page);if(cpu&&resources&&predicate({cpu,resources}))return {cpu,resources};await pause(150);}throw new Error(label);};
+const until=async(predicate,label)=>{
+ console.log('UNTIL',label);let last,lastValid;
+ for(let end=Date.now()+90000;Date.now()<end;){
+  const cpu=await inspectK386(page),resources=await inspectResources(page);last={cpu,resources};
+  if(cpu&&resources){lastValid=last;if(predicate(last))return last;}
+  await pause(150);
+ }
+ await writeFile(join(output,'failure-state.json'),JSON.stringify({label,last,lastValid,snapshots},null,2)+'\n');
+ throw new Error(label);
+};
 const find=async q=>{await key('CTRL+K');await wait('Find apps');await type(q);await wait('1 results -');await key('ENTER');};
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -46,12 +56,15 @@ try{
  results.push('Memo, Calculator, maximize/restore and Desk preserve state');
  await key('CTRL+N');await wait('K386 DOS shell');await type('COUNTER\r');
  await key('CTRL+O');await wait('K386 DOS shell');await type('COUNTER\r');
- const before=await until(r=>r.resources.usage.every(u=>u.program==='COUNTER.EXE')&&r.cpu.views.every(v=>v.counter>0),'Two real DOS EXEs');
+ const started=await until(counterPairReady,'Two real DOS EXEs with matching CPU/resource PSPs');
+ snapshots.push({stage:'startup',...started});
+ const before=await until(r=>counterPairAdvanced(started,r),'Both guest counters progress beyond startup');
+ snapshots.push({stage:'before',...before});
  await find('window left');await key('CTRL+N');await find('window right');
- const after=await until(r=>r.cpu.views.every((v,i)=>v.counter>before.cpu.views[i].counter),'Background execution survives high-resolution tiling');
+ const after=await until(r=>counterPairAdvanced(before,r),'Background execution survives high-resolution tiling');
  assert.notEqual(after.cpu.views[0].physical,after.cpu.views[1].physical);assert.notEqual(after.cpu.views[0].cr3,after.cpu.views[1].cr3);
  for(let i=0;i<2;i++)assert.equal(after.resources.usage[i].generation,before.resources.usage[i].generation);
- snapshots.push({stage:'before',...before},{stage:'after',...after});results.push('two isolated V86 EXEs keep running across high-resolution tiling');
+ snapshots.push({stage:'after',...after});results.push('two isolated V86 EXEs keep running across high-resolution tiling');
  await key('CTRL+D');await wait('Desktop shown');
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
  const position=await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(720,500));assert.deepEqual(position,{x:720,y:500});await pause(500);
@@ -63,7 +76,7 @@ try{
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(350);
  await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(24,584));await pause(350);
  await page.evaluate(()=>window.np2debug.np2.mouseClick());await wait('Desktop windows restored');
- await until(r=>r.cpu.views.every((v,i)=>v.counter>after.cpu.views[i].counter),'Hidden sessions keep running');
+ await until(r=>counterPairAdvanced(after,r),'Hidden sessions keep running');
  results.push('actual software cursor reaches x720/y500; mouse clicks the taskbar beyond the old 400-line boundary');
  await page.waitForFunction(()=>{
   const c=document.createElement('canvas');c.width=800;c.height=600;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0);
