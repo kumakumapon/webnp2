@@ -28,7 +28,7 @@ def main():
     files.pop('K386.COM', None)
     for stem in ['KSH', 'COUNTER', 'ECHO', 'FAULT', 'KFILE', 'PORT', 'DF', 'FPU', 'FLAGS', 'DTA', 'KEYCHK', 'TIMER', 'MEMORY', 'PROCESS', 'BADTIMER', 'ROMWRITE', 'INTWAIT']:
         files.pop(stem + '.COM', None)
-    names = ('K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KSH.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'FAULT.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'KRESCHK.COM', 'INTWAIT.EXE', 'KHELLO.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE')
+    names = ('K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KSH.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'FAULT.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'KRESCHK.COM', 'INTWAIT.EXE', 'KHELLO.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'XARRAY.EXE')
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     files['KDISP.COM'] = (source / 'tools/display/build/KDISP.COM').read_bytes()
