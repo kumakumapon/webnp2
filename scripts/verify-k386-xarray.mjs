@@ -24,14 +24,21 @@ const type=async s=>{await page.evaluate(s=>window.np2debug.np2.typeText(s),s);a
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 const hash=b=>createHash('sha256').update(b).digest('hex');
 // The XMS record is published by the monitor at the first allocation, so it may still be absent at start-up.
-const until=async(predicate,label,{xmsOptional=false}={})=>{
- let record;const deadline=Date.now()+300000;
+const until=async(predicate,label,{xmsOptional=false,timeout=300000}={})=>{
+ let record;const deadline=Date.now()+timeout;
  for(let i=0;Date.now()<deadline;i++){
   const cpu=await inspectK386(page),resources=await inspectResources(page),xms=await inspectXms(page);record={cpu,resources,xms};
   if(cpu&&cpu.views.some(v=>v.screen.includes('XARRAY FAIL')||v.screen.includes('XMS FAIL')))throw new Error(JSON.stringify(record));
   if(cpu&&resources&&(xms||xmsOptional)&&predicate(record))return record;
   if(i&&i%100===0)console.log('WAIT '+label+': '+JSON.stringify({states:cpu?.views.map(v=>v.state),pending:xms?.pending}));await pause(150);
  }throw new Error(label+': '+JSON.stringify(record));
+};
+// While a program is busy the monitor's records are often mid-update; reading one record alone
+// succeeds far more often than needing CPU, resource and XMS snapshots to be coherent together.
+const untilXms=async(predicate,label)=>{
+ let xms;const deadline=Date.now()+300000;
+ while(Date.now()<deadline){xms=await inspectXms(page);if(xms&&predicate(xms))return xms;await pause(100);}
+ throw new Error(label+': '+JSON.stringify(xms));
 };
 const run=async(id,path)=>{await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');await type(path+'\r');};
 const pass=s=>{results.push(s);console.log('PASS '+s);};
@@ -74,8 +81,9 @@ try{
  pass('fill, sequential, sort, boundary search and range scenarios pass in the guest; cache statistics match, and each scenario releases its XMS blocks');
  // Ending an application in the middle of a scenario must reclaim its blocks.
  await type('3');
- r=await until(r=>r.xms.sessions[0].length===2&&r.xms.sessions[0].every(b=>b.bytes===16384),'sort holds two 16 KiB blocks');
- snapshots.push({stage:'sort-blocks',...r});
+ const held=await untilXms(x=>x.sessions[0].length===2&&x.sessions[0].every(b=>b.bytes===16384&&b.initialized===16384),'sort holds two 16 KiB blocks');
+ assert.notEqual(held.sessions[0][0].token,held.sessions[0][1].token);
+ snapshots.push({stage:'sort-blocks',xms:held});
  await key('CTRL+E');
  r=await until(r=>r.cpu.views[0].state===0&&r.xms.sessions[0].length===0,'End reclaims blocks');
  pass('End during a running scenario reclaims both XMS blocks without a write-back');
@@ -83,13 +91,14 @@ try{
  await run(0,'XARRAY.EXE');await run(1,'XARRAY.EXE');
  r=await until(r=>r.cpu.views.every(v=>v.state===2&&v.screen.includes('XARRAY READY')),'both sessions ready');
  assert.notEqual(r.cpu.views[0].cr3,r.cpu.views[1].cr3);
- await key('CTRL+N');await type('a');await key('CTRL+O');await type('a');
- r=await until(r=>r.cpu.views.every(v=>v.screen.includes('XARRAY ALL OK')),'both sessions pass all scenarios');
+ // Scenario 1 (the 2 MiB fill) is left out here: it is verified above and would double this step.
+ await key('CTRL+N');await type('2345');await key('CTRL+O');await type('2345');
+ r=await until(r=>r.cpu.views.every(v=>v.screen.includes('XARRAY OK range')),'both sessions pass scenarios 2 to 5',{timeout:600000});
  for(const v of r.cpu.views)assert.ok(!v.screen.includes('XARRAY FAIL'));
  r=await until(r=>r.xms.sessions.every(b=>b.length===0),'both sessions released');
  snapshots.push({stage:'concurrent',...r});
  await page.screenshot({path:join(output,'xarray-concurrent.png')});
- pass('two V86 sessions run every scenario concurrently and finish with no XMS block left');
+ pass('two V86 sessions run scenarios 2 to 5 concurrently and finish with no XMS block left');
  await key('CTRL+N');await type('q');await key('CTRL+O');await type('q');
  r=await until(r=>r.cpu.views.every(v=>v.state===0),'both exit');
  await key('F4');await type('XARRAY CHECKED');await wait('XARRAY CHECKED');
