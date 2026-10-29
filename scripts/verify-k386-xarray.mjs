@@ -86,7 +86,7 @@ try{
  snapshots.push({stage:'sort-blocks',xms:held});
  await key('CTRL+E');
  r=await until(r=>r.cpu.views[0].state===0&&r.xms.sessions[0].length===0,'End reclaims blocks');
- pass('End during a running scenario reclaims both XMS blocks without a write-back');
+ pass('End during a running scenario ends the session and reclaims both XMS blocks');
  // Two independent sessions page different arrays at the same time.
  await run(0,'XARRAY.EXE');await run(1,'XARRAY.EXE');
  r=await until(r=>r.cpu.views.every(v=>v.state===2&&v.screen.includes('XARRAY READY')),'both sessions ready');
