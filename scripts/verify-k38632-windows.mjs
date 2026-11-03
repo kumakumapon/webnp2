@@ -55,6 +55,9 @@ try{
  s=await until(s=>s.cpu.views[1].counter>counter&&s.cpu.views[0].state===2,'native GUI coexistence');assert.deepEqual(s.resources.usage.map(u=>u.generation),generation);
  await page.waitForFunction(()=>!window.np2debug.np2.getScreenText().text.includes('Find apps'));await page.waitForTimeout(1200);await page.screenshot({path:join(output,'two-pm32-gui.png')});
  pass('windowed VIEW32 file/ANSI/navigation, wait without redispatch, per-focus input, tiling/maximize/minimize and calculator/clock/memo coexistence');
+ // Coexistence was exercised above. Close the clock before lifecycle checks:
+ // its occluded timer-driven composition makes guest service timing variable.
+ await key('ESC');
  await key('CTRL+N');await type('q');s=await until(s=>s.cpu.views[0].state===0,'viewer quit');reclaimed(s,0);
  await run(0,'COUNT32.EXE 2');s=await until(s=>live(s,0)&&live(s,1),'two private counters');owned(s,0);owned(s,1);
  assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);assert.equal(pm(s,0).samples[1],50);assert.equal(pm(s,1).samples[1],49);assert.equal(pm(s,0).samples[2],0x50333221);assert.equal(pm(s,1).samples[2],0x50333221);assert.equal(pm(s,0).samples[3],pm(s,1).samples[3]);
