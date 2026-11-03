@@ -142,3 +142,13 @@ See [native EXE tools and shell responsiveness](kdesk-native-tools.md).
 
 Enhanced-mode standard tools now use [native guest windows](kdesk-window-tools.md),
 including text editing, settings and images while both DOS sessions continue.
+
+
+## PM32 text applications
+
+The separate experimental KDESK/386 image includes resident K32HOST and shares
+its two execution slots between V86 and PM32. Find apps (Ctrl+K) offers PM32
+viewer, PM32 ticker and PM32 memory test. PM32 applications run in guest KDESK
+windows and continue while another window or native GUI app has focus.
+See [PM32 window usage and limits](k38632-windows.md); ordinary KDESK and
+foreground real-DOS applications retain their existing execution path.

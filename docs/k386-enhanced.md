@@ -121,5 +121,5 @@ timers and original COMMAND probes. The process E2E adds actual per-level CPU
 contexts, memory cookies and firmware-write faults; CI records final evidence.
 
 The standalone PM32 practical SDK and read-only text viewer are documented in
-[k38632-services.md](k38632-services.md). They remain separate from V86/GUI
-ownership pending the mixed-owner scheduling milestone.
+[k38632-services.md](k38632-services.md). They can also use the shared PM32/V86 scheduler and native KDESK text windows;
+see [PM32 window tasks](k38632-windows.md) for controls, ownership and limits.

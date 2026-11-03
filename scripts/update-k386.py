@@ -20,12 +20,14 @@ def main():
     root = Path(__file__).resolve().parents[1]
     subprocess.run(['make', '-C', str(source / 'tools/k386'), 'all'], check=True)
     subprocess.run(['make', '-C', str(source / 'tools/display'), 'all'], check=True)
+    subprocess.run(['make', '-C', str(source / 'tools/window'), 'all'], check=True)
     manifest = json.loads((root / 'public/msdos4/manifest.json').read_text())
     original = (root / 'public/msdos4' / manifest['image']).read_bytes()
     assert hashlib.sha256(original).hexdigest() == manifest['sha256']
     up = module('k386_disk_reader', root / 'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
     files.pop('K386.COM', None)
+    files['KDESK.EXE'] = (source / 'tools/window/build/KDESK.EXE').read_bytes()
     for stem in ['KSH', 'COUNTER', 'ECHO', 'FAULT', 'KFILE', 'PORT', 'DF', 'FPU', 'FLAGS', 'DTA', 'KEYCHK', 'TIMER', 'MEMORY', 'PROCESS', 'BADTIMER', 'ROMWRITE', 'INTWAIT']:
         files.pop(stem + '.COM', None)
     names = ('K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KSH.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'FAULT.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'KRESCHK.COM', 'INTWAIT.EXE', 'KHELLO.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'XARRAY.EXE')
@@ -33,7 +35,7 @@ def main():
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     files['K32CPU.COM'] = (source / 'tools/k38632/build/K32CPU.COM').read_bytes()
     files['K32MEM.EXE'] = (source / 'tools/k38632/build/K32MEM.EXE').read_bytes()
-    for name in ['ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'K32RUN.EXE', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE', 'BADABI.EXE', 'BADENT.EXE', 'BADOVR.EXE', 'BADSIZE.EXE', 'BADELF.EXE']:
+    for name in ['COUNT32.EXE', 'K32HOST.EXE', 'K32MIX.COM', 'ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'K32RUN.EXE', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE', 'BADABI.EXE', 'BADENT.EXE', 'BADOVR.EXE', 'BADSIZE.EXE', 'BADELF.EXE']:
         files[name] = (source / 'tools/k38632/build' / name).read_bytes()
     files['DATA32.BIN'] = bytes(i % 251 for i in range(70001))
     files['VIEWDATA.TXT'] = b''.join(f'LINE {i:03d} - K38632 read-only text viewer\r\n'.encode('ascii') for i in range(80))
@@ -51,7 +53,7 @@ def main():
     files['LICENSE.TXT'] += b'\r\nK386 original extension\r\n' + files['K386LIC.TXT']
     # XMS backing coexists with the monitor; EMM386 would already own V86 mode.
     files['CONFIG.SYS'] = b'FILES=40\r\nBUFFERS=8\r\nDEVICE=FDXMS286.SYS\r\n'
-    autoexec = b'@ECHO OFF\r\nECHO KDESK/386 experimental guest shell\r\nK386.EXE\r\nKDESK.EXE\r\n'
+    autoexec = b'@ECHO OFF\r\nECHO KDESK/386 experimental guest shell\r\nK386.EXE\r\nK32HOST.EXE\r\nKDESK.EXE\r\n'
     helper = module('k386_pc98_image', source / 'ports/pc98/image.py')
     excluded = {'IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'AUTOEXEC.BAT', 'DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
@@ -65,9 +67,9 @@ def main():
     (destination / name).write_bytes(image)
     (destination / 'manifest.json').write_text(json.dumps({
         'enabled': True, 'experimental': True, 'image': name, 'sha256': sha,
-        'source_commit': commit, 'base_image_sha256': manifest['sha256'],
+        'source_commit': commit, 'source_dirty': bool(subprocess.check_output(['git', '-C', str(source), 'status', '--porcelain'], text=True)), 'base_image_sha256': manifest['sha256'],
         'files': entries, 'dos_files_read_only': True, 'extended_memory_mb': 16,
-        'compatibility': 'experimental V86 shell and bounded COM/MZ services; not a complete virtual DOS machine',
+        'compatibility': 'experimental shared V86/PM32 text windows with bounded read-only services; not a complete virtual DOS machine',
     }, indent=2) + '\n')
     (destination / 'LICENSE.txt').write_bytes(files['LICENSE.TXT'])
     (destination / 'K386.txt').write_bytes(files['K386.TXT'])
