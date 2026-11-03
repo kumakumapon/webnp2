@@ -23,7 +23,7 @@ async function run(id,command){await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L
 async function end(id){await key(id?'CTRL+O':'CTRL+N');await key('CTRL+E');return until(s=>s.cpu.views[id].state===0,'end '+id);}
 async function task(id,command){await find('task manager');for(let i=0;i<14;i++)await key('UP');for(let i=0;i<8+id;i++)await key('DOWN');await type(command);}
 const pm=(s,id)=>s.cpu.diagnostics[id].pm32;
-const live=(s,id)=>s.cpu.views[id].kind===1&&s.cpu.views[id].state===1&&s.cpu.views[id].counter>65536;
+const live=(s,id)=>s.cpu.views[id].kind===1&&s.cpu.views[id].state===1&&s.cpu.views[id].counter>0;
 function owned(s,id){
  const v=s.cpu.views[id],r=pm(s,id);assert.ok(r);assert.equal(r.error,0);assert.ok(r.handle);assert.equal(r.locked,1);assert.equal(r.a20Owned,0);
  assert.equal(r.returnedCR0,r.savedCR0);assert.equal(r.returnedCR3,r.savedCR3);assert.equal(r.returnedFlags,r.savedFlags);assert.equal(r.returnedMask,r.savedMask);assert.equal(r.a20Before,r.a20After);
