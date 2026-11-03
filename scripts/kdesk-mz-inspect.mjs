@@ -26,7 +26,7 @@ async function moduleRecord(page, name) {
     if(paragraphs!==16+Math.ceil(payload.length/16)+h[5])continue;
     if(!relocations.every(offset=>ram.readUInt16LE(base+offset)===payload.readUInt16LE(offset)+base/16))continue;
     matches.push({name,psp,cs:base/16+h[11],ds:base/16+h[7],ss:base/16+h[7],
-      ip:h[10],stackTop:h[8],paragraphs,relocations:relocations.length,base});
+      ip:h[10],stackTop:h[8],paragraphs,relocations:relocations.length,moduleBytes:payload.length,base});
   }
   assert.equal(matches.length,1,`${name}: exactly one live DOS-owned module`);
   return matches[0];
@@ -43,13 +43,26 @@ export async function inspectNativeMZ(page, enhanced) {
     return (!(r.cr0&1)||(r.eflags&0x20000))&&r.cs===gui.cs&&r.ds===gui.ds&&r.ss===gui.ss?r:false;
   },gui,{timeout:60000,polling:25})).jsonValue();
   assert.ok(registers.esp<=gui.stackTop&&registers.esp>=gui.stackTop-0x3000);
-  let monitor;
+  let monitor,resident;
   if(enhanced){
     monitor=await moduleRecord(page,'K386.EXE');
     assert.equal(monitor.relocations,0);assert.equal(monitor.cs,monitor.psp+16);
     assert.equal(monitor.paragraphs,0x1010);assert.notEqual(monitor.psp,gui.psp);
     const vector=Buffer.from(await page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x2f*4,4).base64),'base64');
-    assert.equal(vector.readUInt16LE(2),monitor.cs,'INT 2Fh points into the retained MZ module');
+    if(vector.readUInt16LE(2)===monitor.cs)assert.ok(vector.readUInt16LE(0)<monitor.moduleBytes);
+    else {
+      resident=await moduleRecord(page,'K32HOST.EXE');
+      assert.equal(resident.cs,resident.psp+16);assert.equal(resident.paragraphs,0x1010);
+      assert.equal(vector.readUInt16LE(2),resident.cs,'INT 2Fh head belongs to the resident PM32 MZ');
+      assert.ok(vector.readUInt16LE(0)<resident.moduleBytes);
+      const code=Buffer.from(await page.evaluate(({base,moduleBytes})=>window.np2debug.np2.readMemoryBase64(base,moduleBytes).base64,resident),'base64');
+      const marker=Buffer.from([0x2e,0xff,0x2e]);let chains=0;
+      for(let at=code.indexOf(marker);at>=0;at=code.indexOf(marker,at+1)) {
+        if(at+5>code.length)continue;const pointer=code.readUInt16LE(at+3);
+        if(pointer+4<=code.length&&code.readUInt16LE(pointer+2)===monitor.cs&&code.readUInt16LE(pointer)<monitor.moduleBytes)chains++;
+      }
+      assert.equal(chains,1,'resident CS far-jump chains to the actual retained V86 MZ');
+    }
   }
-  return {gui,registers,monitor};
+  return {gui,registers,monitor,resident};
 }
