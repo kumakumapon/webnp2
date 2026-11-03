@@ -18,7 +18,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
       'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
-      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM',
+      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM', 'K32MEM.EXE',
     ]));
   });
   it('packages the V86 apps as tagged MZ executables with valid relocations', () => {

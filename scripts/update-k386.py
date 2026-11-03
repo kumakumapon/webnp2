@@ -32,6 +32,7 @@ def main():
     for name in names:
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     files['K32CPU.COM'] = (source / 'tools/k38632/build/K32CPU.COM').read_bytes()
+    files['K32MEM.EXE'] = (source / 'tools/k38632/build/K32MEM.EXE').read_bytes()
     files['KDISP.COM'] = (source / 'tools/display/build/KDISP.COM').read_bytes()
     malformed = bytearray(files['MZTEST.EXE'])
     malformed[28:32] = b'\xff\xff\xff\xff'
