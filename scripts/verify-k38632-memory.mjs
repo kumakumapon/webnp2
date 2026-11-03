@@ -66,8 +66,8 @@ try{
   if(mode==='K')assert.equal(f.cr2,f.base);else if(address!==null)assert.equal(f.cr2,address);
  }
  pass('real read-only code, supervisor and guard-page violations plus privileged CLI are contained and reclaim their XMS');
- const budget=await run('T');assert.equal(budget.state,5);assert.equal(budget.reason,66);assert.equal(budget.irqs,64);assert.ok(budget.counter>0);
- const cancelled=await run('B');assert.equal(cancelled.state,5);assert.equal(cancelled.reason,65);assert.ok(cancelled.counter>0);
+ const budget=await run('T');assert.equal(budget.state,5);assert.equal(budget.reason,66);assert.equal(budget.irqs,64);assert.equal(budget.resumes,budget.irqs-1);assert.ok(budget.counter>0);
+ const cancelled=await run('B');assert.equal(cancelled.state,5);assert.equal(cancelled.reason,65);assert.equal(cancelled.resumes,cancelled.irqs-1);assert.ok(cancelled.counter>0);
  pass('infinite CPL3 loops are preempted and terminated by a real scheduler budget or explicit Escape with complete reclamation');
  const again=await run();assert.equal(again.stage,3);assert.equal(again.checksum,r.checksum);assert.notEqual(again.tag,r.tag);
  await page.screenshot({path:join(output,'pm32-reclaimed.png')});
