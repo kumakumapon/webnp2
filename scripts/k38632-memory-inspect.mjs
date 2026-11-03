@@ -1,10 +1,10 @@
 // Inspect guest-owned conventional records and actual page tables of K32MEM.
-export async function inspectMemoryRunner(page,previousTag=null){
- return page.evaluate(previous=>{
+export async function inspectMemoryRunner(page,previousTag=null,signature='K32MEM01'){
+ return page.evaluate(({previous,signature})=>{
   const n=window.np2debug.np2,w=(b,o)=>b.charCodeAt(o)|b.charCodeAt(o+1)<<8;
   const d=(b,o)=>(w(b,o)|w(b,o+2)<<16)>>>0;
   const ram=atob(n.readMemoryBase64(0x10000,0x90000).base64);let at=-1;
-  while((at=ram.indexOf('K32MEM01',at+1))>=0){
+  while((at=ram.indexOf(signature,at+1))>=0){
    if(w(ram,at+8)!==256||w(ram,at+10)!==1024)continue;
    const b=ram.slice(at,at+1024),base=d(b,20),tag=d(b,56);
    if(!base||base+d(b,504)!==at+0x10000||!tag||tag===previous)continue;
@@ -20,7 +20,9 @@ export async function inspectMemoryRunner(page,previousTag=null){
     savedMask:b.charCodeAt(140),returnedMask:b.charCodeAt(141),a20Owned:w(b,142),stage:d(b,144),checksum:d(b,148),sampleCount:d(b,152),freed:d(b,156),attempts:d(b,160),
     firstIRQ:frame(168),lastIRQ:frame(244),final:frame(320),samples:Array.from({length:16},(_,i)=>d(b,396+i*4)),unmapped:d(b,464),counter:d(b,468),budget:d(b,492),
     a20Before:w(b,500),a20After:w(b,502),publishedPtes:Array.from({length:13},(_,i)=>d(b,512+i*4)),
-    pde0:tables?d(tables,0):null,pde2:tables?d(tables,8):null,userPtClear:tables?Array.from(tables.slice(8192)).every(c=>c.charCodeAt(0)===0):null};
+    pde0:tables?d(tables,0):null,pde2:tables?d(tables,8):null,userPtClear:tables?Array.from(tables.slice(8192)).every(c=>c.charCodeAt(0)===0):null,
+    parserError:d(b,576),fileBytes:d(b,580),entry:d(b,584),segments:d(b,588),rwbase:d(b,592),rwbytes:d(b,596),fileOpen:d(b,604),syscalls:d(b,608),writes:d(b,612),yields:d(b,616),times:d(b,620),badPointers:d(b,624),exitCode:d(b,628),unknownCalls:d(b,632),dispatches:d(b,636),name:b.slice(704,768).split('\0')[0],
+    ptes:signature==='K32RUN01'&&tables?Array.from({length:1024},(_,i)=>d(tables,8192+i*4)):null};
   }return null;
- },previousTag);
+ },{previous:previousTag,signature});
 }
