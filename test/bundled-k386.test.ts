@@ -18,7 +18,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
       'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
-      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM', 'K32MEM.EXE', 'K32RUN.EXE', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE',
+      'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM', 'K32MEM.EXE', 'K32RUN.EXE', 'ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'DATA32.BIN', 'VIEWDATA.TXT', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE',
     ]));
   });
   it('packages the V86 apps as tagged MZ executables with valid relocations', () => {
@@ -43,6 +43,22 @@ describe('optional experimental K386 disk', () => {
         expect(word(at)+word(at+2)*16+2).toBeLessThanOrEqual(moduleSize);
       }
     }
+  });
+  it('bundles versioned PM32 SDK applications and immutable read fixtures', () => {
+    if (!manifest.enabled) return;
+    const disk=openDiskImage(readFileSync(`public/k386/${manifest.image}`),manifest.image);
+    for(const stem of ['ARGS32','HEAP32','INPUT32','FILE32','VIEW32']) {
+      const exe=fatReadFile(disk,stem+'.EXE');
+      const word=(at:number)=>exe[at]|exe[at+1]<<8;
+      expect(new TextDecoder().decode(exe.slice(72,80))).toBe('K32EXE01');
+      expect(word(80)).toBe(257);expect(word(92)).toBe(15);
+      expect(word(38)).toBe(3);
+    }
+    const data=fatReadFile(disk,'DATA32.BIN');
+    expect(data.length).toBe(70001);
+    expect(data.every((value,index)=>value===index%251)).toBe(true);
+    const text=new TextDecoder().decode(fatReadFile(disk,'VIEWDATA.TXT'));
+    expect(text).toContain('LINE 000 - K38632');expect(text).toContain('LINE 079 - K38632');
   });
   it('boots XMS without an existing V86 owner and preserves kernel provenance', () => {
     if (!manifest.enabled) return;

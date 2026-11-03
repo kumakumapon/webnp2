@@ -22,6 +22,7 @@ export async function inspectMemoryRunner(page,previousTag=null,signature='K32ME
     a20Before:w(b,500),a20After:w(b,502),publishedPtes:Array.from({length:13},(_,i)=>d(b,512+i*4)),
     pde0:tables?d(tables,0):null,pde2:tables?d(tables,8):null,userPtClear:tables?Array.from(tables.slice(8192)).every(c=>c.charCodeAt(0)===0):null,
     parserError:d(b,576),fileBytes:d(b,580),entry:d(b,584),segments:d(b,588),rwbase:d(b,592),rwbytes:d(b,596),fileOpen:d(b,604),syscalls:d(b,608),writes:d(b,612),yields:d(b,616),times:d(b,620),badPointers:d(b,624),exitCode:d(b,628),unknownCalls:d(b,632),dispatches:d(b,636),name:b.slice(704,768).split('\0')[0],
+    abi:d(b,768),features:d(b,772),argc:d(b,776),heapBase:d(b,780),heapLimit:d(b,784),heapPages:d(b,788),heapPeak:d(b,792),allocations:d(b,796),frees:d(b,800),inputPolls:d(b,804),waits:d(b,808),waitPolls:d(b,812),openFiles:d(b,820),peakFiles:d(b,824),readBytes:d(b,828),opens:d(b,832),closes:d(b,836),fileErrors:d(b,840),heapErrors:d(b,844),mapChanges:d(b,848),lastKey:d(b,852),wakeFlags:d(b,856),waitElapsed:d(b,860),lastToken:d(b,864),queuedKeys:d(b,872),droppedKeys:d(b,876),
     ptes:signature==='K32RUN01'&&tables?Array.from({length:1024},(_,i)=>d(tables,8192+i*4)):null};
   }return null;
  },{previous:previousTag,signature});
