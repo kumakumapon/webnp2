@@ -77,7 +77,7 @@ try{
    await key('ENTER');await wait('No matching apps');
    await key('CTRL+A');await type('z'.repeat(40));await wait('No matching apps');
    assert.equal(await page.evaluate(()=>window.np2debug.np2.getScreenText().lines[5].split('z').length-1),31);
-   await key('CTRL+U');await wait(profile==='k386'?'27 results':'19 results');
+   await key('CTRL+U');await wait(profile==='k386'?'28 results':'19 results');
    await key('ROLLDOWN');await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('Image viewer'));
    await key('HOME');
    await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[7]?.includes('File manager'));
