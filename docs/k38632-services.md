@@ -14,8 +14,8 @@ K32RUN VIEW32.EXE VIEWDATA.TXT
 INPUT32 expects `a`, then `b`. VIEW32 previews an A: root 8.3 text file with
 n/space/PageDown, p/PageUp, j/Down, k/Up, Home/End and q. Escape stops any owner.
 The preview is bounded to 64 KiB / 1024 lines and never changes a file.
-These remain standalone PM32 applications; they do not yet run as KDESK
-windows or concurrently with V86. `KDESK` returns to the existing desktop.
+The same applications also run in [KDESK PM32 windows](k38632-windows.md).
+K32RUN remains the standalone execution path; `KDESK` returns to the desktop.
 
 The native implementation is separated into loader/ELF validation, pure SDK
 policy (`services.c`), real-mode DOS/XMS/keyboard broker (`services-dos.c`),

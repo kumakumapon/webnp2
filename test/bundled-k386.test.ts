@@ -15,9 +15,10 @@ describe('optional experimental K386 disk', () => {
     expect(createHash('sha256').update(image).digest('hex')).toBe(manifest.sha256);
     expect(manifest.dos_files_read_only).toBe(true);
     expect(manifest.extended_memory_mb).toBe(16);
+    expect(manifest.source_dirty).toBe(false);
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
-      'K386.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
+      'K386.EXE', 'K32HOST.EXE', 'K32MIX.COM', 'COUNT32.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
       'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM', 'K32MEM.EXE', 'K32RUN.EXE', 'ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'DATA32.BIN', 'VIEWDATA.TXT', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE',
     ]));
   });
@@ -47,7 +48,7 @@ describe('optional experimental K386 disk', () => {
   it('bundles versioned PM32 SDK applications and immutable read fixtures', () => {
     if (!manifest.enabled) return;
     const disk=openDiskImage(readFileSync(`public/k386/${manifest.image}`),manifest.image);
-    for(const stem of ['ARGS32','HEAP32','INPUT32','FILE32','VIEW32']) {
+    for(const stem of ['ARGS32','HEAP32','INPUT32','FILE32','VIEW32','COUNT32']) {
       const exe=fatReadFile(disk,stem+'.EXE');
       const word=(at:number)=>exe[at]|exe[at+1]<<8;
       expect(new TextDecoder().decode(exe.slice(72,80))).toBe('K32EXE01');
@@ -68,7 +69,7 @@ describe('optional experimental K386 disk', () => {
     const names=manifest.files.map((file: {name: string})=>file.name);
     expect(names).not.toContain('KDESK.COM');
     expect(names).not.toContain('K386.COM');
-    for(const name of ['KDESK.EXE','K386.EXE']) {
+    for(const name of ['KDESK.EXE','K386.EXE','K32HOST.EXE']) {
       const exe=fatReadFile(disk,name);
       const word=(at:number)=>exe[at]|exe[at+1]<<8;
       expect(word(0)).toBe(0x5a4d);
@@ -76,11 +77,15 @@ describe('optional experimental K386 disk', () => {
       expect(word(10)).toBe(word(12));
       expect(word(6)).toBe(name==='KDESK.EXE'?1:0);
       if(name==='KDESK.EXE')expect(word(14)).toBeGreaterThan(word(22));
+      if(name==='K32HOST.EXE') {
+        expect(new TextDecoder().decode(exe.slice(28,36))).toBe('K386APP1');
+        expect(word(38)).toBe(2); // resident service must never enter a V86 slot
+      }
     }
     const config = new TextDecoder().decode(fatReadFile(disk, 'CONFIG.SYS'));
     expect(config).toContain('DEVICE=FDXMS286.SYS');
     expect(config).not.toContain('DEVICE=EMM386');
-    expect(new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'))).toContain('K386.EXE\r\nKDESK.EXE\r\n');
+    expect(new TextDecoder().decode(fatReadFile(disk, 'AUTOEXEC.BAT'))).toContain('K386.EXE\r\nK32HOST.EXE\r\nKDESK.EXE\r\n');
     for (const name of ['IO.SYS', 'MSDOS.SYS', 'COMMAND.COM', 'FDXMS286.SYS']) {
       expect(fatReadFile(disk, name)).toEqual(fatReadFile(baseline, name));
     }

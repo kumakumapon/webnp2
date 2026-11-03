@@ -534,3 +534,39 @@ jobs:
           name: k38632-services-playwright-validation
           path: test-results/k38632-services/
           if-no-files-found: ignore
+
+  k38632-windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned shared PM32 and V86 desktop
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Playwright two PM32 windows, mixed V86, isolation and lifecycle
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/k38632-windows-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-k38632-windows.mjs http://127.0.0.1:4173/webnp2/ test-results/k38632-windows-${{ matrix.video }} ${{ matrix.video }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k38632-windows-${{ matrix.video }}-validation
+          path: test-results/k38632-windows-${{ matrix.video }}/
+          if-no-files-found: ignore
