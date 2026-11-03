@@ -27,7 +27,15 @@ const until=async(predicate,label)=>{
   if(cpu&&cpu.views.some(v=>v.screen.includes('XMS FAIL')))throw new Error(JSON.stringify(record));
   if(cpu&&resources&&xms&&predicate(record))return record;
   if(i&&i%100===0)console.log('WAIT '+label+': '+JSON.stringify({states:cpu?.views.map(v=>v.state),pending:xms?.pending}));await pause(150);
- }throw new Error(label+': '+JSON.stringify(record));
+ }
+ await writeFile(join(output,'failure-state.json'),JSON.stringify({label,record,results,snapshots,
+  inspector:await page.evaluate(()=>{
+   const n=window.np2debug.np2,cpu=window.k386InspectAddresses,resources=window.k386ResourceAddress,xms=window.k386XmsAddress;
+   const bytes=at=>at?Array.from(atob(n.readMemoryBase64(at,32).base64),c=>c.charCodeAt(0)):null;
+   return {cpu,resources,xms,mailboxHeader:bytes(cpu?.mailbox),resourceHeader:bytes(resources),xmsHeader:bytes(xms)};
+  }),
+ },null,2)+'\n');
+ throw new Error(label+': '+JSON.stringify(record));
 };
 const run=async(id,path)=>{await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');await type(path+'\r');};
 const pass=s=>{results.push(s);console.log('PASS '+s);};
