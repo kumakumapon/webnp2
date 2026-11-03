@@ -16,7 +16,7 @@ const manifest=await (await fetch(new URL('k386/manifest.json',base))).json();
 assert.equal(manifest.enabled,true);
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
-let page;const results=[],snapshots=[],measurements=[],errors=[];
+let page;const results=[],snapshots=[],measurements=[],displays=[],errors=[];
 const key=async s=>{await page.evaluate(s=>window.np2debug.np2.sendKeys(s),s);await page.waitForTimeout(150);};
 const type=async s=>{await page.evaluate(s=>window.np2debug.np2.typeText(s),s);await page.waitForTimeout(150);};
 const wait=s=>page.waitForFunction(s=>{try{return window.np2debug.np2.getScreenText().text.includes(s);}catch{return false;}},s,{timeout:90000});
@@ -45,8 +45,9 @@ function progressed(before,after,id){sameOwner(before,after,id);assert.ok(after.
 function privatePair(s){assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);for(let id=0;id<2;id++){const p=pm(s,id);assert.ok(p.pmCR0&1);assert.ok(p.pmCR0>>>31);assert.equal(s.cpu.diagnostics[id].frame.cs,59);assert.equal(s.cpu.diagnostics[id].frame.eflags&0x20000,0);}}
 function held(s,id){const r=record(s,id);return s.cpu.views[id].state===2&&r?.scenario===6&&r.state===4&&pm(s,id).heapPages===512;}
 function checkHeld(s,id,expectedIdentity){const r=record(s,id);assert.equal(r.identity,expectedIdentity);assert.equal(r.sum,arrayExpected('fill',expectedIdentity).sum);assert.equal(r.work,6291456);assert.equal(r.first,patternWord(0,expectedIdentity));assert.equal(r.last,patternWord(2097152-4,expectedIdentity));assert.equal(r.allocations,1);assert.equal(r.frees,0);}
-async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(await diskHash(),manifest.sha256);}
-async function persist(){await writeFile(output+'/verification.json',JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,image:manifest.sha256,video,ramMiB:16,clock:8,articHz:307200,results,measurements,snapshots,errors},null,2)+'\n');}
+async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(await diskHash(),manifest.sha256);
+ const graphics=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());assert.equal(graphics.width,video==='cirrus'?800:640);assert.equal(graphics.height,video==='cirrus'?600:400);if(video==='cirrus')assert.equal(graphics.deviceBpp,16);displays.push({ramMiB:mem,...graphics});}
+async function persist(){await writeFile(output+'/verification.json',JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,image:manifest.sha256,video,displays,ramMiB:16,clock:8,articHz:307200,results,measurements,snapshots,errors},null,2)+'\n');}
 try{
  await boot(16);
  // Use the actual guest launcher, not a host app substitute.
@@ -84,7 +85,7 @@ try{
  // Two apps reserve the same virtual addresses and retain distinct 2 MiB
  // patterns. C re-reads EVERY byte after peer activity and lifecycle changes.
  await run(0,'XARRAY32.EXE 1');await until(s=>ready(s,0),'identity one');await type('h');await until(s=>held(s,0),'first held array',300000);
- await run(1,'XARRAY32.EXE 2');await until(s=>ready(s,1),'identity two');await type('h');s=await until(s=>held(s,1)&&held(s,0),'two held arrays',300000);privatePair(s);checkHeld(s,0,1);checkHeld(s,1,2);save('two private 2 MiB patterns',s);
+ await run(1,'XARRAY32.EXE 2');await until(s=>ready(s,1),'identity two');await type('h');s=await until(s=>held(s,1)&&held(s,0),'two held arrays',300000);privatePair(s);checkHeld(s,0,1);checkHeld(s,1,2);save('two private 2 MiB patterns',s);await page.screenshot({path:output+'/two-private-arrays.png'});
  assert.equal(pm(s,0).heapBase,pm(s,1).heapBase);
  const heapFirst=(pm(s,0).heapBase-0x800000)/4096;assert.ok(Number.isInteger(heapFirst)&&heapFirst>0);
  for(const offset of [0,255,511])for(let id=0;id<2;id++){
@@ -94,8 +95,9 @@ try{
  await key('CTRL+N');await key('CTRL+P');s=await until(s=>s.cpu.views[0].state===3,'pause held owner');const paused=s;
  await key('CTRL+O');await type('c');s=await until(s=>record(s,1)?.state===2&&s.cpu.views[1].state===2,'peer verifies while other is stopped');progressed(paused,s,1);assert.equal(s.cpu.views[0].state,3);sameOwner(paused,s,0);assert.deepEqual(record(s,0),record(paused,0));assert.equal(s.resources.usage[0].cpuTicks,paused.resources.usage[0].cpuTicks);
  await type('h');await until(s=>held(s,1),'peer refilled',300000);await key('CTRL+N');await key('CTRL+R');await until(s=>held(s,0),'resume original owner');await type('c');s=await until(s=>record(s,0)?.state===2&&s.cpu.views[0].state===2,'full original data verification');sameOwner(paused,s,0);
- await type('h');await until(s=>held(s,0),'End victim filled',300000);s=await end(0);clean(s,0);checkHeld(s,1,2);const endedGeneration=s.cpu.views[0].generation;save('End reclaims selected held owner',s);
+ await type('h');await until(s=>record(s,0)?.scenario===6&&record(s,0)?.state===1&&s.cpu.views[0].state===1&&pm(s,0)?.heapPages===512,'End victim actively filling',300000);s=await end(0);clean(s,0);checkHeld(s,1,2);const endedGeneration=s.cpu.views[0].generation;save('End reclaims selected running owner',s);
  await run(0,'XARRAY32.EXE 1');s=await until(s=>ready(s,0)&&s.cpu.views[0].generation!==endedGeneration,'new generation after End');await type('f');s=await until(s=>s.cpu.views[0].state===4&&pm(s,0)?.reason===14,'fault with 512 heap pages');clean(s,0);assert.equal(pm(s,0).heapPeak,512);assert.equal(pm(s,0).cr2,0x10000);assert.equal(pm(s,0).faultError,7);checkHeld(s,1,2);save('contained user-write fault with peer pattern intact',s);
+ const faultGeneration=s.cpu.views[0].generation;await end(0);await run(0,'XARRAY32.EXE 1');s=await until(s=>ready(s,0)&&s.cpu.views[0].generation!==faultGeneration,'restart after contained fault');checkHeld(s,1,2);await type('q');clean(await until(s=>s.cpu.views[0].state===0,'restarted owner quits'),0);
  await key('CTRL+O');await type('c');s=await until(s=>record(s,1)?.state===2&&s.cpu.views[1].state===2,'peer re-reads full array after End and fault');assert.equal(record(s,1).allocations,1);assert.equal(record(s,1).frees,1);await type('q');s=await until(s=>s.cpu.views[1].state===0,'held peer quits');clean(s,1);await end(0);
  pass('same virtual heap, different page tables and data; stop/resume preserves 2 MiB, End/fault reclaim only the victim, and the peer verifies every retained byte afterwards');
  await key('F4');await type('ARRAY32 CHECKED');await wait('ARRAY32 CHECKED');await key('F10');await wait('Unsaved memo:');await type('d');await wait('KDESK exited.');assert.equal(await diskHash(),manifest.sha256);await page.close();

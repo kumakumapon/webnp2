@@ -105,13 +105,16 @@ try{
   page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
   await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
   await wait('Ready');assert.equal(await diskHash(),manifest.sha256);
+  const graphics=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());
+  assert.equal(graphics.width,video==='cirrus'?800:640);assert.equal(graphics.height,video==='cirrus'?600:400);
+  if(video==='cirrus')assert.equal(graphics.deviceBpp,16);
   await run(1,'COUNT32.EXE 1');await requireState(counterReady,'counter initialization');
   // Warm both slots before timing, so replacement of the automatic KSH shell
   // is not compared with reuse of a previously ended PM32 owner.
   let old=(await snapshot()).cpu.views[0].generation;
   await run(0,'FILE32.EXE');fileClean(await requireState(s=>fileDone(s,old),'file warm-up'));
   if(clockOpen){await find('clock');await wait('12-hour');await page.waitForFunction(()=>!window.np2debug.np2.getScreenText().text.includes('Find apps'));}
-  const row={clockOpen,file:[],input:[],snapshots:[]};cases.push(row);
+  const row={clockOpen,graphics,file:[],input:[],snapshots:[]};cases.push(row);
   if(clockOpen&&phase==='changed')await occlusionCheck(row);
   for(let i=0;i<repeats;i++){
    const before=await snapshot(),start=performance.now();old=before.cpu.views[0].generation;
