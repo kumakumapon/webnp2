@@ -82,9 +82,28 @@ try {
  const drawing=await until(r=>r.cpu.views.every((v,i)=>v.counter>resumed.cpu.views[i].counter),'DOS progresses with paint window open');
  await page.waitForFunction(()=>{const lines=window.np2debug.np2.getScreenText().lines;const row=lines.findIndex(l=>l.includes('Image editor'));if(row<1)return false;window.windowToolsTestOrigin={x:(lines[row].indexOf('Image editor')-2)*8,y:(row-1)*16};return true;},null,{timeout:60000});
  const origin=await page.evaluate(()=>window.windowToolsTestOrigin);
+ snapshots.push({checkpoint:'paint-origin',origin,screen:await text()});
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await pause(250);
  await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x+24,p.y+72),origin);await pause(250);
- await page.evaluate(()=>window.np2debug.np2.mouseClick());await pause(450);
+ await page.screenshot({path:output+'/paint-before-click.png'});
+ // A short host click can begin and end between guest polls under the
+ // Cirrus repaint load. Hold the real bus button until the guest image buffer
+ // acknowledges this exact stroke, then release before sending Save.
+ await page.evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]));
+ try {
+  await page.waitForFunction(()=>{
+   const api=window.np2debug.np2,s=atob(api.readMemoryBase64(0x1000,0x9f000).base64);let at=-1;
+   while((at=s.indexOf('KDESKCLP',at+1))>=0){
+    const w=o=>s.charCodeAt(at+o)|s.charCodeAt(at+o+1)<<8;
+    if(w(8)!==1||w(10)!==1||w(22)!==224||w(24)!==144)continue;
+    const base=w(26)*16;if(base<0x10000||base+224*144>0xa0000)continue;
+    if(atob(api.readMemoryBase64(base+8*224+8,1).base64).charCodeAt(0)===196)return true;
+   }return false;
+  },null,{timeout:60000,polling:100});
+ } finally {
+  await page.evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]));
+ }
+ await pause(200);
  await key('CTRL+S');await wait('Saved BMP');bitmap=await file('DRAW.BMP');
  const pixel=b=>b[b.readUInt32LE(10)+(b.readInt32LE(22)-1-8)*((b.readInt32LE(18)+3)&~3)+8];
  const savedPixel=async expected=>{for(let i=0;i<600;i++){try{const b=await file('DRAW.BMP');if(pixel(b)===expected)return b;}catch{}await pause(50);}const b=await file('DRAW.BMP');await writeFile(output+'/unexpected.bmp',b);throw new Error('saved mouse pixel '+pixel(b)+' expected '+expected);};
@@ -121,5 +140,5 @@ try {
  assert.deepEqual(errors,[]);
  pass('incremental shell raster matches a complete repaint; existing kernel, COMMAND, image and data files remain intact');
  await writeFile(output+'/verification.json',JSON.stringify({source:manifest.source_commit,image_sha256:manifest.sha256,video:video||'pegc',browser:browser.version(),results,snapshots},null,2)+'\n');
-}catch(e){console.error(await text().catch(()=>''));await page.screenshot({path:output+'/failure.png'}).catch(()=>{});throw e;}
+}catch(e){await writeFile(output+'/failure.json',JSON.stringify({error:String(e),snapshots,results,screen:await text().catch(()=>null)},null,2));console.error(await text().catch(()=>''));await page.screenshot({path:output+'/failure.png'}).catch(()=>{});throw e;}
 finally{await browser.close();}

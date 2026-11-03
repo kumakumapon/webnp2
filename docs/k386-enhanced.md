@@ -119,3 +119,7 @@ Continuation [MS-DOS #18](https://github.com/kumakumapon/MS-DOS/pull/18) and
 DOS memory/PSP/environment, nested processes, inherited handles, BIOS interval
 timers and original COMMAND probes. The process E2E adds actual per-level CPU
 contexts, memory cookies and firmware-write faults; CI records final evidence.
+
+The standalone PM32 practical SDK and read-only text viewer are documented in
+[k38632-services.md](k38632-services.md). They remain separate from V86/GUI
+ownership pending the mixed-owner scheduling milestone.

@@ -33,8 +33,10 @@ def main():
         files[name] = (source / 'tools/k386/build' / name).read_bytes()
     files['K32CPU.COM'] = (source / 'tools/k38632/build/K32CPU.COM').read_bytes()
     files['K32MEM.EXE'] = (source / 'tools/k38632/build/K32MEM.EXE').read_bytes()
-    for name in ['K32RUN.EXE', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE', 'BADABI.EXE', 'BADENT.EXE', 'BADOVR.EXE', 'BADSIZE.EXE', 'BADELF.EXE']:
+    for name in ['ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'K32RUN.EXE', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE', 'BADABI.EXE', 'BADENT.EXE', 'BADOVR.EXE', 'BADSIZE.EXE', 'BADELF.EXE']:
         files[name] = (source / 'tools/k38632/build' / name).read_bytes()
+    files['DATA32.BIN'] = bytes(i % 251 for i in range(70001))
+    files['VIEWDATA.TXT'] = b''.join(f'LINE {i:03d} - K38632 read-only text viewer\r\n'.encode('ascii') for i in range(80))
     files['KDISP.COM'] = (source / 'tools/display/build/KDISP.COM').read_bytes()
     malformed = bytearray(files['MZTEST.EXE'])
     malformed[28:32] = b'\xff\xff\xff\xff'
