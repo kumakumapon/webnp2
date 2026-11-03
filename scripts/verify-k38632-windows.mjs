@@ -21,7 +21,7 @@ function save(label,s){snapshots.push({label,...s});}
 async function find(q){await key('CTRL+K');await wait('Find apps');await type(q);await page.waitForFunction(q=>{const l=window.np2debug.np2.getScreenText().lines;return l[5]?.slice(15,64).trim().replace(/_$/,'')===q&&l[20]?.includes('1 results -');},q,{timeout:90000});await key('ENTER');}
 async function run(id,command){await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');await wait('COM/EXE command:');await type(command+'\r');}
 async function end(id){await key(id?'CTRL+O':'CTRL+N');await key('CTRL+E');return until(s=>s.cpu.views[id].state===0,'end '+id);}
-async function task(id,command){await find('task manager');for(let i=0;i<14;i++)await key('UP');for(let i=0;i<8+id;i++)await key('DOWN');await type(command);}
+async function task(id,command){const resources=await inspectResources(page);await find('task manager');for(let i=0;i<14;i++)await key('UP');for(let i=0;i<8+id;i++)await key('DOWN');await wait('ID '+resources.usage[id].generation+'  '+resources.usage[id].program+'  Priority:');await type(command);}
 const pm=(s,id)=>s.cpu.diagnostics[id].pm32;
 const live=(s,id)=>s.cpu.views[id].kind===1&&s.cpu.views[id].state===1&&s.cpu.views[id].counter>0;
 function owned(s,id){
@@ -52,7 +52,7 @@ try{
  await key('CTRL+N');await find('window left');await key('CTRL+O');await find('window right');await key('CTRL+G');await key('CTRL+G');await key('F8');await key('CTRL+O');
  await find('math');await wait('Value: 0');await type('6*7=');await wait('Value: 42');await key('F4');await type('PM32 GUI COEXISTS');await wait('PM32 GUI COEXISTS');await find('clock');await wait('12-hour');
  s=await until(s=>s.cpu.views[1].counter>counter&&s.cpu.views[0].state===2,'native GUI coexistence');assert.deepEqual(s.resources.usage.map(u=>u.generation),generation);
- await page.screenshot({path:join(output,'two-pm32-gui.png')});
+ await page.waitForFunction(()=>!window.np2debug.np2.getScreenText().text.includes('Find apps'));await page.waitForTimeout(1200);await page.screenshot({path:join(output,'two-pm32-gui.png')});
  pass('windowed VIEW32 file/ANSI/navigation, wait without redispatch, per-focus input, tiling/maximize/minimize and calculator/clock/memo coexistence');
  await key('CTRL+N');await type('q');s=await until(s=>s.cpu.views[0].state===0,'viewer quit');reclaimed(s,0);
  await run(0,'COUNT32.EXE 2');s=await until(s=>live(s,0)&&live(s,1),'two private counters');owned(s,0);owned(s,1);
