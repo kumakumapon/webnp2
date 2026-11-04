@@ -9,6 +9,7 @@ import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectXms} from './k386-xms.mjs';
 import {arrayWorkloads,arrayExpected,arrayRecord,legacyArrayResult,patternWord} from './k386-array-workloads.mjs';
+import {pm32CounterReady} from './k386-counter-progress.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k38632-array',video='pegc']=process.argv.slice(2);
 assert.ok(['pegc','cirrus'].includes(video));
@@ -54,7 +55,8 @@ try{
  await key('CTRL+K');await wait('Find apps');await type('pm32 array lab');
  await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[20]?.includes('1 results -'),null,{timeout:90000});await key('ENTER');
  let s=await until(s=>ready(s,0),'XARRAY32 launcher');save('PM32 startup',s);assert.equal(record(s,0).identity,1);
- await run(1,'COUNT32.EXE 1');s=await until(s=>s.cpu.views[1].kind===1&&s.cpu.views[1].counter>0&&pm(s,1)?.samples[2]===0x50333221,'PM32 peer initialized');
+ let previousPeerGeneration=(await snapshot()).cpu.views[1].generation;
+ await run(1,'COUNT32.EXE 1');s=await until(s=>pm32CounterReady(s,1,previousPeerGeneration),'PM32 peer initialized');
  privatePair(s);
  const pmResults=new Map();
  for(const workload of arrayWorkloads){
@@ -70,7 +72,8 @@ try{
  // Same data and operations through the legacy paged-XMS API. Canonical
  // results precede statistics; wait for the prompt and actual block release.
  await run(0,'XARRAY.EXE');await until(s=>s.cpu.views[0].kind===0&&s.cpu.views[0].state===2&&s.cpu.views[0].screen.includes('XARRAY READY'),'legacy startup');
- await run(1,'COUNT32.EXE 1');await until(s=>s.cpu.views[1].counter>0&&pm(s,1)?.samples[2]===0x50333221,'mixed peer ready');await key('CTRL+N');
+ previousPeerGeneration=(await snapshot()).cpu.views[1].generation;
+ await run(1,'COUNT32.EXE 1');await until(s=>pm32CounterReady(s,1,previousPeerGeneration),'mixed peer ready');await key('CTRL+N');
  for(const workload of arrayWorkloads){
   const before=await snapshot(),start=performance.now();await type(workload.key);
   s=await until(s=>s.cpu.views[0].state===2&&legacyArrayResult(s.cpu.views[0].screen,workload.name),'V86 '+workload.name,600000);

@@ -13,3 +13,14 @@ export function counterPairAdvanced(before,after) {
    u.runs>previous.runs&&u.cpuTicks>previous.cpuTicks&&delta>0&&delta<0x80000000;
  });
 }
+
+// A terminated PM32 slot deliberately retains its last counter and CPU samples
+// for diagnostics. A replacement is ready only after its own live generation,
+// resource owner and protected CPU frame agree and it has executed COUNT32.
+export function pm32CounterReady(snapshot,id,previousGeneration){
+ const v=snapshot?.cpu?.views?.[id],u=snapshot?.resources?.usage?.[id],d=snapshot?.cpu?.diagnostics?.[id],p=d?.pm32;
+ return !!v&&!!u&&!!p&&v.kind===1&&v.abi===257&&v.state===1&&v.generation>0&&v.generation!==previousGeneration&&
+  u.generation===v.generation&&u.program==='COUNT32.EXE'&&u.psp===v.psp&&v.cr3>0&&v.physical>0&&
+  v.counter>0&&v.screen.includes('COUNT32 1')&&p.error===0&&p.handle>0&&p.locked===1&&
+  p.samples?.[1]===49&&p.samples?.[2]===0x50333221&&d.frame?.cs===59&&!(d.frame.eflags&0x20000);
+}
