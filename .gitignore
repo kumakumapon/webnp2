@@ -13,3 +13,5 @@ public/k386/LICENSE.txt
 public/k386/K386.txt
 
 .work/cirrus-core/
+public/kgui32/*.xdf
+public/kgui32/LICENSE.txt

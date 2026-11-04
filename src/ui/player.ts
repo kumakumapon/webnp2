@@ -219,6 +219,8 @@ export interface PlayerOptions {
   msDos4BootUrl?: string;
   k386BootUrl?: string;
   k386HighColorBootUrl?: string;
+  kgui32BootUrl?: string;
+  kgui32HighColorBootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
   /**
@@ -746,6 +748,14 @@ export function buildPlayerUI(
   const k386HighColorBtn = options.k386HighColorBootUrl
     ? el('a', {class:'start-btn start-btn-k386-highcolor',href:k386HighColorHref()}, [t('startBtnK386HighColor')])
     : undefined;
+  const kgui32Href = () => `${options.kgui32BootUrl}&lang=${getLang()}`;
+  const kgui32Btn = options.kgui32BootUrl
+    ? el('a', {class:'start-btn start-btn-kgui32',href:kgui32Href()}, [t('startBtnKgui32')])
+    : undefined;
+  const kgui32HighColorHref = () => `${options.kgui32HighColorBootUrl}&lang=${getLang()}`;
+  const kgui32HighColorBtn = options.kgui32HighColorBootUrl
+    ? el('a', {class:'start-btn start-btn-kgui32-highcolor',href:kgui32HighColorHref()}, [t('startBtnKgui32HighColor')])
+    : undefined;
   // ライブラリが空の場合もあるため既定は非表示。起動可否は非同期チェック後に表示する。
   const libraryStartBtn = el('button', { class: 'start-btn start-btn-library hidden', type: 'button' }, [
     t('overlayLibraryBtn'),
@@ -756,6 +766,8 @@ export function buildPlayerUI(
   if (msDos4Btn) overlayButtonList.push(msDos4Btn);
   if (k386Btn) overlayButtonList.push(k386Btn);
   if (k386HighColorBtn) overlayButtonList.push(k386HighColorBtn);
+  if (kgui32Btn) overlayButtonList.push(kgui32Btn);
+  if (kgui32HighColorBtn) overlayButtonList.push(kgui32HighColorBtn);
   overlayButtonList.push(libraryStartBtn);
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
   const overlay = el('div', { class: 'overlay' }, [overlayButtons, overlayNote]);
@@ -2798,6 +2810,14 @@ export function buildPlayerUI(
       if (k386HighColorBtn) {
         k386HighColorBtn.textContent = t('startBtnK386HighColor');
         k386HighColorBtn.href = k386HighColorHref();
+      }
+      if (kgui32Btn) {
+        kgui32Btn.textContent = t('startBtnKgui32');
+        kgui32Btn.href = kgui32Href();
+      }
+      if (kgui32HighColorBtn) {
+        kgui32HighColorBtn.textContent = t('startBtnKgui32HighColor');
+        kgui32HighColorBtn.href = kgui32HighColorHref();
       }
       if (msDos4Btn) {
         msDos4Btn.textContent = t('startBtnMsDos4');

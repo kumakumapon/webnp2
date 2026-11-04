@@ -61,6 +61,44 @@ jobs:
             public/k386/manifest.json
             public/k386/LICENSE.txt
             public/k386/K386.txt
+            public/kgui32/*.xdf
+            public/kgui32/manifest.json
+            public/kgui32/LICENSE.txt
+
+  kgui32:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned native desktop and fallback images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Playwright independent PM32 desktop, ownership, failure and fallback validation
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/kgui32-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-kgui32.mjs http://127.0.0.1:4173/webnp2/ test-results/kgui32-${{ matrix.video }} ${{ matrix.video }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kgui32-${{ matrix.video }}-playwright-validation
+          path: test-results/kgui32-${{ matrix.video }}/
+          if-no-files-found: ignore
 
   k386-shell:
     runs-on: ubuntu-latest

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_commit=b99bac3292fcaa60c46a2a768f834e7dc07f25a1
+source_commit=6d6afbbeab25454c72dbaf9383431806f19576cb
 source_dir="$(mktemp -d)"
 trap 'rm -rf "$source_dir"' EXIT
 
@@ -13,3 +13,4 @@ git -C "$source_dir" checkout --quiet --detach FETCH_HEAD
 python3 scripts/update-msdos4-cpanel.py "$source_dir" --with-window
 
 python3 scripts/update-k386.py "$source_dir"
+python3 scripts/update-kgui32.py "$source_dir"
