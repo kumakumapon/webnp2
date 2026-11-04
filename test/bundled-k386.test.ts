@@ -18,7 +18,7 @@ describe('optional experimental K386 disk', () => {
     expect(manifest.source_dirty).toBe(false);
     expect(manifest.source_commit).toMatch(/^[a-f0-9]{40}$/);
     expect(manifest.files.map((file: {name: string}) => file.name)).toEqual(expect.arrayContaining([
-      'K386.EXE', 'K32HOST.EXE', 'K32MIX.COM', 'COUNT32.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
+      'K386.EXE', 'K32HOST.EXE', 'K32MIX.COM', 'COUNT32.EXE', 'XARRAY32.EXE', 'XARRAY.EXE', 'K386CPU.COM', 'K386TEST.COM', 'KDESK.EXE', 'COUNTER.EXE', 'ECHO.EXE', 'KFILE.EXE', 'PORT.EXE', 'DF.EXE', 'FPU.EXE',
       'KSH.EXE', 'KHELLO.EXE', 'BADAPP.EXE', 'MZTEST.EXE', 'FLAGS.EXE', 'DTA.EXE', 'KEYCHK.EXE', 'TIMER.EXE', 'MEMORY.EXE', 'PROCESS.EXE', 'BADTIMER.EXE', 'ROMWRITE.EXE', 'FDXMS286.SYS', 'KRESCHK.COM', 'INTWAIT.EXE', 'CASE.EXE', 'XMEM.EXE', 'XCHILD.EXE', 'K32CPU.COM', 'K32MEM.EXE', 'K32RUN.EXE', 'ARGS32.EXE', 'HEAP32.EXE', 'INPUT32.EXE', 'FILE32.EXE', 'VIEW32.EXE', 'DATA32.BIN', 'VIEWDATA.TXT', 'HELLO32.EXE', 'MEM32.EXE', 'SPIN32.EXE', 'BADPTR32.EXE', 'FAULT32.EXE',
     ]));
   });
@@ -55,6 +55,11 @@ describe('optional experimental K386 disk', () => {
       expect(word(80)).toBe(257);expect(word(92)).toBe(15);
       expect(word(38)).toBe(3);
     }
+    const array=fatReadFile(disk,'XARRAY32.EXE');
+    const word=(at:number)=>array[at]|array[at+1]<<8;
+    expect(new TextDecoder().decode(array.slice(72,80))).toBe('K32EXE01');
+    expect(word(80)).toBe(257);expect(word(92)).toBe(7);
+    expect(word(38)).toBe(3); // CPU backend is PM32, without read-file capability.
     const data=fatReadFile(disk,'DATA32.BIN');
     expect(data.length).toBe(70001);
     expect(data.every((value,index)=>value===index%251)).toBe(true);

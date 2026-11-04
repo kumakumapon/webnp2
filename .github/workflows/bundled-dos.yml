@@ -411,6 +411,76 @@ jobs:
           if-no-files-found: ignore
 
 
+  k38632-render-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned native desktop and DOS images
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Measure live overlapping Clock, FILE32, VIEW32 and background CPU
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/render-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/measure-k386-render-load.mjs http://127.0.0.1:4173/webnp2/ test-results/render-load changed ${{ matrix.video }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k38632-render-load-${{ matrix.video }}
+          path: test-results/render-load/
+          if-no-files-found: ignore
+
+  k38632-array:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned PM32 and V86 array applications
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Compare real CPU results and test owner isolation and lifecycle
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/array32-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-k38632-array.mjs http://127.0.0.1:4173/webnp2/ test-results/k38632-array ${{ matrix.video }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k38632-array-${{ matrix.video }}
+          path: test-results/k38632-array/
+          if-no-files-found: ignore
+
   k38632:
     runs-on: ubuntu-latest
     timeout-minutes: 15
