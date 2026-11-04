@@ -49,6 +49,8 @@ interface Dict {
   startBtnMsDos4(): string;
   startBtnK386(): string;
   startBtnK386HighColor(): string;
+  startBtnKgui32(): string;
+  startBtnKgui32HighColor(): string;
   toolbarReset(): string;
   toolbarFullscreen(): string;
   toolbarMachineReset(): string;
@@ -501,6 +503,8 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnMsDos4: () => 'MS-DOS 4.0 + RetroBasic で起動',
     startBtnK386: () => 'KDESK/386（実験版）で起動',
     startBtnK386HighColor: () => 'KDESK/386（800×600・65,536色）で起動',
+    startBtnKgui32: () => 'KGUI32（独立32bit GUI・実験版）で起動',
+    startBtnKgui32HighColor: () => 'KGUI32（800×600・65,536色・実験版）で起動',
     toolbarReset: () => '初期状態に戻す',
     toolbarFullscreen: () => 'フルスクリーン',
     toolbarMachineReset: () => 'マシンリセット',
@@ -875,6 +879,8 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnMsDos4: () => 'Start with MS-DOS 4.0 + RetroBasic',
     startBtnK386: () => 'Start KDESK/386 (experimental)',
     startBtnK386HighColor: () => 'Start KDESK/386 (800×600, 65,536 colors)',
+    startBtnKgui32: () => 'Start KGUI32 (independent 32bit GUI, experimental)',
+    startBtnKgui32HighColor: () => 'Start KGUI32 (800×600, 65,536 colors, experimental)',
     toolbarReset: () => 'Reset to Original',
     toolbarFullscreen: () => 'Fullscreen',
     toolbarMachineReset: () => 'Reset Machine',
