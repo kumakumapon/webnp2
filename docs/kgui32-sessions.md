@@ -7,7 +7,7 @@ KGUI32の専用CPL3デスクトップへ、既存の2つのV86/PM32実行枠を�
 背景タスクの実行後から次の割り当て間隔を測り、GUIの描画時間を確保します。
 
 操作方法は[kgui32.md](kgui32.md)、API構造とエラー・所有権の契約は
-[MS-DOS側のSESSIONS.md](https://github.com/kumakumapon/MS-DOS/blob/codex/kgui32-sessions/tools/kgui32/SESSIONS.md)を参照してください。
+[MS-DOS側のSESSIONS.md](https://github.com/kumakumapon/MS-DOS/blob/main/tools/kgui32/SESSIONS.md)を参照してください。
 
 | 機能 | 今回の範囲 |
 | --- | --- |
@@ -21,7 +21,8 @@ KGUI32の専用CPL3デスクトップへ、既存の2つのV86/PM32実行枠を�
 
 GUI専用4 MiB、PM32アプリごとに既存4 MiB、実行枠2本、拡張メモリ16 MiBを維持します。
 ブラウザのHTML端末、別CPUコア、DOSカーネル改変、共有ディスク書き込みは追加しません。
-汎用グラフィカルGUI SDK、日本語・文字属性、クリップボード、直接GDCを操作するアプリの
+初版GUI SDKと電卓・時計は[kgui32-client-sdk.md](kgui32-client-sdk.md)を参照してください。
+高度なGUI部品、日本語・文字属性、クリップボード、直接GDCを操作するアプリの
 仮想化、実行枠の拡大は後続の開発項目です。既存KDESKも別途起動できます。
 
 ## 検証と同期
