@@ -45,7 +45,7 @@ def main():
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
-        'dos_files_read_only':True,'compatibility':'independent PM32 desktop foundation; DOS/application window integration and widget SDK are later milestones',
+        'dos_files_read_only':True,'compatibility':'independent PM32 desktop with two owned V86/PM32 ASCII text windows; graphical client/widget SDK is a later milestone',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')

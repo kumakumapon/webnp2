@@ -10,13 +10,25 @@ CIでイメージ生成後、起動画面の「KGUI32（独立32bit GUI・実験
 PEGCは640×400・256色、Cirrusの選択肢は800×600・65,536色です。拡張メモリ16 MiBを
 指定し、イメージ内のXMSドライバを使用します。保存済みのディスクは差し替えません。
 
-- タイトルバーをドラッグして移動。Tabでフォーカス切り替え、矢印キーで移動。
-- 右上の最小化・閉じるボタンと、下部タスクバーによる復元・再表示。
-- SystemのTest CPU（T）で2つのPM32診断アプリを起動、Stop（S）で終了。
-- F10 / Escape / Q / Exit to DOSで終了。DOSで`KDESK`を入力すれば従来GUIを起動可能。
+- タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
+- **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。
+- DOSウィンドウのRun（Ctrl+L）でコマンドを入力しEnter。実行中のルートは先にEnd。
+  例: `COUNT32.EXE 1`、`VIEW32.EXE VIEWDATA.TXT`。Escで入力を取り消し。
+- Stop（Ctrl+P）、Resume（Ctrl+R）、End（Ctrl+E）、Again（直前の成功したルートを再起動）。
+- 最小化しても処理を継続。下部タスクバーで復元。閉じる操作は所有するセッションを終了。
+- DOSウィンドウ右下のグリップでサイズ変更。下部Left/Right/Up/Downで画面をスクロール。
+- キーはフォーカス先だけに転送。通常のQ/T/Sもアプリへ届きます。Tab、Ctrl+L/P/R/Eは予約。
+- F10 / Exit to DOSでGUI全体を終了。組み込みウィンドウではEsc/Qも終了。
+  DOSで`KDESK`を入力すれば従来GUIを起動可能。
 
-Test CPUは実行基盤の検証用です。一般アプリを新GUI内のウィンドウで操作する機能は
-まだありません。既存アプリが2枠のいずれかを使用中なら開始を拒否し、置き換えません。
+80×25文字の画面を保持し、ウィンドウ内にはその一部を表示します。入力時はカーソル位置を
+追従します。表示はASCII・8×16で、PEGCでは一部の行・列をスクロールして操作します。
+アプリ枠は既存の2本、GUI専用枠は別に維持します。DOSシェル2本、DOSとPM32、PM32同士を
+組み合わせられます。汎用のグラフィカルGUIアプリSDKは後続です。
+
+SystemのTest CPU（T）は2つのCOUNT32診断タスクを起動します。既存の実行枠が使用中なら
+開始を拒否します。System Stop（S）はこのローダーが所有する対話セッションも終了します。
+別の所有者のタスクは表示だけが可能で、入力・停止・終了・置換は拒否します。
 
 ## 構成・責務
 
@@ -30,7 +42,7 @@ Test CPUは実行基盤の検証用です。一般アプリを新GUI内のウィ
 
 GUIは専用4 MiBのXMS領域・GDT/IDT/TSS・スタック・ページテーブルを持ちます。
 低位メモリは監督者専用、コード/引数ページは読み取り専用、スタックには未割り当て
-ガードページを設けます。GUI用feature bit 16とシステムコール64〜68は専用ローダー
+ガードページを設けます。GUI用feature bit 16とシステムコール64〜70は専用ローダー
 だけが受理し、通常のK32RUN/K32HOSTはGUIパッケージを拒否します。
 
 描画は、検証したダメージ矩形を32 KiBの専用中間バッファ経由で既存ネイティブドライバへ
@@ -39,7 +51,7 @@ DOS呼び出しとアプリのスケジュールは実モードへ戻った安�
 イベントキューは32件で移動をまとめ、あふれを計数し、最終ボタン解放を取り込みます。
 
 GUIの正常終了・ページフォールト・無限ループの強制終了では、自分が起動した世代の
-診断アプリと、描画/フォント/パレット/XMS/通常メモリを回収します。既存所有者には
+アプリと、描画/フォント/パレット/XMS/通常メモリを回収します。既存所有者には
 終了要求を送りません。ディスク操作は既存の読み取り専用方針を維持します。
 
 これはGUI専用の保護モードクライアントと実モード管理層による最初の基盤です。
@@ -61,6 +73,8 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4173
 WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32.mjs http://127.0.0.1:4173/ test-results/kgui32-pegc pegc
 WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32.mjs http://127.0.0.1:4173/ test-results/kgui32-cirrus cirrus
+WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32-sessions.mjs http://127.0.0.1:4173/ test-results/kgui32-pegc/sessions pegc
+WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32-sessions.mjs http://127.0.0.1:4173/ test-results/kgui32-cirrus/sessions cirrus
 ```
 
 生成画像・manifest・ライセンス出力はPages/CI成果物とし、生成済みイメージをコミット
@@ -73,12 +87,14 @@ PlaywrightはGUIの実CPUフレーム、CR3/物理メモリ、CPUが取得した
 ページ保護、描画ピクセル、キー/マウス操作、バックグラウンドカウンタを検査します。
 正常終了・不正API・実際の#PF・IRQ0で中断する無限ループ・4 MiBでの割り当て拒否を
 検証し、最後に従来KDESKの電卓を操作して全FAT12のハッシュ一致を確認します。
-`KGPROOF.COM`は生きたDOS親から3回GUIをEXECし、事前に起動した2アプリの世代・
+`KGPROOF.COM`は生きたDOS親から4回GUIをEXECし、事前に起動した2アプリの世代・
 ページテーブル・ヒープが残り、通常/XMS空き量が戻ることも検査します。
-CIはPEGC/Cirrusの専用E2Eを追加し、既存のKDESK/K386テストも維持します。
+セッションE2EではKSH×2、KSH/COUNTER＋COUNT32、VIEW32＋COUNT32の入力分離、
+非アクティブ実行、停止・再開・最小化、実ファイル読み取り、起動失敗、#PFと再起動を検証します。
+CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持します。
 
-実装済みの対象はWelcome/Systemの2ウィンドウと描画・入力・所有権の基盤です。
-外部DOS/PM32アプリのウィンドウ表示、汎用GUI SDK、リサイズ部品、クリップボード、
-ファイラー、日本語描画、既存アプリ移植は後続段階です。従来KDESKでは引き続き
-既存機能を利用できます。ネイティブの詳細設計はMS-DOSの`tools/kgui32/README.md`を
-参照してください。
+実装済みの対象はWelcome/Systemと2つのDOS/PM32テキストウィンドウです。
+汎用GUI SDK、クリップボード、ファイラー、日本語・文字属性の描画、直接GDCを操作する
+外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
+従来KDESKの既存機能も引き続き利用できます。
+ネイティブ設計はMS-DOSの`tools/kgui32/README.md`と`SESSIONS.md`を参照してください。
