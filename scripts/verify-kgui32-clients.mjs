@@ -18,8 +18,16 @@ const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseM
 const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await page.waitForTimeout(220);};
 async function composed(id){
  const first=await until(s=>s.gui.app?.active===id,'focused window '+id);
- return until(s=>s.gui.app?.active===id&&(s.gui.cpu.state===7||s.gui.app.frames>first.gui.app.frames),'composed window '+id);
+ // The client can commit while the GUI still has an older cached frame.
+ // Let timer refreshes run, then force cursor damage and wait past PRESENT.
+ let current=await until(s=>s.gui.app?.active===id&&s.gui.app.heartbeat>=first.gui.app.heartbeat+2,'refreshed window '+id);
+ for(let i=0;i<2;i++){
+  const frames=current.gui.app.frames,x=current.gui.app.mx===10?12:10,y=current.gui.height-48;await point(x,y);
+  current=await until(s=>s.gui.app?.active===id&&s.gui.app.mx===x&&s.gui.app.my===y&&s.gui.app.frames>frames,'composed window '+id);
+ }
+ return current;
 }
+const glyphs=async(x,y)=>page.evaluate(({x,y})=>{const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return Array.from(g.getImageData(x,y,16,16).data);},{x,y});
 async function drain(x,y,id){await point(x,y);await until(s=>s.gui.app?.mx===x&&s.gui.app.my===y,'mouse queue drained');return composed(id);}
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -31,12 +39,14 @@ try{
  assert.equal(s.bridge.currentVector,s.bridge.vector);assert.equal(hash(await disk()),manifest.sha256);
  await click(48+70,64+128);s=await until(s=>live(s,0,0x3243474b),'graphical calculator');
  await type('6*7=');s=await until(s=>live(s,0,0x3243474b)&&s.apps[0].value===42,'calculator key result 42');
+ await composed(2);
+ const initial42=await glyphs(40,123);assert.ok(initial42.some((v,i)=>i%4!==3&&v<100),'calculator digits must be drawn');
  await key('F2');await until(s=>s.gui.app?.active===0,'launcher via F2');
  await click(48+220,64+128);s=await until(s=>live(s,1,0x324b474b),'graphical clock');
  const start=s.apps[1].seconds;s=await until(s=>live(s,0,0x3243474b)&&live(s,1,0x324b474b)&&s.apps[1].seconds!==start,'clock progresses beside calculator');
  assert.equal(s.apps[0].value,42);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.gui.cpu.pd,s.cpu.views[0].cr3);assert.notEqual(s.gui.cpu.pd,s.cpu.views[1].cr3);
- await composed(3);await page.screenshot({path:join(output,'calculator-clock.png')});snapshots.push({label:'two native graphical clients',...s});pass('independent calculator and clock, real CPL3 contexts and continuing background time');
  const width=s.gui.width,height=s.gui.height;
+ await click(330,height-16);await composed(2);await click(480,height-16);await composed(3);await page.screenshot({path:join(output,'calculator-clock.png')});snapshots.push({label:'two native graphical clients',...s});pass('independent calculator and clock, real CPL3 contexts and continuing background time');
  for(const id of [0,1]){assert.equal(s.cpu.diagnostics[id].pm32.features,47);assert.notEqual(s.gui.cpu.physical,s.cpu.views[id].physical);}
  assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);
  const generations=s.cpu.views.map(v=>v.generation);
@@ -66,6 +76,8 @@ try{
  s=await until(s=>live(s,0,0x3243474b)&&s.apps[0].width===384&&s.apps[0].height===184,'client resize event and redraw');assert.equal(s.apps[0].value,64);
  await point(70,52);await button(1);await point(101,63);await button(0);await drain(20,height-48,2);
  await type('c6*7=');s=await until(s=>s.apps[0].value===42&&s.apps[0].error===0,'keys after graphical window move');
+ await composed(2);
+ assert.deepEqual(await glyphs(71,134),initial42,'resized and moved calculator must display the same 42 glyphs');
  await page.screenshot({path:join(output,'resized-clients.png')});snapshots.push({label:'client resize and movement',...s});pass('graphical resize delivers new canvas dimensions; moved client retains calculator input and value');
  // Real invalid client requests cannot affect a peer's window.
  await click(cx+292,cy+188);s=await until(s=>s.cpu.views[1].state===0&&s.cpu.diagnostics[1].pm32.exitCode===0,'clock SDK Close button');assert.equal(s.gui.ready,1);assert.equal(s.apps[0].value,42);
