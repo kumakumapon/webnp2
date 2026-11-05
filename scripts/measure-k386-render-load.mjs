@@ -86,6 +86,14 @@ async function occlusionCheck(row){
  // Resume without raising the console above the memo, via task-manager key
  // commands followed by focusing Memo; the comparison starts after repaint.
  await key('CTRL+O');await key('CTRL+R');await key('F4');await page.waitForTimeout(500);
+ // Input is asynchronous. The printing console can still be in front when
+ // its CPU is already running; capture only after Memo is fully restored.
+ await page.waitForFunction(text=>{
+  const n=window.np2debug.np2,at=window.kdeskPerformanceAddress;if(!at)return false;
+  const h=atob(n.readMemoryBase64(at,16).base64);if(h.charCodeAt(12)||h.charCodeAt(13))return false;
+  const lines=n.getScreenText().lines;
+  return lines[5]?.slice(14,25).includes('Memo')&&lines.filter(l=>l.includes(text)).length===3;
+ },text.slice(0,-1),{timeout:60000});
  const moved=await requireState(s=>!!s.ui&&counterReady(s),'moved occluder and printing peer');
  const movedPixels=await protectedPixels(),movedText=await protectedText({left:12,top:5,width:48,height:16});
  const covered=await requireState(s=>s.ui&&s.ui.clockPreserves>=moved.ui.clockPreserves+2&&s.cpu.views[1].counter>moved.cpu.views[1].counter+131072,'clock and covered printing console');
