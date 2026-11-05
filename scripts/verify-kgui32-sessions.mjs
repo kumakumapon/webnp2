@@ -26,6 +26,7 @@ async function idle(id){
  const first=await until(s=>s.gui?.app?.active===id,'focus window '+id);
  return until(s=>s.gui?.app?.active===id&&(s.gui.cpu.state===7||s.gui.app.frames>first.gui.app.frames),'completed composition for window '+id);
 }
+async function settledPointer(x,y,id){await point(x,y);await until(s=>s.gui?.app?.mx===x&&s.gui.app.my===y,'mouse queue drained');await idle(id);}
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 try{
@@ -94,14 +95,14 @@ try{
  await key('CTRL+L');await type('KSH.EXE\r');s=await until(s=>s.peers?.views[1].kind===0&&s.peers.views[1].screen.includes('K386 DOS shell'),'recover faulted window with shell');
  snapshots.push({label:'failure containment and recovery',...s});pass('failed load rollback, real application #PF, generation-changing restart and shell recovery preserve desktop and peer');
  // Actual framebuffer assertions prove resize/move, not merely requested coordinates.
- await idle(3);await point(20,height-48);
+ await settledPointer(20,height-48,3);
  const [accent,border]=await pixels([[24+399,60],[24,100]]);
  await point(24+ww-8,48+wh-8);await button(1);await point(24+400-8,48+240-8);await button(0);
- await idle(3);await point(20,height-48);
+ await settledPointer(20,height-48,3);
  assert.deepEqual((await pixels([[24+399,60]]))[0],border);
  const newX=width-408,newY=height-280;
  await point(72,60);await button(1);await point(newX+48,newY+12);await button(0);
- await idle(3);await point(20,height-48);
+ await settledPointer(20,height-48,3);
  const moved=await pixels([[newX+250,newY+20],[274,68]]);
  assert.deepEqual(moved[0],accent);assert.notDeepEqual(moved[1],accent);
  await page.screenshot({path:join(output,'resized-moved-session.png')});
@@ -109,7 +110,9 @@ try{
  pass('native session resize and title drag restore actual framebuffer pixels and preserve focused input');
  await key('F10');
  s=await until(s=>s.gui&&!s.gui.ready&&s.gui.state===3,'GUI teardown');
- assert.equal(s.gui.owned,0);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.dosBefore,s.gui.dosAfter);
+ assert.equal(s.gui.owned,0);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.ok(s.peers.views.every(v=>v.state===0));assert.equal(s.gui.dosBefore,s.gui.dosAfter);
+ snapshots.push({label:'final reclaimed',...s});
+ pass('mixed-session teardown reclaims conventional/XMS memory and preserves every FAT12 byte');
  assert.equal(hash(await disk()),manifest.sha256);assert.deepEqual(errors,[]);
- await writeFile(join(output,'verification.json'),JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,sha256:manifest.sha256,video,results,snapshots},null,2)+'\n');
+ await writeFile(join(output,'verification.json'),JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,image:manifest.image,sha256:manifest.sha256,video,results,snapshots},null,2)+'\n');
 }catch(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),gui:await inspectGUI(page).catch(()=>null),peers:await inspectK386(page).catch(()=>null),results,snapshots},null,2)+'\n');await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw e;}finally{await browser.close();}
