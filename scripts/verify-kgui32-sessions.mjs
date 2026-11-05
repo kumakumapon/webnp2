@@ -22,7 +22,10 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 async function until(test,label){console.log('CHECK '+label);let last,report=Date.now();for(let end=Date.now()+120000;Date.now()<end;){last={gui:await inspectGUI(page).catch(()=>null),peers:await inspectK386(page).catch(()=>null),resources:await inspectResources(page).catch(()=>null)};if(test(last))return last;if(Date.now()-report>10000){console.log(JSON.stringify({label,frames:last.gui?.app?.frames,events:last.gui?.app?.events,irqs:last.gui?.cpu?.irqs,eip:last.gui?.cpu?.frame.eip,keys:last.peers?.views.map(v=>v.keys)}));report=Date.now();}await page.waitForTimeout(100);}throw Error(label+' timed out; see failure.json');}
 const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await page.waitForTimeout(180);};
 const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await page.waitForTimeout(220);};
-async function idle(id){return until(s=>s.gui?.app?.active===id&&s.gui.cpu.state===7,'GUI finished composing window '+id);}
+async function idle(id){
+ const first=await until(s=>s.gui?.app?.active===id,'focus window '+id);
+ return until(s=>s.gui?.app?.active===id&&(s.gui.cpu.state===7||s.gui.app.frames>first.gui.app.frames),'completed composition for window '+id);
+}
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 try{
