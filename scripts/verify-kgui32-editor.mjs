@@ -22,6 +22,12 @@ try{
  await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  let s=await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');const height=s.gui.height;
  await click(130,266);s=await until(s=>s.editors[0]?.frames>0&&!s.editors[0].error,'editor');
+ if(process.argv[5]==='emergency'){
+  await type('temporary');await until(s=>s.editors[0]?.dirty===1,'dirty editor before native emergency');await key('CTRL+G');
+  s=await until(s=>!s.gui.ready&&s.gui.state===3,'native emergency cleanup');assert.equal(s.gui.cpu.reason,65);assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert.ok(s.cpu.views.every(v=>v.state===0));
+  const disk=Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');assert.equal(hash(disk),hash(original));pass('native emergency bypasses dirty-client negotiation and reclaims all owned resources without disk writes');
+  await writeFile(join(out,'verification.json'),JSON.stringify({video,source:manifest.source_commit,image:manifest.sha256,results,errors},null,2));
+ }else{
  await type('alpha\rbravo');s=await until(s=>s.editors[0]?.hash===fnv('alpha\nbravo'),'multiline');assert.equal(s.editors[0].dirty,1);
  await key('CTRL+A');await key('CTRL+C');await type('X');await until(s=>s.editors[0]?.hash===fnv('X'),'selection replacement');await key('CTRL+Z');await until(s=>s.editors[0]?.hash===fnv('alpha\nbravo'),'undo');await key('CTRL+Y');await until(s=>s.editors[0]?.hash===fnv('X'),'redo');
  pass('actual CPL3 multiline document, selection, clipboard and undo/redo');
@@ -48,4 +54,5 @@ try{
  assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert.ok(s.cpu.views.every(v=>v.state===0));
  const disk=Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');assert.equal(hash(disk),hash(original));assert.deepEqual(errors,[]);pass('normal desktop exit and byte identical entire FAT12 disk');
  await writeFile(join(out,'verification.json'),JSON.stringify({video,source:manifest.source_commit,image:manifest.sha256,results,errors},null,2));
+}
 }catch(e){await page.screenshot({path:join(out,'failure.png')}).catch(()=>{});await writeFile(join(out,'failure.json'),JSON.stringify(await inspect().catch(()=>null),null,2));throw e;}finally{await browser.close();}

@@ -15,6 +15,7 @@ KGUI32のWelcome > Editor、またはRunから `KGEDIT.EXE` で起動します�
   他のアプリが既に終了を受け入れている場合、そのアプリは再起動しません。
 - EditorではCtrl+L/P/R/Eを編集側へ転送。管理はRun/Stop/Resume/End/Againボタン。
   Endは確認なしの強制終了。F2/Ctrl+KでWelcomeへ戻れます。
+  Ctrl+GはGUI全体の非常停止で、変更の確認をせず終了します。
 
 GUI専用4 MiB、2つの混在枠・各4 MiB、16 MiB設定を維持します。
 エディタ2本でクリップボードを共有できます。ホストのクリップボードは操作しません。
