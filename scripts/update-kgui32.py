@@ -26,12 +26,13 @@ def main():
     assert hashlib.sha256(original).hexdigest() == base['sha256']
     up = module('kgui32_files', root/'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
     files['LINES.TXT'] = b'\n'*9000+b'FINAL LINE\n'
     files['EMPTY.TXT'] = b''
+    files['EDITTEST.TXT'] = b'EDITOR FIXTURE\r\nSecond line\r\n'
     files['BINARY.TXT'] = bytes(range(256))
     autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32HOST.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
     helper = module('kgui32_image', source/'ports/pc98/image.py')
@@ -49,7 +50,7 @@ def main():
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
-        'dos_files_read_only':True,'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE'],'widget_sdk':2,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed text/graphical client windows and widget SDK 2/root browser; ASCII, bounded RGB commands, read-only files',
+        'dos_files_read_only':True,'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':3,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed text/graphical client windows and widget SDK 3/root browser/temporary editor; ASCII, bounded RGB commands, read-only files',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')
