@@ -48,7 +48,7 @@ try{
  await click(182,90);s=await until(s=>s.editors[0]?.heartbeat>frozen,'resume editor');assert.equal(s.editors[0].hash,stable);assert.equal(s.cpu.views[0].generation,oldGeneration);
  await click(246,90);await until(s=>s.cpu.views[0].state===0,'force end editor');
  await click(54,90);await type('KGEDIT.EXE fault\r');s=await until(s=>s.cpu.views[0].state===4&&s.cpu.views[0].fault===14,'actual editor page fault');assert.equal(s.cpu.views[0].cr2,0x10000);assert.equal(s.cpu.diagnostics[0].pm32.handle,0);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);assert.equal(s.editors[1].hash,fnv('alpha\nbravo!'));
- await click(54,90);await type('KGEDIT.EXE\r');s=await until(s=>s.editors[0]?.frames>0&&s.cpu.views[0].state!==4&&s.cpu.views[0].generation>oldGeneration+1,'fresh editor after fault');assert.equal(s.editors[0].bytes,0);assert.equal(s.editors[0].dirty,0);
+ await click(54,90);await type('KGEDIT.EXE\r');s=await until(s=>s.editors[0]?.frames>0&&s.cpu.views[0].state!==4&&s.cpu.views[0].generation>oldGeneration+1,'fresh editor after fault');assert.equal(s.editors[0].bytes,0);assert.equal(s.editors[0].dirty,0);await type('R');await until(s=>s.editors[0]?.hash===fnv('R'),'keyboard reaches restarted client');await key('CTRL+Z');await until(s=>s.editors[0]?.bytes===0&&!s.editors[0].dirty,'restarted editor undo');
  pass('stop/resume preserves text, peer continues, and actual #PF reclaims owned resources before clean restart');
  await click(596,56);await until(s=>s.cpu.views[0].state===0,'clean editor close');await click(480,height-16);await key('F10');await until(s=>s.editors[1]?.mode===2,'last dirty editor close');await key('d');
  s=await until(s=>s.gui.state===3&&!s.gui.ready,'DOS return');
