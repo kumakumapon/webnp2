@@ -41,6 +41,7 @@ try{
  await key('CTRL+N');await until(s=>s.editors[0]?.mode===2,'new confirmation');await key('d');await until(s=>s.editors[0]?.bytes===0&&!s.editors[0].dirty,'new after discard');
  await key('CTRL+O');await until(s=>s.editors[0]?.mode===1,'common picker');await type('EDITTEST.TXT');await key('TAB');await key('ENTER');s=await until(s=>s.editors[0]?.mode===0&&s.editors[0]?.hash===fnv('EDITOR FIXTURE\nSecond line\n'),'actual file contents');assert.equal(s.editors[0].dirty,0);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);
  await page.screenshot({path:join(out,'editor-picker-result.png')});pass('shared read-only picker opens real FAT fixture and releases handles');
+ await key('CTRL+A');await key('HELP');await until(s=>s.editors[0]?.cursor===27&&s.editors[0]?.anchor===27,'End on trailing empty line');await key('UP');await key('HELP');await until(s=>s.editors[0]?.cursor===26,'End excludes newline');await key('DOWN');s=await until(s=>s.editors[0]?.cursor===27,'vertical cursor clamps to empty line');
  const stable=s.editors[0].hash,oldGeneration=s.cpu.views[0].generation;
  await click(118,90);s=await until(s=>s.cpu.views[0].state===3,'stop editor');const frozen=s.editors[0].heartbeat,peer=s.editors[1].heartbeat;
  s=await until(s=>s.editors[1]?.heartbeat>peer+2,'peer continues while editor stopped');assert.equal(s.editors[0].heartbeat,frozen);assert.equal(s.editors[0].hash,stable);
