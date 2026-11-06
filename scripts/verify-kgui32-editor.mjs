@@ -50,7 +50,7 @@ try{
  await click(54,90);await type('KGEDIT.EXE\r');s=await until(s=>s.editors[0]?.frames>0&&s.cpu.views[0].state!==4&&s.cpu.views[0].generation>oldGeneration+1,'fresh editor after fault');assert.equal(s.editors[0].bytes,0);assert.equal(s.editors[0].dirty,0);
  pass('stop/resume preserves text, peer continues, and actual #PF reclaims owned resources before clean restart');
  await click(596,56);await until(s=>s.cpu.views[0].state===0,'clean editor close');await click(480,height-16);await key('F10');await until(s=>s.editors[1]?.mode===2,'last dirty editor close');await key('d');
- await until(s=>s.gui.state===3&&!s.gui.ready,'DOS return');
+ s=await until(s=>s.gui.state===3&&!s.gui.ready,'DOS return');
  assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert.ok(s.cpu.views.every(v=>v.state===0));
  const disk=Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');assert.equal(hash(disk),hash(original));assert.deepEqual(errors,[]);pass('normal desktop exit and byte identical entire FAT12 disk');
  await writeFile(join(out,'verification.json'),JSON.stringify({video,source:manifest.source_commit,image:manifest.sha256,results,errors},null,2));
