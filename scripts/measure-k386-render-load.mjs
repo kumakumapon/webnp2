@@ -8,6 +8,7 @@ import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectKdeskPerformance} from './kdesk-performance.mjs';
+import {readKdeskRenderSnapshot} from './kdesk-render-snapshot.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/render-load',phase='changed',video='pegc']=process.argv.slice(2);
 assert.ok(['baseline','changed'].includes(phase));
@@ -49,60 +50,58 @@ function progress(before,after){
 }
 function fileDone(s,old){return s.cpu.views[0].kind===1&&s.cpu.views[0].generation!==old&&s.cpu.views[0].state===0&&s.resources.usage[0].program.endsWith('FILE32.EXE')&&pm(s,0)?.opens===10;}
 function fileClean(s){const r=pm(s,0);assert.equal(r.error,0);assert.equal(r.exitCode,0);assert.equal(r.handle,0);assert.equal(r.openFiles,0);assert.equal(r.opens,r.closes);assert.equal(r.allocations,r.frees);assert.equal(r.readBytes,20);assert.equal(r.tablesCleared,1);}
-async function protectedPixels(){
- return page.evaluate(({width,height})=>{
-  const c=document.createElement('canvas');c.width=width;c.height=height;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0,width,height);
-  return Array.from(g.getImageData(364,96,100,120).data);
- },{width:video==='cirrus'?800:640,height:video==='cirrus'?600:400});
+async function protectedSnapshot(rect={},memo){
+ for(let end=Date.now()+60000;Date.now()<end;){
+  const value=await page.evaluate(readKdeskRenderSnapshot,{width:video==='cirrus'?800:640,height:video==='cirrus'?600:400,...rect});
+  if(value&&(!memo||value.text.filter((_,i)=>i%2===0).filter(s=>Buffer.from(s,'base64').toString('utf16le').includes(memo)).length===3))return value;
+  await page.waitForTimeout(25);
+ }throw Error('coherent KDESK snapshot not published');
 }
-async function protectedText({left=11,top=4,width=48,height=16}={}){
- for(let i=0;i<200;i++){
-  const value=await page.evaluate(({left,top,width,height})=>{const n=window.np2debug.np2,at=window.kdeskPerformanceAddress;
-   if(!at)return null;const h=atob(n.readMemoryBase64(at,16).base64);if(h.charCodeAt(12)||h.charCodeAt(13))return null;
-   return Array.from({length:Math.min(height,25-top)},(_,i)=>top+i).flatMap(row=>[0xa0000,0xa2000].map(base=>n.readMemoryBase64(base+row*160+left*2,width*2).base64));
-  },{left,top,width,height});if(value)return value;await page.waitForTimeout(15);
- }throw Error('text snapshot remained busy');
+function unchanged(actual,expected,label){
+ assert.deepEqual(actual.pixels,expected.pixels,label+' pixels');
+ assert.deepEqual(actual.text,expected.text,label+' characters and attributes');
 }
 async function occlusionCheck(row){
  await key('CTRL+O');await key('CTRL+P');await requireState(s=>s.cpu.views[1].state===3,'pause for pixel check');
  await key('F4');const text='OCCLUSION 012345678901234567890123456789\r';await type(text.repeat(3));await page.waitForFunction(s=>window.np2debug.np2.getScreenText().lines.filter(l=>l.includes(s)).length===3,text.slice(0,-1),{timeout:90000});
  await page.waitForFunction(({width,height})=>{const c=document.createElement('canvas');c.width=width;c.height=height;const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),0,0,width,height);const p=g.getImageData(138,74,1,1).data;return p[0]<80&&p[1]>70&&p[1]<160&&p[2]>120;},{width:video==='cirrus'?800:640,height:video==='cirrus'?600:400},{timeout:60000});
- // Capture only after the guest's three memo lines are presented.
- await page.waitForTimeout(500);
- const before=await requireState(s=>!!s.ui,'native GUI performance producer');
- const pixels=await protectedPixels(),lines=await protectedText();
- const result=await until(s=>s.ui&&s.ui.clockPreserves>=before.ui.clockPreserves+2,'two clock updates behind Memo');assert.ok(result.complete,'clock updates must run while occluded');
- assert.deepEqual(await protectedPixels(),pixels,'clock must not overwrite visible occluding pixels');
- assert.deepEqual(await protectedText(),lines,'clock must preserve occluding text and attributes');
- assert.equal(result.last.ui.fullScenes,before.ui.fullScenes,'clock ticks must not recompose the whole scene');
- row.occlusion={before:before.ui,after:result.last.ui};await page.screenshot({path:output+'/occlusion.png'});
+ await requireState(s=>!!s.ui,'native GUI performance producer');
+ const before=await protectedSnapshot({},text.slice(0,-1));
+ await requireState(s=>s.ui&&s.ui.clockPreserves>=before.metrics.clockPreserves+2,'two clock updates behind Memo');
+ const after=await protectedSnapshot();unchanged(after,before,'clock must preserve the occluder');
+ assert.equal(after.metrics.fullScenes,before.metrics.fullScenes,'clock ticks must not recompose the whole scene');
+ row.occlusion={before:before.metrics,after:after.metrics,text:before.text};await page.screenshot({path:output+'/occlusion.png'});
  // Move by non-cell offsets, then keep a printing DOS task below the memo.
  // This exercises partial glyph/shadow coverage and the composition page used
  // by the next drag/restore, rather than only a static fully covered window.
  await page.evaluate(()=>window.np2debug.np2.mouseHome());await page.waitForTimeout(300);
  await page.evaluate(()=>window.np2debug.np2.mouseDrag({x:112,y:72},{x:125,y:81}));
  await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines[5]?.slice(14,25).includes('Memo'),null,{timeout:60000});
- await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(630,365));await page.waitForTimeout(500);
- // Resume without raising the console above the memo, via task-manager key
- // commands followed by focusing Memo; the comparison starts after repaint.
- await key('CTRL+O');await key('CTRL+R');await key('F4');await page.waitForTimeout(500);
- // Input is asynchronous. The printing console can still be in front when
- // its CPU is already running; capture only after Memo is fully restored.
- await page.waitForFunction(text=>{
-  const n=window.np2debug.np2,at=window.kdeskPerformanceAddress;if(!at)return false;
-  const h=atob(n.readMemoryBase64(at,16).base64);if(h.charCodeAt(12)||h.charCodeAt(13))return false;
-  const lines=n.getScreenText().lines;
-  return lines[5]?.slice(14,25).includes('Memo')&&lines.filter(l=>l.includes(text)).length===3;
- },text.slice(0,-1),{timeout:60000});
+ await page.evaluate(()=>window.np2debug.np2.mouseMoveTo(630,365));
+ const rect={left:12,top:5,columns:48,rows:16};
+ // Establish the expected Memo while the printing task is still stopped.
+ // Resuming a peer must never redefine the expected foreground text.
+ const movedBase=await protectedSnapshot(rect,text.slice(0,-1));
+ await requireState(s=>s.cpu.views[1].state===3,'reference captured with printing peer paused');
+ await key('CTRL+O');await key('CTRL+R');await key('F4');
  const moved=await requireState(s=>!!s.ui&&counterReady(s),'moved occluder and printing peer');
- const movedPixels=await protectedPixels(),movedText=await protectedText({left:12,top:5,width:48,height:16});
- const covered=await requireState(s=>s.ui&&s.ui.clockPreserves>=moved.ui.clockPreserves+2&&s.cpu.views[1].counter>moved.cpu.views[1].counter+131072,'clock and covered printing console');
- assert.deepEqual(await protectedPixels(),movedPixels,'covered DOS glyphs must preserve odd-pixel occluders');
- assert.deepEqual(await protectedText({left:12,top:5,width:48,height:16}),movedText,'covered DOS glyphs must preserve all memo text attributes');
- assert.equal(covered.ui.fullScenes,moved.ui.fullScenes,'covered console output must not recompose the scene');
- row.occlusion.moved={before:moved.ui,after:covered.ui,counterBefore:moved.cpu.views[1].counter,counterAfter:covered.cpu.views[1].counter};
- await key('CTRL+D');await wait('Desktop shown');await key('CTRL+D');await wait('Desktop windows restored');await page.waitForTimeout(500);
- assert.deepEqual(await protectedPixels(),movedPixels,'hide/restore uses a coherent composition page');
+ const resumed=await protectedSnapshot(rect,text.slice(0,-1));unchanged(resumed,movedBase,'resuming a background peer must preserve Memo');
+ let last=resumed,covered=null,accepted=0;
+ console.log('CHECK repeated idle snapshots during guarded DOS updates');
+ for(let end=Date.now()+timeout;Date.now()<end;){
+  last=await protectedSnapshot(rect);
+  unchanged(last,movedBase,'covered DOS glyphs must preserve the odd-pixel occluder');
+  assert.equal(last.metrics.fullScenes,resumed.metrics.fullScenes,'covered console output must not recompose the scene');
+  accepted++;
+  const s=await snapshot();
+  if(accepted>=8&&last.metrics.clockPreserves>=resumed.metrics.clockPreserves+2&&last.metrics.dosUpdates>=resumed.metrics.dosUpdates+3&&s&&s.cpu.views[1].counter>moved.cpu.views[1].counter+131072){covered=s;break;}
+  await page.waitForTimeout(100);
+ }
+ assert.ok(covered,'multiple native DOS redraws, clock updates and background CPU progress must complete');
+ row.occlusion.moved={before:resumed.metrics,after:last.metrics,snapshots:accepted,text:movedBase.text,counterBefore:moved.cpu.views[1].counter,counterAfter:covered.cpu.views[1].counter};
+ console.log('OCCLUSION '+JSON.stringify({video,snapshots:accepted,dosUpdates:last.metrics.dosUpdates-resumed.metrics.dosUpdates,clockPreserves:last.metrics.clockPreserves-resumed.metrics.clockPreserves}));
+ await key('CTRL+D');await wait('Desktop shown');await key('CTRL+D');await wait('Desktop windows restored');
+ unchanged(await protectedSnapshot(rect,text.slice(0,-1)),movedBase,'hide/restore uses a coherent composition page');
  await page.screenshot({path:output+'/occlusion-moved.png'});
  await key('ESC');await wait('Unsaved memo:');await type('d');await wait('Memo closed');
  await requireState(counterReady,'peer after pixel check');
