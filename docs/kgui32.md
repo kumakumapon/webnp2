@@ -11,14 +11,14 @@ PEGCは640×400・256色、Cirrusの選択肢は800×600・65,536色です。拡
 指定し、イメージ内のXMSドライバを使用します。保存済みのディスクは差し替えません。
 
 - タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
-- WelcomeのCalculator / Clock / DOS Shellで独立アプリを起動。F2またはCtrl+Kで戻ります。
+- WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2またはCtrl+Kで戻ります。
 - **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。
 - DOSウィンドウのRun（Ctrl+L）でコマンドを入力しEnter。実行中のルートは先にEnd。
   例: `COUNT32.EXE 1`、`VIEW32.EXE VIEWDATA.TXT`。Escで入力を取り消し。
 - Stop（Ctrl+P）、Resume（Ctrl+R）、End（Ctrl+E）、Again（直前の成功したルートを再起動）。
 - 最小化しても処理を継続。下部タスクバーで復元。閉じる操作は所有するセッションを終了。
 - DOSウィンドウ右下のグリップでサイズ変更。下部Left/Right/Up/Downで画面をスクロール。
-- キーはフォーカス先だけに転送。通常のQ/T/Sもアプリへ届きます。Tab、Ctrl+L/P/R/Eは予約。
+- キーはフォーカス先だけに転送。通常のQ/T/Sもアプリへ届きます。SDK1のTab、Ctrl+L/P/R/Eは予約。FilesのTabはアプリ内移動。
 - F10 / Exit to DOSでGUI全体を終了。組み込みウィンドウではEsc/Qも終了。
   DOSで`KDESK`を入力すれば従来GUIを起動可能。
 
@@ -94,8 +94,9 @@ PlaywrightはGUIの実CPUフレーム、CR3/物理メモリ、CPUが取得した
 非アクティブ実行、停止・再開・最小化、実ファイル読み取り、起動失敗、#PFと再起動を検証します。
 CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持します。
 
-実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、初版GUI SDK、電卓・時計です。
-高度なGUI部品、クリップボード、ファイラー、日本語・文字属性の描画、直接GDCを操作する
+実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK2、電卓・時計、
+読み取り専用Filesです。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)を参照。
+クリップボード、編集/保存、日本語・文字属性の描画、直接GDCを操作する
 外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
 従来KDESKの既存機能も引き続き利用できます。
 ネイティブ設計はMS-DOSの`tools/kgui32/README.md`と`SESSIONS.md`を参照してください。
