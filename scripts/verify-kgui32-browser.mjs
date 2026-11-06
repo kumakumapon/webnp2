@@ -8,7 +8,7 @@ const [base='http://127.0.0.1:4174/',output='test-results/kgui32-browser',video=
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 const image=await readFile(new URL('../public/kgui32/'+manifest.image,import.meta.url));
 const fnv=b=>{let h=2166136261;for(const v of b)h=Math.imul(h^v,16777619)>>>0;return h;},nameHash=s=>fnv(Buffer.from(s));
-const sha=b=>createHash('sha256').update(b).digest('hex');
+const sha=b=>createHash('sha256').update(Array.isArray(b)?Uint8Array.from(b):b).digest('hex');
 // Independent expected values come from actual FAT directory/file bytes.
 let metadataHash=2166136261;const directory=[];
 for(let at=5*1024;at<11*1024&&image[at];at+=32){
@@ -52,7 +52,10 @@ try{
  const canvasX=24,canvasY=110,cw=576,ch=height===400?216:320,rows=Math.floor((ch-104)/16);
  await point(canvasX+cw-18,canvasY+71);await button(1);await until(s=>(s.files[0]?.mode&8)!==0,'thumb captured');
  await point(8,height-35);await until(s=>s.files[0]?.top===directory.length-rows,'drag outside reaches final list page');await button(0);await until(s=>(s.files[0]?.mode&8)===0,'release outside cancels capture');
- await key('HOME');await until(s=>s.files[0]?.top===0,'keyboard after drag');pass('local Tab, list navigation, scrollbar capture/motion and release outside the canvas work');
+ await key('HOME');await until(s=>s.files[0]?.top===0,'keyboard after drag');
+ await point(canvasX+cw-18,canvasY+71);await button(1);await until(s=>(s.files[0]?.mode&8)!==0,'capture before focus change');
+ await key('F2');await until(s=>s.gui.app.active===0&&(s.files[0]?.mode&8)===0,'focus loss cancels capture');await button(0);await click(330,height-16);await composed(2);
+ pass('local Tab, list navigation, scrollbar capture and release outside/focus loss work');
  await filter(0,'browse.txt');s=await until(s=>s.files[0]?.matches===1&&s.files[0].nameHash===nameHash('BROWSE.TXT'),'case-insensitive filter');
  await key('TAB');await key('ENTER');s=await until(s=>ready(s,0)&&(s.files[0].mode&1),'preview');
  const content=file('BROWSE.TXT');assert.ok(content.length>65536);assert.equal(s.files[0].bytes,content.length);assert.equal(s.files[0].hash,fnv(content));assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);assert.ok(s.cpu.diagnostics[0].pm32.heapPages>=Math.ceil(content.length/4096));
