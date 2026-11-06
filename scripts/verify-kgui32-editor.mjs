@@ -16,7 +16,7 @@ async function inspect(){const s=await inspectClients(page);if(!s)return null;s.
 async function until(test,label){console.log('CHECK '+label);let s;for(let end=Date.now()+120000;Date.now()<end;){s=await inspect().catch(()=>null);if(s&&test(s))return s;await page.waitForTimeout(100);}throw Error(label+' '+JSON.stringify({e:s?.editors,app:s?.gui.app,states:s?.cpu.views}));}
 const key=async text=>{await page.evaluate(text=>window.np2debug.np2.sendKeys(text),text);await page.waitForTimeout(250);};
 const type=async text=>{await page.evaluate(text=>window.np2debug.np2.typeText(text),text);await page.waitForTimeout(250);};
-async function click(x,y){await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await until(s=>s.gui.app?.mx===x&&s.gui.app?.my===y,'pointer');for(const d of [1,0]){await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await page.waitForTimeout(300);}}
+async function click(x,y){await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await until(s=>s.gui.app?.mx===x&&s.gui.app?.my===y,'pointer');for(const d of [1,0]){const before=(await inspect()).gui.app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await until(s=>s.gui.app.heartbeat>=before+3,'guest consumes mouse transition '+d);}}
 const pass=s=>{results.push(s);console.log('PASS '+s);};
 try{
  await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
