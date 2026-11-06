@@ -35,8 +35,16 @@ try{
  await key('CTRL+N');await until(s=>s.editors[0]?.mode===2,'new confirmation');await key('d');await until(s=>s.editors[0]?.bytes===0&&!s.editors[0].dirty,'new after discard');
  await key('CTRL+O');await until(s=>s.editors[0]?.mode===1,'common picker');await type('EDITTEST.TXT');await key('TAB');await key('ENTER');s=await until(s=>s.editors[0]?.mode===0&&s.editors[0]?.hash===fnv('EDITOR FIXTURE\nSecond line\n'),'actual file contents');assert.equal(s.editors[0].dirty,0);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);
  await page.screenshot({path:join(out,'editor-picker-result.png')});pass('shared read-only picker opens real FAT fixture and releases handles');
+ const stable=s.editors[0].hash,oldGeneration=s.cpu.views[0].generation;
+ await click(118,90);s=await until(s=>s.cpu.views[0].state===3,'stop editor');const frozen=s.editors[0].heartbeat,peer=s.editors[1].heartbeat;
+ s=await until(s=>s.editors[1]?.heartbeat>peer+2,'peer continues while editor stopped');assert.equal(s.editors[0].heartbeat,frozen);assert.equal(s.editors[0].hash,stable);
+ await click(182,90);s=await until(s=>s.editors[0]?.heartbeat>frozen,'resume editor');assert.equal(s.editors[0].hash,stable);assert.equal(s.cpu.views[0].generation,oldGeneration);
+ await click(246,90);await until(s=>s.cpu.views[0].state===0,'force end editor');
+ await click(54,90);await type('KGEDIT.EXE fault\r');s=await until(s=>s.cpu.views[0].state===4&&s.cpu.views[0].fault===14,'actual editor page fault');assert.equal(s.cpu.views[0].cr2,0x10000);assert.equal(s.cpu.diagnostics[0].pm32.handle,0);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);assert.equal(s.editors[1].hash,fnv('alpha\nbravo!'));
+ await click(54,90);await type('KGEDIT.EXE\r');s=await until(s=>s.editors[0]?.frames>0&&s.cpu.views[0].state!==4&&s.cpu.views[0].generation>oldGeneration+1,'fresh editor after fault');assert.equal(s.editors[0].bytes,0);assert.equal(s.editors[0].dirty,0);
+ pass('stop/resume preserves text, peer continues, and actual #PF reclaims owned resources before clean restart');
  await click(596,56);await until(s=>s.cpu.views[0].state===0,'clean editor close');await click(480,height-16);await key('F10');await until(s=>s.editors[1]?.mode===2,'last dirty editor close');await key('d');
- await until(s=>s.gui.state===3&&!s.gui.graphics,'DOS return');
+ await until(s=>s.gui.state===3&&!s.gui.ready,'DOS return');
  assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert.ok(s.cpu.views.every(v=>v.state===0));
  const disk=Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');assert.equal(hash(disk),hash(original));assert.deepEqual(errors,[]);pass('normal desktop exit and byte identical entire FAT12 disk');
  await writeFile(join(out,'verification.json'),JSON.stringify({video,source:manifest.source_commit,image:manifest.sha256,results,errors},null,2));
