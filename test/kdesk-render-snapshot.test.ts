@@ -71,11 +71,13 @@ describe('frontend publication fence',()=>{
  it('accepts stable native text and canvas pixels but rejects stale uploads or changed producers',()=>{
   guest();const a=readKdeskRenderSnapshot(bounds);expect(sameKdeskRenderSnapshot(a,structuredClone(a))).toBe(true);
   expect(sameKdeskRenderSnapshot(null,a)).toBe(false);
+  const progress=structuredClone(a)!;progress.metrics.clockPreserves++;progress.metrics.dosUpdates++;
+  expect(sameKdeskRenderSnapshot(a,progress)).toBe(true);
   for(const part of ['pixels','text','metrics']){
    const b=structuredClone(a)!;
    if(part==='pixels')b.pixels[0]^=1;
    else if(part==='text')b.text[0]='stale';
-   else b.metrics.clockPreserves++;
+   else b.metrics.owner++;
    expect(sameKdeskRenderSnapshot(a,b)).toBe(false);
   }
  });

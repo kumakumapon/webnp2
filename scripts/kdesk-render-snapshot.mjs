@@ -23,9 +23,11 @@ export function readKdeskRenderSnapshot({width,height,left=11,top=4,columns=48,r
 
 // A native idle publication can precede the frontend's next canvas upload.
 // Accept a settled reference only when the same publication/text/pixels are
-// seen across browser frames. Persistent corruption still compares unequal to
+// seen across browser frames. Background clock/DOS counters may advance.
+// Persistent corruption still compares unequal to
 // the original reference; a changed publication must be sampled again.
 export function sameKdeskRenderSnapshot(a,b){
- return !!a&&!!b&&JSON.stringify(a.metrics)===JSON.stringify(b.metrics)&&
+ return !!a&&!!b&&a.metrics.owner===b.metrics.owner&&a.metrics.cookie===b.metrics.cookie&&
+  a.metrics.fullScenes===b.metrics.fullScenes&&
   JSON.stringify(a.text)===JSON.stringify(b.text)&&JSON.stringify(a.pixels)===JSON.stringify(b.pixels);
 }
