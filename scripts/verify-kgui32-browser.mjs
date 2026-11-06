@@ -63,6 +63,7 @@ try{
  await key('ROLLDOWN');s=await until(s=>s.files[0]?.top===rows,'preview page down');await key('HELP');s=await until(s=>s.files[0]?.top===1800-rows,'preview end');
  await composed(2);assert.notEqual(sha(await pixels(36,162,300,16)),firstLine,'scrolling redraws actual preview glyphs');await page.screenshot({path:join(output,'preview-end.png')});snapshots.push({label:'complete text bytes and scrolling',...s});pass('over-64-KiB TXT content matches the real file hash; scrolling reaches the last line with no open DOS handle');
  await key('ESC');s=await until(s=>ready(s,0)&&!(s.files[0].mode&1),'return to same list');assert.equal(s.files[0].matches,1);assert.equal(s.cpu.views[0].generation,gen);assert.equal(s.cpu.diagnostics[0].pm32.heapPages,0);
+ await filter(0,'LINES.TXT');await key('TAB');await key('ENTER');s=await until(s=>ready(s,0)&&(s.files[0].mode&1)&&s.files[0].nameHash===nameHash('LINES.TXT'),'newline-heavy preview');assert.equal(s.files[0].hash,fnv(file('LINES.TXT')));await key('HELP');await until(s=>s.files[0]?.top===9001-rows,'all 9001 text lines reachable');await key('ESC');
  await filter(0,'EMPTY.TXT');await key('TAB');await key('ENTER');s=await until(s=>ready(s,0)&&(s.files[0].mode&1)&&s.files[0].bytes===0,'empty preview');assert.equal(s.files[0].hash,fnv(Buffer.alloc(0)));await key('ESC');
  await filter(0,'BINARY.TXT');await key('TAB');await key('ENTER');s=await until(s=>(s.files[0]?.mode&4)!==0,'binary dialog');assert.equal(s.files[0].mode&1,0);assert.equal(s.cpu.diagnostics[0].pm32.heapPages,0);await key('ESC');await until(s=>(s.files[0]?.mode&4)===0,'dismiss dialog');
  await filter(0,'NO-SUCH-FILE');await until(s=>s.files[0]?.matches===0,'empty filter');await key('TAB');await key('ENTER');await until(s=>ready(s,0)&&s.files[0].mode===0,'empty list open is safe');pass('back retains filter/selection and frees preview pages; empty files, binary TXT dialog and no matches are safe');
@@ -83,12 +84,11 @@ try{
  s=await until(s=>s.cpu.views[1].state===0&&s.apps[1]?.magic===0x3244474b&&s.apps[1].value===23,'directory negative probe');assert.equal(s.apps[1].error,0);assert.equal(s.cpu.diagnostics[1].pm32.exitCode,0);assert.equal(s.files[0].hash,fnv(content));
  await run(1,'KGDIRNO.EXE');s=await until(s=>s.cpu.views[1].state===0&&s.apps[1]?.value===3,'feature opt-in probe');assert.equal(s.apps[1].error,0);assert.equal(s.cpu.diagnostics[1].pm32.features,47);pass('real CPL3 rejects low/RO/overflow/size/stale cursor requests and missing capability; peer preview is unchanged');
  // Two independent Files instances enumerate concurrently using private DTAs.
- await run(1,'KGFILES.EXE');await until(s=>s.files[1]?.frames>0&&(s.files[1].mode&2),'peer enumeration started');
+ await run(1,'KGFILES.EXE hold');await until(s=>s.files[1]?.entries===4&&(s.files[1].mode&16),'peer holds a live cursor after four entries');
  await click(330,height-16);await key('ESC');await until(s=>ready(s,0)&&!(s.files[0].mode&1),'first root before refresh');await key('TAB');await key('TAB');await key('ENTER');
- s=await until(s=>(s.files[0]?.mode&2)&&(s.files[1]?.mode&2),'simultaneous independent DTA searches');
- snapshots.push({label:'interleaved live directory cursors',...s});
+ s=await until(s=>ready(s,0)&&s.files[0].entries===directory.length&&s.files[1]?.entries===4&&(s.files[1].mode&16),'complete first search while peer cursor remains live');assert.equal(s.files[0].metadataHash,metadataHash);
+ snapshots.push({label:'interleaved live directory cursors',...s});await click(480,height-16);await key('SPACE');
  s=await until(s=>ready(s,0)&&ready(s,1),'two Files roots');for(const f of s.files){assert.equal(f.entries,directory.length);assert.equal(f.metadataHash,metadataHash);}
- await click(480,height-16);
  await filter(1,'KGCLOCK.EXE');s=await until(s=>ready(s,1)&&s.files[1].matches===1&&s.files[1].nameHash===nameHash('KGCLOCK.EXE'),'second filter');assert.equal(s.files[0].hash,fnv(content));
  await key('TAB');await key('ENTER');await until(s=>(s.files[1]?.mode&4)!==0,'non-TXT dialog');await key('ENTER');
  await click(330,height-16);await key('ESC');await filter(0,'BROWSE.TXT');await key('TAB');await key('ENTER');await until(s=>ready(s,0)&&(s.files[0].mode&1),'first preview survives peer enumeration');pass('two Files roots keep independent enumeration, filters and selection; executable preview is refused');

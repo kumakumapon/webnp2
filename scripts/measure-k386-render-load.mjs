@@ -8,7 +8,7 @@ import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectKdeskPerformance} from './kdesk-performance.mjs';
-import {readKdeskRenderSnapshot} from './kdesk-render-snapshot.mjs';
+import {readKdeskRenderSnapshot,sameKdeskRenderSnapshot} from './kdesk-render-snapshot.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/render-load',phase='changed',video='pegc']=process.argv.slice(2);
 assert.ok(['baseline','changed'].includes(phase));
@@ -53,7 +53,11 @@ function fileClean(s){const r=pm(s,0);assert.equal(r.error,0);assert.equal(r.exi
 async function protectedSnapshot(rect={},memo){
  for(let end=Date.now()+60000;Date.now()<end;){
   const value=await page.evaluate(readKdeskRenderSnapshot,{width:video==='cirrus'?800:640,height:video==='cirrus'?600:400,...rect});
-  if(value&&(!memo||value.text.filter((_,i)=>i%2===0).filter(s=>Buffer.from(s,'base64').toString('utf16le').includes(memo)).length===3))return value;
+  if(value&&(!memo||value.text.filter((_,i)=>i%2===0).filter(s=>Buffer.from(s,'base64').toString('utf16le').includes(memo)).length===3)){
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const settled=await page.evaluate(readKdeskRenderSnapshot,{width:video==='cirrus'?800:640,height:video==='cirrus'?600:400,...rect});
+   if(sameKdeskRenderSnapshot(value,settled))return settled;
+  }
   await page.waitForTimeout(25);
  }throw Error('coherent KDESK snapshot not published');
 }

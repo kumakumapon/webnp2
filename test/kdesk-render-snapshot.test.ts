@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {readKdeskRenderSnapshot} from '../scripts/kdesk-render-snapshot.mjs';
+import {readKdeskRenderSnapshot,sameKdeskRenderSnapshot} from '../scripts/kdesk-render-snapshot.mjs';
 
 function guest(){
  const ram=Buffer.alloc(0xa4000),at=0x24000;
@@ -63,5 +63,20 @@ describe('coherent native KDESK render snapshots',()=>{
  it('does not turn transport errors into an idle snapshot',()=>{
   const g=guest();g.state.np2debug.np2.readMemoryBase64.mockImplementation(()=>{throw Error('transport');});
   expect(()=>readKdeskRenderSnapshot(bounds)).toThrow('transport');
+ });
+});
+
+
+describe('frontend publication fence',()=>{
+ it('accepts stable native text and canvas pixels but rejects stale uploads or changed producers',()=>{
+  guest();const a=readKdeskRenderSnapshot(bounds);expect(sameKdeskRenderSnapshot(a,structuredClone(a))).toBe(true);
+  expect(sameKdeskRenderSnapshot(null,a)).toBe(false);
+  for(const part of ['pixels','text','metrics']){
+   const b=structuredClone(a)!;
+   if(part==='pixels')b.pixels[0]^=1;
+   else if(part==='text')b.text[0]='stale';
+   else b.metrics.clockPreserves++;
+   expect(sameKdeskRenderSnapshot(a,b)).toBe(false);
+  }
  });
 });

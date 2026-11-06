@@ -30,6 +30,7 @@ def main():
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
+    files['LINES.TXT'] = b'\n'*9000+b'FINAL LINE\n'
     files['EMPTY.TXT'] = b''
     files['BINARY.TXT'] = bytes(range(256))
     autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32HOST.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
