@@ -27,8 +27,8 @@ jobs:
       - name: Boot DOS4 and verify real HDD I/O
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/hdd-preview.log 2>&1 &
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/webnp2/ > /dev/null && break; sleep 1; done
-          CHROMIUM=/usr/bin/google-chrome WEBNP2_NO_SANDBOX=1 node scripts/verify-pc98-hdd.mjs http://127.0.0.1:4173/webnp2/ test-results/hdd-proof ${{ matrix.video }}
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          CHROMIUM=/usr/bin/google-chrome WEBNP2_NO_SANDBOX=1 node scripts/verify-pc98-hdd.mjs http://127.0.0.1:4173/ test-results/hdd-proof ${{ matrix.video }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
