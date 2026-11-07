@@ -29,7 +29,7 @@ const pass=s=>{results.push(s);console.log('PASS '+s);};
 async function launch(){await key('F2');await until(s=>s.gui.app?.active===0,'launcher');await click(130,266);return until(s=>s.editors.some(e=>e?.frames>0),'editor launched');}
 async function workspaceOpen(id,name){
  await key('CTRL+O');let s=await until(s=>s.editors[id]?.mode===1&&s.canvases[id]?.controls.includes(703),'Open picker');
- if(id===0)await key('CTRL+W');else await click(24+id*8+s.canvases[id].width-40,120+id*8);await type(name);await key('TAB');await key('ENTER');
+ if(id===0)await key('CTRL+W');else await click(s.gui.width-64,s.gui.height-s.canvases[id].height-64);await type(name);await key('TAB');await key('ENTER');
  return until(s=>s.editors[id]?.mode===0&&!s.editors[id]?.dirty,'workspace opened');
 }
 async function nameAs(name){await key('CTRL+W');await until(s=>s.editors[s.gui.app.active-2]?.mode===3,'Save As');await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
@@ -69,7 +69,7 @@ try{
   // Boot a fresh browser context from the exported bytes, not a RAM snapshot.
   await page.context().close();page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',e=>errors.push(e.message));await page.route('**/kgui32/'+manifest.image,route=>route.fulfill({body:saved,contentType:'application/octet-stream'}));await page.goto(bootURL());await until(s=>s.gui.ready&&s.gui.app?.frames,'fresh boot from saved disk');await launch();await workspaceOpen(0,'RESCUE.TXT');s=await until(s=>s.editors[0]?.hash===fnv('stale editor!')&&!s.editors[0]?.dirty,'saved contents after cold boot');assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);await page.screenshot({path:join(out,'reopened-after-cold-boot.png')});
   // Exercise the actual broker's permission/pointer/feature checks in CPL3.
-  await key('F2');await until(s=>s.gui.app.active===0,'launcher before diagnostics');await click(130,266);await until(s=>s.editors[1]?.frames>0,'diagnostic slot');await click(480,s.gui.height-16);await click(254,98);await until(s=>s.cpu.views[1].state===0,'end empty peer');
+  await key('F2');await until(s=>s.gui.app.active===0,'launcher before diagnostics');await click(130,266);await until(s=>s.editors[1]?.frames>0,'diagnostic slot');await click(480,s.gui.height-16);{const view=await inspect();await click(view.gui.width-view.canvases[1].width+188,view.gui.height-view.canvases[1].height-96);}await until(s=>s.cpu.views[1].state===0,'end empty peer');
   for(const [name,count] of [['KGSAVEB.EXE',24],['KGSAVENO.EXE',1]]){const generation=(await inspect()).cpu.views[1].generation;await key('CTRL+L');await type(name+'\r');s=await until(s=>s.cpu.views[1].state===0&&s.cpu.views[1].generation>generation&&s.resources.usage[1].program===name&&s.cpu.diagnostics[1].pm32?.samples?.[0]===0x3453474b,'CPL3 '+name);assert.equal(s.cpu.diagnostics[1].pm32.samples[2],count);assert.equal(s.cpu.diagnostics[1].pm32.samples[3],0);assert.equal(s.cpu.diagnostics[1].pm32.exitCode,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);}
   await key('F10');s=await until(s=>!s.gui.ready&&s.gui.state===3,'final DOS');cleanup(s);assert.equal(hash(await disk()),hash(saved));pass('cold boot retains exact file bytes; real CPL3 boundary/feature probes refuse invalid requests without disk changes');
  }
