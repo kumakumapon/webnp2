@@ -37,10 +37,33 @@ def module(name, path):
     spec.loader.exec_module(result)
     return result
 
+def workspace_hdd(root, destination):
+    """New data volume only; never open or format a user's saved image."""
+    image = module('kgui_hdd', root/'scripts/update-pc98-hdd-proof.py').make_hdd()
+    start = 256+264*256
+    for fat in (start+1024, start+21*1024):
+        struct.pack_into('<H', image, fat+3*2, 0xffff)
+    entry = start+41*1024+32
+    image[entry:entry+11] = b'WORK       '
+    image[entry+11] = 16
+    struct.pack_into('<HH', image, entry+24, 0x21, 3)
+    directory = start+57*1024+4096
+    for offset, name, cluster in ((0,b'.          ',3),(32,b'..         ',0)):
+        image[directory+offset:directory+offset+11] = name
+        image[directory+offset+11] = 16
+        struct.pack_into('<HH', image, directory+offset+24, 0x21, cluster)
+    sha = hashlib.sha256(image).hexdigest()
+    name = f'workspace-{sha[:12]}.thd'
+    (destination/name).write_bytes(image)
+    return {'image':name,'sha256':sha,'bytes':len(image),'filesystem':'FAT16',
+            'logical_sector_bytes':1024,'initial_free_bytes':10114*4096,
+            'disposable_volume_marker':'KHDPROOF'}
+
 def main():
     source = Path(sys.argv[1]).resolve()
     root = Path(__file__).resolve().parents[1]
     subprocess.run(['make', '-C', str(source/'tools/kgui32'), 'all'], check=True)
+    subprocess.run(['make', '-C', str(source/'ports/pc98/hdd'), 'all'], check=True)
     base = json.loads((root/'public/k386/manifest.json').read_text())
     commit = subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()
     dirty = bool(subprocess.check_output(['git','-C',str(source),'status','--porcelain'],text=True))
@@ -50,6 +73,9 @@ def main():
     assert hashlib.sha256(original).hexdigest() == base['sha256']
     up = module('kgui32_files', root/'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
+    files['KHD98.SYS'] = (source/'ports/pc98/hdd/build/KHD98.SYS').read_bytes()
+    files['HDDFLT.COM'] = (source/'ports/pc98/hdd/build/HDDFLT.COM').read_bytes()
+    files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
     for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
@@ -68,6 +94,7 @@ def main():
     sha = hashlib.sha256(image).hexdigest()
     destination = root/'public/kgui32'
     destination.mkdir(exist_ok=True)
+    hdd = workspace_hdd(root, destination)
     name = f'kgui32-{sha[:12]}.xdf'
     (destination/name).write_bytes(image)
     (destination/'manifest.json').write_text(json.dumps({
@@ -75,7 +102,9 @@ def main():
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
-        'dos_files_read_only':False,'workspace_save_api':1,'writable_workspace':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed text/graphical clients; SDK4 ASCII editor, root read only and bounded opt-in workspace saves',
+        'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
+        'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded ASCII editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')
