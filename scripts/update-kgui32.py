@@ -5,7 +5,31 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import struct
 import sys
+
+def add_workspace(image):
+    """Add an empty FAT12 directory without touching the original boot files."""
+    def get(c):
+        value = struct.unpack_from('<H', image, 1024+c*3//2)[0]
+        return value >> 4 if c & 1 else value & 4095
+    cluster = next(c for c in range(2, 1223) if not get(c))
+    for start in (1024, 3072):
+        at = start+cluster*3//2
+        old = struct.unpack_from('<H', image, at)[0]
+        struct.pack_into('<H', image, at, (old & 15) | 0xfff0 if cluster & 1 else (old & 0xf000) | 0xfff)
+    root = next(at for at in range(5*1024, 11*1024, 32) if image[at] == 0)
+    image[root:root+32] = bytes(32)
+    image[root:root+11] = b'WORK       '
+    image[root+11] = 16
+    struct.pack_into('<HH', image, root+24, 0x21, cluster)
+    at = (9+cluster)*1024
+    image[at:at+1024] = bytes(1024)
+    for offset, name, child in ((0, b'.          ', cluster), (32, b'..         ', 0)):
+        image[at+offset:at+offset+11] = name
+        image[at+offset+11] = 16
+        struct.pack_into('<HH', image, at+offset+24, 0x21, child)
+    return {'name':'WORK','size':0,'attributes':16,'sha256':hashlib.sha256(b'').hexdigest()}
 
 def module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -26,7 +50,7 @@ def main():
     assert hashlib.sha256(original).hexdigest() == base['sha256']
     up = module('kgui32_files', root/'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
@@ -40,6 +64,7 @@ def main():
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
         [(name,data) for name,data in files.items() if name not in excluded],
         kernel=files['MSDOS.SYS'],command=files['COMMAND.COM'],autoexec=autoexec)
+    entries.append(add_workspace(image))
     sha = hashlib.sha256(image).hexdigest()
     destination = root/'public/kgui32'
     destination.mkdir(exist_ok=True)
@@ -50,7 +75,7 @@ def main():
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
-        'dos_files_read_only':True,'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':3,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed text/graphical client windows and widget SDK 3/root browser/temporary editor; ASCII, bounded RGB commands, read-only files',
+        'dos_files_read_only':False,'workspace_save_api':1,'writable_workspace':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed text/graphical clients; SDK4 ASCII editor, root read only and bounded opt-in workspace saves',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')

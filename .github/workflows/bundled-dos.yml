@@ -695,7 +695,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Generate pinned SDK3 editor and desktop
+      - name: Generate pinned editor and desktop
         run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm ci
       - run: npm run build
@@ -716,4 +716,41 @@ jobs:
         with:
           name: kgui32-editor-${{ matrix.video }}-playwright-validation
           path: test-results/kgui32-editor-${{ matrix.video }}/
+          if-no-files-found: ignore
+
+  kgui32-save:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned SDK4 workspace editor
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm run build
+      - name: Playwright saved files, conflicts, cold boot, full disk and 64 KiB transfers
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/save-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-kgui32-save.mjs http://127.0.0.1:4173/webnp2/ test-results/kgui32-save-${{ matrix.video }}/editor ${{ matrix.video }}
+          node scripts/verify-kgui32-save.mjs http://127.0.0.1:4173/webnp2/ test-results/kgui32-save-${{ matrix.video }}/full ${{ matrix.video }} full
+          node scripts/verify-kgui32-save.mjs http://127.0.0.1:4173/webnp2/ test-results/kgui32-save-${{ matrix.video }}/wide ${{ matrix.video }} wide
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kgui32-save-${{ matrix.video }}-playwright-validation
+          path: test-results/kgui32-save-${{ matrix.video }}/
           if-no-files-found: ignore
