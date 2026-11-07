@@ -9,6 +9,8 @@ KGUI32は、PC-98ゲスト内の32bitプロテクトモードで描画・ウィ�
 CIでイメージ生成後、起動画面の「KGUI32（独立32bit GUI・実験版）」を選択します。
 PEGCは640×400・256色、Cirrusの選択肢は800×600・65,536色です。拡張メモリ16 MiBを
 指定し、イメージ内のXMSドライバを使用します。保存済みのディスクは差し替えません。
+GUI FDに加えて専用のFAT16データHDDを接続し、Editorの保存先は通常B:\WORKに
+なります。HDDなしのFD起動も利用できます。詳しくは[HDD保存基盤](kgui32-hdd-workspace.md)。
 
 - タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
 - WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2またはCtrl+Kで戻ります。
@@ -53,7 +55,7 @@ DOS呼び出しとアプリのスケジュールは実モードへ戻った安�
 
 GUIの正常終了・ページフォールト・無限ループの強制終了では、自分が起動した世代の
 アプリと、描画/フォント/パレット/XMS/通常メモリを回収します。既存所有者には
-終了要求を送りません。ディスク操作は既存の読み取り専用方針を維持します。
+終了要求を送りません。A:ルートの閲覧は読み取り専用、Editorの保存は検証済みWork内に限定します。
 
 これはGUI専用の保護モードクライアントと実モード管理層による最初の基盤です。
 常時プロテクトモードで動く新カーネルやWindows互換環境ではありません。
@@ -63,8 +65,9 @@ GUIの正常終了・ページフォールト・無限ループの強制終了�
 `scripts/prepare-msdos4-cpanel-ci.sh`はMS-DOSの完全なコミットSHAを取得し、通常版と
 KDESK/386を生成後、`scripts/update-kgui32.py`で専用イメージを追加生成します。
 専用manifestにはネイティブSHA、元KDESKイメージと新イメージのSHA-256、各ファイルの
-ハッシュを記録します。通常版のバイナリ・ライセンスを引き継ぎ、AUTOEXECだけを
-`K386.EXE → K32HOST.EXE → KGUILDR.EXE`に変更します。
+ハッシュを記録します。通常版のバイナリ・ライセンスを引き継ぎ、AUTOEXECを
+`K386.EXE → K32HOST.EXE → KGUILDR.EXE`に変更し、CONFIGにデータHDDドライバを追加します。
+同梱THDも専用manifestのSHA-256で管理します。
 
 ```
 bash scripts/prepare-msdos4-cpanel-ci.sh
@@ -94,9 +97,9 @@ PlaywrightはGUIの実CPUフレーム、CR3/物理メモリ、CPUが取得した
 非アクティブ実行、停止・再開・最小化、実ファイル読み取り、起動失敗、#PFと再起動を検証します。
 CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持します。
 
-実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK2、電卓・時計、
-読み取り専用Filesです。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)を参照。
-クリップボード、編集/保存、日本語・文字属性の描画、直接GDCを操作する
+実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK4、電卓・時計、
+読み取り専用Files、ASCIIエディタとHDD/FDのWork保存です。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
+アプリ間クリップボード、日本語・文字属性の描画、直接GDCを操作する
 外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
 従来KDESKの既存機能も引き続き利用できます。
 ネイティブ設計はMS-DOSの`tools/kgui32/README.md`と`SESSIONS.md`を参照してください。
