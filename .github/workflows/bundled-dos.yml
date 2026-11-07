@@ -695,7 +695,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Generate pinned SDK3 editor and desktop
+      - name: Generate pinned editor and desktop
         run: bash scripts/prepare-msdos4-cpanel-ci.sh
       - run: npm ci
       - run: npm run build
