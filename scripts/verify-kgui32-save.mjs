@@ -29,7 +29,7 @@ const pass=s=>{results.push(s);console.log('PASS '+s);};
 async function launch(){await key('F2');await until(s=>s.gui.app?.active===0,'launcher');await click(130,266);return until(s=>s.editors.some(e=>e?.frames>0),'editor launched');}
 async function workspaceOpen(id,name){
  await key('CTRL+O');let s=await until(s=>s.editors[id]?.mode===1&&s.canvases[id]?.controls.includes(703),'Open picker');
- await click(24+id*8+s.canvases[id].width-40,120+id*8);await type(name);await key('TAB');await key('ENTER');
+ if(id===0)await key('CTRL+W');else await click(24+id*8+s.canvases[id].width-40,120+id*8);await type(name);await key('TAB');await key('ENTER');
  return until(s=>s.editors[id]?.mode===0&&!s.editors[id]?.dirty,'workspace opened');
 }
 async function nameAs(name){await key('CTRL+W');await until(s=>s.editors[s.gui.app.active-2]?.mode===3,'Save As');await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}

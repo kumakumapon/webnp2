@@ -8,7 +8,7 @@ Welcome → Editor (`KGEDIT.EXE`) を開きます。別の32ビットGUIイメ�
   Tabでフィルタ・一覧・名前・Save・Cancelを移動します。上書きはReplace/Rで確認し、
   Escで取り消せます。名前の大文字小文字は区別しません。
 - **Open / Ctrl+O → Work**: 保存したファイルを選択して開きます。Rootで従来の
-  読み取り専用ルートへ戻れます。ルートから開いた文書の保存先もWorkです。
+  読み取り専用ルートへ戻れます。Open内ではCtrl+WでもRoot/Workを切り替えられます。ルートから開いた文書の保存先もWorkです。
 - 終了・新規作成・読込時に変更があれば **Save/S・Discard/D・Cancel/Esc**。
   保存ダイアログで取り消した場合も、文書とウィンドウを保持します。
 - Undo/Redoは保存しても保持します。保存時の内容へ戻るとModifiedが消えます。
