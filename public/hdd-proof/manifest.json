@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "experimental": true,
+  "build": "bash scripts/prepare-pc98-hdd-ci.sh"
+}

@@ -33,6 +33,8 @@ jobs:
       - run: npm ci
       - name: Generate the CPANEL and KDESK DOS 4 image
         run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - name: Generate the opt-in DOS4 HDD proof images
+        run: bash scripts/prepare-pc98-hdd-ci.sh
       - run: npm run build
         env:
           # CORS未対応の配布元(OneDrive除く)向けの中継サービスのURL。リポジトリ変数

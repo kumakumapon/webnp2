@@ -1,0 +1,38 @@
+name: PC-98 HDD I/O proof
+on:
+  push:
+    branches: [master, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hdd-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/prepare-pc98-hdd-ci.sh
+      - run: npm test
+      - run: npm run build
+      - name: Boot DOS4 and verify real HDD I/O
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/hdd-preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          CHROMIUM=/usr/bin/google-chrome WEBNP2_NO_SANDBOX=1 node scripts/verify-pc98-hdd.mjs http://127.0.0.1:4173/ test-results/hdd-proof ${{ matrix.video }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pc98-hdd-${{ matrix.video }}
+          path: |
+            test-results/hdd-proof
+            public/hdd-proof/manifest.json
