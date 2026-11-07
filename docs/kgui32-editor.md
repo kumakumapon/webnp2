@@ -1,4 +1,8 @@
-# KGUI32 SDK3 / 一時テキストエディタ
+# KGUI32 SDK3 / 編集・入力・終了の基盤
+
+SDK3は実装・検証・マージ済みです。SDK4で保存が追加されました。
+現在の利用方法は [保存できるエディタ](kgui32-save.md) を参照してください。
+以下はSDK3時点の制限と操作の記録です。
 
 KGUI32のWelcome > Editor、またはRunから `KGEDIT.EXE` で起動します。
 最大64 KiBのASCII文書をメモリ内で編集します。ディスク保存はありません。
@@ -22,7 +26,7 @@ GUI専用4 MiB、2つの混在枠・各4 MiB、16 MiB設定を維持します。
 画面内は最大47桁・14行です。一般の日本語入力、ディスク保存、枠の増加は後続です。
 
 SDKのAPI・所有権・通常終了と非常停止の契約は
-[EDITOR-SDK.md](https://github.com/kumakumapon/MS-DOS/blob/codex/kgui32-sdk3-editor/tools/kgui32/EDITOR-SDK.md)。
+[EDITOR-SDK.md](https://github.com/kumakumapon/MS-DOS/blob/main/tools/kgui32/EDITOR-SDK.md)。
 Playwrightの `scripts/verify-kgui32-editor.mjs` はPEGC/Cirrusで実CPU/RAM、
 複数行・選択・Undo/Redo・別プロセス貼付・キー転送・終了取消・実ファイル内容と
 全FAT不変性を検査します。実施結果は開発PRへ記録します。

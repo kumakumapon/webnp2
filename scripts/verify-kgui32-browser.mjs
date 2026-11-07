@@ -13,7 +13,7 @@ const sha=b=>createHash('sha256').update(Array.isArray(b)?Uint8Array.from(b):b).
 let metadataHash=2166136261;const directory=[];
 for(let at=5*1024;at<11*1024&&image[at];at+=32){
  const attr=image[at+11];if(image[at]===0xe5||attr&8)continue;
- const name=image.subarray(at,at+8).toString('ascii').trimEnd()+'.'+image.subarray(at+8,at+11).toString('ascii').trimEnd();
+ const name=image.subarray(at,at+8).toString('ascii').trimEnd()+(image.subarray(at+8,at+11).toString('ascii').trimEnd()?'.'+image.subarray(at+8,at+11).toString('ascii').trimEnd():'');
  const bytes=image.readUInt32LE(at+28),date=image.readUInt16LE(at+24),time=image.readUInt16LE(at+22);
  directory.push({name,bytes,attr,date,time,cluster:image.readUInt16LE(at+26)});
  for(const value of [nameHash(name),bytes,attr,date,time])metadataHash=Math.imul(metadataHash^value,16777619)>>>0;
