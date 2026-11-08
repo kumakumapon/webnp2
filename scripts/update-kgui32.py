@@ -59,6 +59,60 @@ def workspace_hdd(root, destination):
             'logical_sector_bytes':1024,'initial_free_bytes':10114*4096,
             'disposable_volume_marker':'KHDPROOF'}
 
+RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
+             'COUNT32.EXE', 'ARGS32.EXE')
+
+def application_hdd(root, destination, files):
+    # Build offline from a NEW marked volume. No mounted/user image is opened.
+    temporary = workspace_hdd(root, destination)
+    image = bytearray((destination/temporary['image']).read_bytes())
+    start = 256+264*256
+    fat, rootdir, data = start+1024, start+41*1024, start+57*1024
+    def link(cluster, value):
+        for offset in (fat, fat+20*1024):
+            struct.pack_into('<H', image, offset+cluster*2, value)
+    link(4, 0xffff)
+    entry = rootdir+64
+    image[entry:entry+11] = b'APPS       '
+    image[entry+11] = 16
+    struct.pack_into('<HH', image, entry+24, 0x21, 4)
+    directory = data+2*4096
+    for offset, name, cluster in ((0,b'.          ',4),(32,b'..         ',0)):
+        image[directory+offset:directory+offset+11] = name
+        image[directory+offset+11] = 16
+        struct.pack_into('<HH', image, directory+offset+24, 0x21, cluster)
+    next_cluster = 5
+    entries = []
+    for index, name in enumerate(RELOCATED):
+        content = files[name]
+        count = (len(content)+4095)//4096
+        first = next_cluster
+        if first+count > 10118:
+            raise ValueError('Application volume exceeds FAT16 capacity')
+        for i in range(count):
+            c = next_cluster; next_cluster += 1
+            link(c, c+1 if i+1<count else 0xffff)
+            at = data+(c-2)*4096
+            image[at:at+min(4096,len(content)-i*4096)] = content[i*4096:(i+1)*4096]
+        at = directory+(index+2)*32
+        base, ext = name.split('.')
+        image[at:at+11] = (base.ljust(8)+ext.ljust(3)).encode('ascii')
+        image[at+11] = 33  # distribution applications are read-only
+        struct.pack_into('<HHI', image, at+24, 0x21, first, len(content))
+        entries.append({'name': 'APPS/'+name, 'bytes': len(content),
+                        'sha256': hashlib.sha256(content).hexdigest()})
+    sha = hashlib.sha256(image).hexdigest()
+    name = f'apps-{sha[:12]}.thd'
+    (destination/name).write_bytes(image)
+    return {**temporary, 'image':name, 'sha256':sha,
+            'initial_free_bytes': (10118-next_cluster)*4096, 'files':entries}
+
+def fd_free(image):
+    def get(c):
+        value = struct.unpack_from('<H', image, 1024+c*3//2)[0]
+        return value >> 4 if c & 1 else value & 4095
+    return sum(not get(c) for c in range(2, 1223))*1024
+
 def main():
     source = Path(sys.argv[1]).resolve()
     root = Path(__file__).resolve().parents[1]
@@ -97,13 +151,25 @@ def main():
     hdd = workspace_hdd(root, destination)
     name = f'kgui32-{sha[:12]}.xdf'
     (destination/name).write_bytes(image)
+    app_hdd = application_hdd(root, destination, files)
+    compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED]
+    compact, compact_entries = helper.make_image(original[:1024], files['IO.SYS'],
+        compact_files, kernel=files['MSDOS.SYS'], command=files['COMMAND.COM'], autoexec=autoexec)
+    compact_entries.append(add_workspace(compact))
+    compact_sha = hashlib.sha256(compact).hexdigest()
+    compact_name = f'kgui32-apps-{compact_sha[:12]}.xdf'
+    (destination/compact_name).write_bytes(compact)
+    distribution = {'image':compact_name,'sha256':compact_sha,'files':compact_entries,
+                    'fd_free_bytes':fd_free(compact),'legacy_fd_free_bytes':fd_free(image),
+                    'hdd':app_hdd,'directory':'APPS','relocated':list(RELOCATED),
+                    'hdd_boot_supported':False}
     (destination/'manifest.json').write_text(json.dumps({
         'enabled':True,'experimental':True,'image':name,'sha256':sha,
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
-        'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
+        'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded ASCII editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])

@@ -7,7 +7,7 @@ const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
  it('offers separate explicit boot choices only after generation',()=>{
   expect(KGUI32_FD_BOOT_URL).toBe(manifest.enabled?`./?fd1=./kgui32/${manifest.image}&run=1&mem=16`:undefined);
-  expect(KGUI32_BOOT_URL).toBe(KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
+  expect(KGUI32_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
   expect(KGUI32_HIGH_COLOR_BOOT_URL).toBe(KGUI32_BOOT_URL?KGUI32_BOOT_URL+'&video=cirrus':undefined);
  });
  it('pins native sources, preserves the base disk and packages the private GUI ABI',()=>{
@@ -44,4 +44,22 @@ describe('independent native PM32 GUI image',()=>{
   expect(fatFreeSpace(volume)).toEqual({total:41435136,free:hdd.initial_free_bytes});
   expect(hdd.initial_free_bytes).toBe(41426944);
  });
+ it('ships relocated apps only on HDD and preserves an explicit complete FD',()=>{
+  if(!manifest.enabled)return;
+  const d=manifest.application_distribution;
+  const compact=readFileSync('public/kgui32/'+d.image),hdd=readFileSync('public/kgui32/'+d.hdd.image);
+  expect(createHash('sha256').update(compact).digest('hex')).toBe(d.sha256);
+  expect(createHash('sha256').update(hdd).digest('hex')).toBe(d.hdd.sha256);
+  const fd=openDiskImage(compact,d.image),hd=openDiskImage(hdd,d.hdd.image);
+  const legacy=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
+  for(const name of d.relocated){
+   expect(fatList(fd,'/').some(e=>e.name===name)).toBe(false);
+   expect(fatReadFile(hd,'APPS/'+name)).toEqual(fatReadFile(legacy,name));
+  }
+  expect(fatFreeSpace(fd).free).toBe(d.fd_free_bytes);
+  expect(d.fd_free_bytes).toBeGreaterThan(d.legacy_fd_free_bytes+65536);
+  expect(fatFreeSpace(hd).free).toBe(d.hdd.initial_free_bytes);
+  expect(d.hdd_boot_supported).toBe(false);
+ });
+
 });
