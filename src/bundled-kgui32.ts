@@ -5,7 +5,10 @@ export const KGUI32_FD_BOOT_URL = manifest.enabled
   ? `./?fd1=./kgui32/${'image' in manifest ? manifest.image : ''}&run=1&mem=16`
   : undefined;
 const companion = (manifest as {workspace_hdd?: {image: string}}).workspace_hdd;
-export const KGUI32_BOOT_URL = KGUI32_FD_BOOT_URL && companion?.image
+const distribution = (manifest as {application_distribution?: {image: string; hdd: {image: string}}}).application_distribution;
+export const KGUI32_BOOT_URL = manifest.enabled && distribution
+  ? `./?fd1=./kgui32/${distribution.image}&hdd=./kgui32/${distribution.hdd.image}&run=1&mem=16`
+  : KGUI32_FD_BOOT_URL && companion?.image
   ? `${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${companion.image}`
   : KGUI32_FD_BOOT_URL;
 export const KGUI32_HIGH_COLOR_BOOT_URL = KGUI32_BOOT_URL ? `${KGUI32_BOOT_URL}&video=cirrus` : undefined;
