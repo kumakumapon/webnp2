@@ -1,6 +1,7 @@
 # KGUI32 HDD保存基盤
 
-KGUI32の起動リンクは、GUI FDと新しい約40MBのFAT16データHDDを指定します。
+KGUI32の標準起動リンクは[HDDアプリ配置版](kgui32-hdd-apps.md)のFD＋HDDを指定します。
+この文書は保存APIと、従来の完全FD＋空のWork HDDによる回帰検証構成も説明します。
 Editorの保存と共通Open/Save Asは、ゲスト側で認識したHDDのWORKを使います。
 通常は **B:\WORK**、空きは初期状態で41,426,944バイトです。
 既存KDESKの標準イメージ、ユーザーが保存済みのディスクは置き換えません。
@@ -78,5 +79,6 @@ manifestはネイティブSHA・dirty・FD/HDDハッシュ・初期空き容量�
 最初のHDD物理書き込みだけを拒否します。フィクスチャのFAT変更は起動前だけです。
 従来のFD保存・GUI・KDESKテストも維持します。
 
-FilesのHDD閲覧、アプリのHDD移動、復旧UI、任意HDD形式、HDD単独起動は後続段階です。
+アプリのHDD配置・起動は[HDDアプリ配置版](kgui32-hdd-apps.md)で対応します。
+FilesのHDD閲覧、復旧UI、任意HDD形式、HDD単独起動は後続段階です。
 現在のFilesルートAPIはA:の読み取り専用を維持しています。

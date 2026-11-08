@@ -58,7 +58,7 @@ async function shipped(){
  await page.screenshot({path:join(output,'hdd-calculator-clock.png')});await end(1);await end(0);
  pass('HDD-only calculator and clock: actual CPL3, independent CR3/RAM, input and background progress');
  await editor();location(await inspect(),0,1);await text(0,'application HDD document');await key('CTRL+S');await picker(0,3,1);await type('APPDOC.TXT');await key('ENTER');await until(s=>!s.editors[0]?.dirty&&s.editors[0]?.mode===0,'HDD Editor save');
- await launch(268,230);s=await until(s=>s.apps[1]?.magic===0x3246474b&&s.apps[1].frames>0,'HDD Files');assert.equal(s.apps[1].error,0);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);
+ await launch(268,230);s=await until(s=>s.apps[1]?.magic===0x3246474b&&s.apps[1].frames>0,'HDD Files');assert.equal(s.cpu.diagnostics[1].pm32.samples[13],0);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);
  const saved=await disk('hdd');assert.equal(protectedImages(saved,await disk('fd1')).files.get('WORK/APPDOC.TXT').toString(),'application HDD document');await page.screenshot({path:join(output,'hdd-files-editor.png')});await end(1);await end(0);
  pass('HDD-only Files and Editor, real DOS save, unchanged distribution apps and FD');
  await command(0,'ARGS32.EXE "two words" three');s=await until(s=>s.cpu.views[0].state===0&&s.cpu.diagnostics[0].pm32?.argc===3,'HDD quoted arguments');assert.equal(s.cpu.diagnostics[0].pm32.exitCode,0);
