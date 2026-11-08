@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
+import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 import {inspectHdd,assertHddProtected,withHddFile,fullHdd,blockedWork,legacyHdd} from './kgui32-hdd-fat.mjs';
 import {inspectFat,assertProtected} from './kgui32-workspace-fat.mjs';
 const [base='http://127.0.0.1:4183/',output='test-results/hdd-workspace',video='pegc',only='all']=process.argv.slice(2);
@@ -38,7 +39,7 @@ async function picker(id,mode,drive){return until(s=>s.editors[id]?.mode===mode&
 async function saveAs(id,name,drive){await key('CTRL+W');await picker(id,3,drive);await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
 async function open(id,name,drive){await key('CTRL+O');await picker(id,1,drive);await type(name);await key('TAB');await key('ENTER');return until(s=>s.editors[id]?.mode===0&&!s.editors[id]?.dirty,'workspace file opened');}
 function reclaimed(s){assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));}
-async function exit(oldVector,discard=false){if(discard){await key('ENTER');await key('F10');await until(s=>s.editors.some(e=>e?.mode===2),'dirty close');await key('d');}else await key('F10');const s=await until(s=>!s.gui.ready&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
+async function exit(oldVector,discard=false){if(discard){await key('ENTER');await key('F10');await until(s=>s.editors.some(e=>e?.mode===2),'dirty close');await key('d');}else await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
 function pass(name,more={}){results.push({name,...more});console.log('PASS',name);}
 async function normal(){
  let old=await boot(),s=await editor();location(s,0,1);await text(0,'HDD document\nsecond line');await key('CTRL+S');s=await picker(0,3,1);assert(s.canvases[0].texts.some(t=>t.includes('HDD')));assert(s.canvases[0].texts.some(t=>t.includes('temp 4 KiB')));
