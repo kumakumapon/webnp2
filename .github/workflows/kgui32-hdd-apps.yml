@@ -36,6 +36,7 @@ jobs:
             sleep 1
           done
           node scripts/verify-kgui32-hdd-apps.mjs http://127.0.0.1:4173/webnp2/ test-results/hdd-apps ${{ matrix.video }}
+          KGUI32_STANDALONE_REPEATS=5 node scripts/verify-kgui32-hdd-apps.mjs http://127.0.0.1:4173/webnp2/ test-results/hdd-apps/standalone-repeat ${{ matrix.video }} standalone
       - uses: actions/upload-artifact@v4
         if: always()
         with:

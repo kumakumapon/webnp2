@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
+import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 import {inspectHdd,assertHddProtected,withHddFile,fullHdd,blockedWork,legacyHdd} from './kgui32-hdd-fat.mjs';
 import {inspectFat,assertProtected} from './kgui32-workspace-fat.mjs';
 const [base='http://127.0.0.1:4183/',output='test-results/hdd-apps',video='pegc',only='all']=process.argv.slice(2);
@@ -41,7 +42,7 @@ async function picker(id,mode,drive){return until(s=>s.editors[id]?.mode===mode&
 async function saveAs(id,name,drive){await key('CTRL+W');await picker(id,3,drive);await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
 async function open(id,name,drive){await key('CTRL+O');await picker(id,1,drive);await type(name);await key('TAB');await key('ENTER');return until(s=>s.editors[id]?.mode===0&&!s.editors[id]?.dirty,'workspace file opened');}
 function reclaimed(s){assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));}
-async function exit(oldVector,discard=false){if(discard){await key('ENTER');await key('F10');await until(s=>s.editors.some(e=>e?.mode===2),'dirty close');await key('d');}else await key('F10');const s=await until(s=>!s.gui.ready&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
+async function exit(oldVector,discard=false){if(discard){await key('ENTER');await key('F10');await until(s=>s.editors.some(e=>e?.mode===2),'dirty close');await key('d');}else await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
 function pass(name,more={}){results.push({name,...more});console.log('PASS',name);}
 const fdFat=inspectFat(original),hdFat=inspectHdd(hdd);
 for(const name of distribution.relocated){assert(!fdFat.files.has(name),name+' absent from distribution FD');assert(hdFat.files.has('APPS/'+name));}
@@ -97,6 +98,9 @@ try{
  if(only==='all'||only==='shipped')await shipped();
  if(only==='all'||only==='text')await textApps();
  for(const kind of ['missing','corrupt','missing-hdd','foreign'])if(only==='all'||only===kind)await rejection(kind);
- if(only==='all'||only==='standalone')await standalone();
+ if(only==='all'||only==='standalone'){
+  const repeats=Number(process.env.KGUI32_STANDALONE_REPEATS??1);assert(Number.isInteger(repeats)&&repeats>=1&&repeats<=20);
+  for(let i=0;i<repeats;i++)await standalone();
+ }
  await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,fd:manifest.sha256,hdd:manifest.workspace_hdd.sha256,fdFree:distribution.fd_free_bytes,results},null,2)+'\n');
 }catch(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>null),results},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw e;}finally{await browser.close();}
