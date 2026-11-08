@@ -45,7 +45,13 @@ async function exit(oldVector,discard=false){if(discard){await key('ENTER');awai
 function pass(name,more={}){results.push({name,...more});console.log('PASS',name);}
 const fdFat=inspectFat(original),hdFat=inspectHdd(hdd);
 for(const name of distribution.relocated){assert(!fdFat.files.has(name),name+' absent from distribution FD');assert(hdFat.files.has('APPS/'+name));}
-async function end(id){await click(330+146*id,(await inspect()).gui.height-16);await key('CTRL+E');return until(s=>s.cpu.views[id].state===0,'end slot '+id);}
+async function end(id){
+ const s=await inspect();await click(330+146*id,s.gui.height-16);
+ // Editor owns Ctrl+E (end of line); use the desktop's explicit End button.
+ if(s.editors[id]){const c=s.canvases[id],x=id?s.gui.width-c.width-32:16,y=id?Math.max(40,s.gui.height-c.height-144):40;await click(x+230,y+48);}
+ else await key('CTRL+E');
+ return until(s=>s.cpu.views[id].state===0,'end slot '+id);
+}
 async function launch(x,y){await key('F2');await click(x,y);}
 async function command(id,value){await launch(130,230);await until(s=>s.cpu.views[id].state!==0,'V86 command window');await end(id);await key('CTRL+L');await type(value+'\r');}
 function protectedImages(bytes,fd){const state=assertHddProtected(hdd,bytes);assert.equal(sha(fd),sha(original));return state;}
@@ -61,14 +67,18 @@ async function shipped(){
  await launch(268,230);s=await until(s=>s.apps[1]?.magic===0x3246474b&&s.apps[1].frames>0,'HDD Files');assert.equal(s.cpu.diagnostics[1].pm32.samples[13],0);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);
  const saved=await disk('hdd');assert.equal(protectedImages(saved,await disk('fd1')).files.get('WORK/APPDOC.TXT').toString(),'application HDD document');await page.screenshot({path:join(output,'hdd-files-editor.png')});await end(1);await end(0);
  pass('HDD-only Files and Editor, real DOS save, unchanged distribution apps and FD');
+ await exit(old);protectedImages(await disk('hdd'),await disk('fd1'));await writeFile(join(output,'saved.thd'),saved);await ctx.close();
+ old=await boot(saved);await editor();await open(0,'APPDOC.TXT',1);s=await until(s=>s.editors[0]?.hash===fnv('application HDD document'),'cold boot app and saved document');assert.equal(sha(await disk('hdd')),sha(saved));await page.screenshot({path:join(output,'hdd-app-cold-boot.png')});await exit(old);await ctx.close();pass('cold boot with distributed FD/HDD retains document and launches HDD Editor');
+}
+async function textApps(){let s;const old=await boot();
  await command(0,'ARGS32.EXE "two words" three');s=await until(s=>s.cpu.views[0].state===0&&s.cpu.diagnostics[0].pm32?.argc===3,'HDD quoted arguments');assert.equal(s.cpu.diagnostics[0].pm32.exitCode,0);
  await key('CTRL+L');await type('COUNT32.EXE 7\r');s=await until(s=>s.cpu.views[0].kind===1&&s.cpu.views[0].state===1&&s.cpu.views[0].counter>0,'HDD PM32 text application');
  await key('CTRL+E');await until(s=>s.cpu.views[0].state===0,'end HDD text app');
  await click(310,88);s=await until(s=>s.cpu.views[0].state===1&&s.cpu.views[0].counter>0,'restart HDD text app');await end(0);
- await exit(old);protectedImages(await disk('hdd'),await disk('fd1'));await writeFile(join(output,'saved.thd'),saved);await ctx.close();
+ await exit(old);protectedImages(await disk('hdd'),await disk('fd1'));await ctx.close();
  pass('PM32 HDD text app, quoted startup arguments, restart and complete resource reclamation');
- old=await boot(saved);await editor();await open(0,'APPDOC.TXT',1);s=await until(s=>s.editors[0]?.hash===fnv('application HDD document'),'cold boot app and saved document');assert.equal(sha(await disk('hdd')),sha(saved));await page.screenshot({path:join(output,'hdd-app-cold-boot.png')});await exit(old);await ctx.close();pass('cold boot with distributed FD/HDD retains document and launches HDD Editor');
 }
+
 function brokenApp(corrupt){
  const bytes=Buffer.from(hdd),s=inspectHdd(bytes),name='APPS/KGCALC.EXE';
  if(corrupt){const at=s.data+(s.chains.get(name)[0]-2)*s.clusterBytes;bytes[at+bytes.readUInt32LE(at+84)]=0;}
@@ -85,6 +95,7 @@ async function standalone(){
 }
 try{
  if(only==='all'||only==='shipped')await shipped();
+ if(only==='all'||only==='text')await textApps();
  for(const kind of ['missing','corrupt','missing-hdd','foreign'])if(only==='all'||only===kind)await rejection(kind);
  if(only==='all'||only==='standalone')await standalone();
  await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,fd:manifest.sha256,hdd:manifest.workspace_hdd.sha256,fdFree:distribution.fd_free_bytes,results},null,2)+'\n');
