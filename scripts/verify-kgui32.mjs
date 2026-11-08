@@ -35,7 +35,13 @@ const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
 async function boot(mem){page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',e=>errors.push(e.message));
- if(mem===16){await page.goto(base);const link=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');await link.waitFor({state:'visible'});const href=await link.getAttribute('href'),url=new URL(href,page.url());assert.equal(url.searchParams.get('fd1'),'./kgui32/'+manifest.image);assert.equal(url.searchParams.get('mem'),'16');assert.equal(url.searchParams.get('video'),video==='cirrus'?'cirrus':null);await link.click();}
+ if(mem===16){await page.goto(base);const link=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');await link.waitFor({state:'visible'});const href=await link.getAttribute('href'),url=new URL(href,page.url());const distribution=manifest.application_distribution;
+  assert.equal(url.searchParams.get('fd1'),'./kgui32/'+(distribution?.image??manifest.image));
+  if(distribution)assert.equal(url.searchParams.get('hdd'),'./kgui32/'+distribution.hdd.image);
+  assert.equal(url.searchParams.get('mem'),'16');assert.equal(url.searchParams.get('video'),video==='cirrus'?'cirrus':null);
+  // This suite exercises the complete standalone FD, including KGPROOF and
+  // low-memory fallback. The shipping HDD pair has its own end-to-end suite.
+  url.searchParams.set('fd1','./kgui32/'+manifest.image);url.searchParams.delete('hdd');await page.goto(url.href);}
  else await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
 }
 async function command(mode){const previous=await inspectGUI(page);await page.evaluate(cookie=>{window.kgui32ExcludedCookie=cookie;delete window.kgui32Address;},previous?.cookie);await type('KGUILDR KGUI32.EXE '+mode+'\r');}
