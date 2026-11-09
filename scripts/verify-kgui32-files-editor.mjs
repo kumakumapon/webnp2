@@ -38,7 +38,11 @@ async function boot(bytes=hdd,fd=original){
  await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return vector();
 }
 function location(s,id,drive,hddTarget=true){const e=s.editors[id];assert.equal(e.version,4);assert.equal(e.workspace>>>8,drive);assert.equal(e.workspace&3,hddTarget?1:2);assert.notEqual(s.cpu.views[id].cr3,s.gui.cpu.pd);assert.equal(s.cpu.diagnostics[id].frame.cs,59);assert.equal(s.cpu.diagnostics[id].frame.eflags&0x20000,0);}
-async function text(id,value,expected=value){await type(value.replaceAll('\n','\r'));return until(s=>s.editors[id]?.bytes===expected.length&&s.editors[id]?.hash===fnv(expected),'typed document');}
+async function text(id,value){
+ // A native retained frame can take longer than the emulator's key pulse.
+ // Bound the outstanding input and acknowledge actual CPL3 bytes after each key.
+ let prefix='',s;for(const c of value){await type(c==='\n'?'\r':c);prefix+=c;s=await until(s=>s.editors[id]?.bytes===prefix.length&&s.editors[id]?.hash===fnv(prefix),'typed document '+prefix.length+'/'+value.length);}return s;
+}
 async function picker(id,mode,drive){return until(s=>s.editors[id]?.mode===mode&&s.canvases[id]?.texts.some(t=>t.includes(String.fromCharCode(65+drive)+':\\WORK'))&&s.canvases[id]?.texts.some(t=>t.startsWith('Free ')||t.includes('unavailable')),'workspace picker');}
 async function saveAs(id,name,drive){await key('CTRL+W');await picker(id,3,drive);await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
 function reclaimed(s){assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));}
