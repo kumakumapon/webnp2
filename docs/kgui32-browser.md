@@ -1,6 +1,7 @@
 # KGUI32: GUI SDK第2版とFiles
 
 Welcomeの **Files** をクリックすると、独立した32bitウィンドウでA:ルートの一覧を開きます。
+Workへの切り替えと選択文書の編集は[Files／Editor連携](kgui32-files-editor.md)を参照してください。
 空きアプリ枠は2本の共通枠から確保し、他方でClock・Calculator・DOSを継続できます。
 Run（Ctrl+L）から `KGFILES.EXE` を入力しても起動できます。拡張メモリ16 MiB、
 アプリ各4 MiB、GUI専用4 MiBの構成です。保存済みのユーザーディスクは変更しません。

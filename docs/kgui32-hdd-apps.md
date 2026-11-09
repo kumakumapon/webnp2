@@ -24,8 +24,9 @@ Applications are read-only files. WORK is independent and writable by guest DOS.
 Export the HDD as THD to keep documents; reconnect it with the corresponding FD
 on the next start. An older workspace HDD lacks APPS: retain its original full FD
 pair rather than replacing it with the compact FD. No automatic user-disk upgrade
-or formatting occurs. Files still browses the read-only A: root; HDD Files
-navigation, recovery UI and Japanese remain later stages.
+or formatting occurs. Files now switches between the read-only A: root and Work and can open a selected
+TXT in Editor; see [Files / Editor integration](kgui32-files-editor.md).
+Recovery UI and Japanese remain later stages.
 
 ## Verification
 

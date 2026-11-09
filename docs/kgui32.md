@@ -98,7 +98,8 @@ PlaywrightはGUIの実CPUフレーム、CR3/物理メモリ、CPUが取得した
 CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持します。
 
 実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK4、電卓・時計、
-読み取り専用Files、ASCIIエディタとHDD/FDのWork保存です。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
+A:ルート／Workを閲覧するFiles、ASCIIエディタとHDD/FDのWork保存です。
+[Files／Editor連携](kgui32-files-editor.md)で選択文書を編集できます。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
 アプリ間クリップボード、日本語・文字属性の描画、直接GDCを操作する
 外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
 従来KDESKの既存機能も引き続き利用できます。
