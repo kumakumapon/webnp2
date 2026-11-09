@@ -18,8 +18,10 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.source_commit).toBe(pin);expect(base.source_commit).toBe(pin);expect(manifest.base_image_sha256).toBe(base.sha256);
   const image=readFileSync('public/kgui32/'+manifest.image);
   expect(createHash('sha256').update(image).digest('hex')).toBe(manifest.sha256);
+  expect(manifest.files_workspace_browser).toBe(1);expect(manifest.files_editor_launch).toBe(1);
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
+  const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
   expect(manifest.dedicated_gui_context).toBe(true);expect(manifest.application_slots).toBe(2);expect(manifest.gui_bits).toBe(32);expect(manifest.dos_files_read_only).toBe(false);expect(manifest.workspace_save_api).toBe(1);expect(manifest.workspace_information_api).toBe(1);expect(manifest.writable_workspace).toBe('auto: verified HDD / WORK');expect(manifest.workspace_fd_fallback).toBe('A:\\WORK');expect(manifest.root_browser_read_only).toBe(true);
   const disk=openDiskImage(image,manifest.image),old=openDiskImage(readFileSync('public/k386/'+base.image),base.image);
   for(const name of ['IO.SYS','MSDOS.SYS','COMMAND.COM','KDESK.EXE','K386.EXE','K32HOST.EXE'])expect(fatReadFile(disk,name)).toEqual(fatReadFile(old,name));
