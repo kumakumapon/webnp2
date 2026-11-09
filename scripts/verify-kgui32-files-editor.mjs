@@ -31,7 +31,7 @@ async function click(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo
 const vector=()=>page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
 async function disk(slot){if(slot==='fd1')return Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');const wait=page.waitForEvent('download');await page.evaluate(()=>window.np2debug.np2.exportDisk('hdd'));return readFile(await (await wait).path());}
 async function boot(bytes=hdd,fd=original){
- ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];page.on('pageerror',e=>errors.push(e.message));
+ filters.fill('');ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(bytes)await page.route('**/kgui32/'+manifest.workspace_hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
  if(!fd.equals(original))await page.route('**/kgui32/'+manifest.image,r=>r.fulfill({body:fd,contentType:'application/octet-stream'}));
  await page.goto(new URL(`?fd1=./kgui32/${manifest.image}${bytes?'&hdd=./kgui32/'+manifest.workspace_hdd.image:''}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
@@ -55,20 +55,22 @@ async function launch(x,y){await key('F2');await click(x,y);}
 
 async function shot(name){for(let i=0;i<2;i++){const before=await inspect(),x=before.gui.app.mx===10?12:10;await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y:before.gui.height-48});await until(s=>s.gui.app.frames>before.gui.app.frames&&s.gui.app.heartbeat>=before.gui.app.heartbeat+2,'composed screenshot');}await page.screenshot({path:join(output,name)});}
 const filters=['',''];
-async function focus(id){const s=await inspect();await click(330+146*id,s.gui.height-16);}
+async function focus(id){const s=await inspect();await click(330+146*id,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'active slot '+id);}
+async function selectAll(id){await key('CTRL+A');return until(s=>s.gui.app.active===id+2&&s.editors[id]?.anchor===0&&s.editors[id]?.cursor===s.editors[id]?.bytes,'Editor selection committed');}
 async function files(){await launch(268,230);return until(s=>s.files[0]?.frames>0&&!(s.files[0].mode&2),'Files root');}
 async function localFocus(id,target){for(let i=0;i<8;i++){const s=await inspect();if(s.files[id].focus===target)return;const next=(s.files[id].focus+1)%8;await key('TAB');await until(s=>s.files[id]?.focus===next,'local focus '+next);}throw Error('local focus');}
 async function filter(name){
  await focus(0);let s=await inspect();if(s.files[0].mode&1){await key('ESC');await until(s=>!(s.files[0]?.mode&1),'back to list');}
+ s=await inspect();if(filters[0]===name&&s.files[0]?.matches===1&&s.files[0]?.nameHash===fnv(name))return s;
  await localFocus(0,0);await key('HOME');for(let i=0;i<filters[0].length;i++)await key('DEL');await type(name);filters[0]=name;
  return until(s=>!(s.files[0]?.mode&2)&&s.files[0]?.matches===1&&s.files[0]?.nameHash===fnv(name),'selected '+name);
 }
 async function work(){await key('CTRL+W');return until(s=>(s.files[0]?.mode&32)&&!(s.files[0].mode&2),'Work enumeration');}
-async function preview(name,bytes){await filter(name);await key('TAB');await key('ENTER');return until(s=>(s.files[0]?.mode&1)&&s.files[0].bytes===bytes.length&&s.files[0].hash===fnv(bytes),'native preview '+name);}
+async function preview(name,bytes){await filter(name);await localFocus(0,1);await key('ENTER');return until(s=>(s.files[0]?.mode&1)&&s.files[0].bytes===bytes.length&&s.files[0].hash===fnv(bytes),'native preview '+name);}
 async function linked(name,bytes,drive=1){
  const normalized=Buffer.from(bytes.toString().replaceAll('\r',''));
- const before=await filter(name),generation=before.cpu.views[0].generation;await key('CTRL+O');
- const s=await until(s=>s.editors[1]?.frames>0&&s.editors[1].bytes===normalized.length&&s.editors[1].hash===fnv(normalized)&&!s.editors[1].dirty,'Files opens '+name+' in Editor');
+ const before=await filter(name),generation=before.cpu.views[0].generation,peerGeneration=before.cpu.views[1].generation;await key('CTRL+O');
+ const s=await until(s=>s.cpu.views[1].generation>peerGeneration&&[1,2].includes(s.cpu.views[1].state)&&s.bridge.generation[1]===s.cpu.views[1].generation&&s.bridge.tokens[1]>0&&s.editors[1]?.frames>0&&s.editors[1].bytes===normalized.length&&s.editors[1].hash===fnv(normalized)&&!s.editors[1].dirty,'Files opens '+name+' in Editor');
  assert.equal(s.cpu.views[0].generation,generation);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);location(s,1,drive,drive!==0);await focus(1);return s;
 }
 async function refresh(){await focus(0);await localFocus(0,3);const events=(await inspect()).files[0].events;await key('ENTER');return until(s=>s.files[0]?.events>events&&!(s.files[0].mode&2)&&s.files[0].error===0,'Files refresh');}
@@ -81,11 +83,11 @@ async function roundtrip(){
  const entry=inspectHdd(fixture).entries.get('WORK/NOTE.TXT');let metadata=2166136261;for(const v of [fnv('NOTE.TXT'),entry.size,entry.attr,entry.raw.readUInt16LE(24),entry.raw.readUInt16LE(22)])metadata=Math.imul(metadata^v,16777619)>>>0;assert.equal(s.files[0].metadataHash,metadata);
  s=await preview('NOTE.TXT',initial);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);
  await until(s=>s.canvases[0]?.texts.includes('Files Work document'),'preview retained frame');await shot('work-preview.png');await linked('NOTE.TXT',initial);
- await key('CTRL+A');await text(1,updated.toString());await key('CTRL+S');await until(s=>s.editors[1]?.hash===fnv(updated)&&!s.editors[1].dirty&&s.editors[1].mode===0,'save opened Work document');
+ await selectAll(1);await text(1,updated.toString());await key('CTRL+S');await until(s=>s.editors[1]?.hash===fnv(updated)&&!s.editors[1].dirty&&s.editors[1].mode===0,'save opened Work document');
  let media=await assertMedia(fixture);assert.deepEqual(media.state.files.get('WORK/NOTE.TXT'),updated);
  await end(1);await refresh();s=await preview('NOTE.TXT',updated);assert.equal(s.cpu.views[0].generation,generation);
  s=await linked('NOTE.TXT',updated);const editorGeneration=s.cpu.views[1].generation;
- await key('CTRL+A');await text(1,'dirty peer must survive');s=await until(s=>s.editors[1]?.dirty,'dirty peer');const peer={hash:s.editors[1].hash,bytes:s.editors[1].bytes,history:s.editors[1].history};
+ await selectAll(1);await text(1,'dirty peer must survive');s=await until(s=>s.editors[1]?.dirty,'dirty peer');const peer={hash:s.editors[1].hash,bytes:s.editors[1].bytes,history:s.editors[1].history};
  await filter('NOTE.TXT');await key('CTRL+O');s=await until(s=>s.files[0]?.error===16&&(s.files[0].mode&4),'two occupied slots refused');
  assert.equal(s.cpu.views[1].generation,editorGeneration);assert.equal(s.cpu.views[0].generation,generation);for(const [k,v] of Object.entries(peer))assert.equal(s.editors[1][k],v);assert.equal(s.editors[1].dirty,1);assert([1,2].includes(s.cpu.views[1].state));
  await until(s=>s.canvases[0]?.texts.some(t=>t.startsWith('Both slots')),'busy retained frame');await shot('busy-dirty-editor.png');await key('ESC');
@@ -108,9 +110,9 @@ async function rejected(){
 async function fallback(){
  const legacy=await readFile(new URL('../public/kgui32/'+legacyImage,import.meta.url)),root=inspectFat(legacy).files.get('EDITTEST.TXT');assert(root);
  const old=await boot(null,legacy);await files();await linked('EDITTEST.TXT',root,0);
- await key('CTRL+A');await text(1,'root copied to FD Work');await saveAs(1,'LINKED.TXT',0);await until(s=>!s.editors[1]?.dirty&&s.editors[1]?.mode===0,'root Save As into FD Work');await end(1);
+ await selectAll(1);await text(1,'root copied to FD Work');await saveAs(1,'LINKED.TXT',0);await until(s=>!s.editors[1]?.dirty&&s.editors[1]?.mode===0,'root Save As into FD Work');await end(1);
  await focus(0);await work();await preview('LINKED.TXT',Buffer.from('root copied to FD Work'));await linked('LINKED.TXT',Buffer.from('root copied to FD Work'),0);
- await key('CTRL+A');await text(1,'FD Work opened and saved');await key('CTRL+S');await until(s=>!s.editors[1]?.dirty&&s.editors[1]?.mode===0,'save FD Work');await end(1);await refresh();await preview('LINKED.TXT',Buffer.from('FD Work opened and saved'));
+ await selectAll(1);await text(1,'FD Work opened and saved');await key('CTRL+S');await until(s=>!s.editors[1]?.dirty&&s.editors[1]?.mode===0,'save FD Work');await end(1);await refresh();await preview('LINKED.TXT',Buffer.from('FD Work opened and saved'));
  await exit(old);const saved=await disk('fd1'),state=assertProtected(legacy,saved);assert.equal(state.files.get('WORK/LINKED.TXT').toString(),'FD Work opened and saved');assert.deepEqual(state.files.get('EDITTEST.TXT'),root);await writeFile(join(output,'saved-fallback.xdf'),saved);await ctx.close();pass('root document opens read-only, Save As selects explicit FD Work; Files preview/open/save use the same fallback; protected root and complete cleanup');
 }
 try{
