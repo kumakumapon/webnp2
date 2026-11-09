@@ -10,6 +10,7 @@ import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 import {inspectHdd,assertHddProtected,withHddFile} from './kgui32-hdd-fat.mjs';
 import {inspectFat,assertProtected} from './kgui32-workspace-fat.mjs';
 const [base='http://127.0.0.1:4183/',output='test-results/files-editor',video='pegc',only='all']=process.argv.slice(2);
+assert(['pegc','cirrus'].includes(video));assert(['all','roundtrip','rejected','fallback'].includes(only));
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 const distribution=manifest.application_distribution;assert(distribution);
 const legacyImage=manifest.image;
@@ -36,14 +37,12 @@ async function boot(bytes=hdd,fd=original){
  await page.goto(new URL(`?fd1=./kgui32/${manifest.image}${bytes?'&hdd=./kgui32/'+manifest.workspace_hdd.image:''}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return vector();
 }
-async function editor(id=0){await key('F2');await click(130,266);return until(s=>s.editors[id]?.frames>0,'Editor '+id);}
 function location(s,id,drive,hddTarget=true){const e=s.editors[id];assert.equal(e.version,4);assert.equal(e.workspace>>>8,drive);assert.equal(e.workspace&3,hddTarget?1:2);assert.notEqual(s.cpu.views[id].cr3,s.gui.cpu.pd);assert.equal(s.cpu.diagnostics[id].frame.cs,59);assert.equal(s.cpu.diagnostics[id].frame.eflags&0x20000,0);}
 async function text(id,value,expected=value){await type(value.replaceAll('\n','\r'));return until(s=>s.editors[id]?.bytes===expected.length&&s.editors[id]?.hash===fnv(expected),'typed document');}
 async function picker(id,mode,drive){return until(s=>s.editors[id]?.mode===mode&&s.canvases[id]?.texts.some(t=>t.includes(String.fromCharCode(65+drive)+':\\WORK'))&&s.canvases[id]?.texts.some(t=>t.startsWith('Free ')||t.includes('unavailable')),'workspace picker');}
 async function saveAs(id,name,drive){await key('CTRL+W');await picker(id,3,drive);await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
-async function open(id,name,drive){await key('CTRL+O');await picker(id,1,drive);await type(name);await key('TAB');await key('ENTER');return until(s=>s.editors[id]?.mode===0&&!s.editors[id]?.dirty,'workspace file opened');}
 function reclaimed(s){assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));}
-async function exit(oldVector,discard=false){if(discard){await key('ENTER');await key('F10');await until(s=>s.editors.some(e=>e?.mode===2),'dirty close');await key('d');}else await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
+async function exit(oldVector){await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
 function pass(name,more={}){results.push({name,...more});console.log('PASS',name);}
 async function end(id){
  const s=await inspect();await click(330+146*id,s.gui.height-16);
@@ -72,7 +71,7 @@ async function linked(name,bytes,drive=1){
  const s=await until(s=>s.editors[1]?.frames>0&&s.editors[1].bytes===normalized.length&&s.editors[1].hash===fnv(normalized)&&!s.editors[1].dirty,'Files opens '+name+' in Editor');
  assert.equal(s.cpu.views[0].generation,generation);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);location(s,1,drive,drive!==0);await focus(1);return s;
 }
-async function refresh(){await focus(0);await localFocus(0,3);await key('ENTER');return until(s=>!(s.files[0]?.mode&2)&&s.files[0].error===0,'Files refresh');}
+async function refresh(){await focus(0);await localFocus(0,3);const events=(await inspect()).files[0].events;await key('ENTER');return until(s=>s.files[0]?.events>events&&!(s.files[0].mode&2)&&s.files[0].error===0,'Files refresh');}
 async function assertMedia(before,fdBefore=original){const saved=await disk('hdd');const state=assertHddProtected(before,saved);assert.equal(sha(await disk('fd1')),sha(fdBefore));return {saved,state};}
 const initial=Buffer.from('Files Work document\r\n'),updated=Buffer.from('Edited through Files\nsecond line');
 const fixture=withHddFile(hdd,'NOTE.TXT',initial);
@@ -100,7 +99,11 @@ async function rejected(){
  const large=Buffer.alloc(65537,65),binary=Buffer.from([65,0,66]);let bytes=withHddFile(fixture,'LARGE.TXT',large);bytes=withHddFile(bytes,'BINARY.TXT',binary);
  const old=await boot(bytes);await files();await work();await filter('LARGE.TXT');await key('CTRL+O');let s=await until(s=>(s.files[0]?.mode&4)&&!(s.files[0].mode&64),'over-limit document refused');assert.equal(s.cpu.views[1].state,0);await key('ESC');
  await filter('BINARY.TXT');await key('CTRL+O');s=await until(s=>s.editors[1]?.frames>0&&s.editors[1].error===22,'Editor rejects binary bytes');assert.equal(s.editors[1].bytes,0);assert.equal(s.editors[1].dirty,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);await end(1);
- await exit(old);assert.equal(sha(await disk('hdd')),sha(bytes));assert.equal(sha(await disk('fd1')),sha(original));await ctx.close();pass('large selection refuses launch; binary startup cannot create a dirty document or alter disks');
+ for(const [args,message] of [['work MISSING.TXT','Cannot open file'],['work ../A.TXT','Invalid document request'],['other NOTE.TXT','Invalid document request']]){
+  const generation=(await inspect()).cpu.views[1].generation;await focus(1);await key('CTRL+L');await type('KGEDIT.EXE '+args+'\r');
+  s=await until(s=>s.cpu.views[1].generation>generation&&s.editors[1]?.frames>0&&s.canvases[1]?.texts.includes(message),'startup rejects '+args);assert.equal(s.editors[1].bytes,0);assert.equal(s.editors[1].dirty,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);await end(1);
+ }
+ await exit(old);assert.equal(sha(await disk('hdd')),sha(bytes));assert.equal(sha(await disk('fd1')),sha(original));await ctx.close();pass('large selection refuses launch; binary, missing, path and namespace startup requests cannot create a dirty document or alter disks');
 }
 async function fallback(){
  const legacy=await readFile(new URL('../public/kgui32/'+legacyImage,import.meta.url)),root=inspectFat(legacy).files.get('EDITTEST.TXT');assert(root);
