@@ -49,4 +49,4 @@ Editorにエラーを表示し、空の未変更文書のままにします。
 
 実行例：`node scripts/verify-kgui32-files-editor.mjs BASE OUTPUT pegc`
 （`cirrus`でも実行）。JSON、スクリーンショット、保存済みTHD／XDFをCIへ添付します。
-復旧UI、任意のディレクトリやHDD形式、日本語編集、スロット追加は後続段階です。
+Workの[復旧UI](kgui32-recovery-editor.md)を利用できます。任意のディレクトリやHDD形式、日本語編集、スロット追加は後続段階です。

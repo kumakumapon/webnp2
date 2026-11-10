@@ -81,4 +81,4 @@ manifestはネイティブSHA・dirty・FD/HDDハッシュ・初期空き容量�
 
 アプリのHDD配置・起動は[HDDアプリ配置版](kgui32-hdd-apps.md)で対応します。
 FilesのWork閲覧とEditor起動は[Files／Editor連携](kgui32-files-editor.md)に対応しました。
-A:ルートは引き続き読み取り専用です。復旧UI、任意HDD形式、HDD単独起動は後続段階です。
+A:ルートは引き続き読み取り専用です。Workの[復旧UI](kgui32-recovery-editor.md)を利用できます。任意HDD形式、HDD単独起動は後続段階です。
