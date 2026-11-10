@@ -16,8 +16,15 @@ async function closeRecovery(id){await h.control(id,862);return h.until(s=>s.edi
 function preserved(s,id,before){const e=s.editors[id];for(const k of ['hash','bytes','dirty','history','redo'])assert.equal(e[k],before[k],k);}
 async function media(before){const saved=await h.disk('hdd');await h.unchangedFd();return {saved,state:assertHddProtected(before,saved)};}
 function fixture(){let b=withHddFile(h.hdd,'NOTE.TXT',Buffer.from('original\n'));b=withHddFile(b,'NOTE.BAK',Buffer.from('backup version\n'));return withHddFile(b,'NOTE.TMP',Buffer.from('draft version\n'));}
+async function negativeProbes(){
+ await h.launchEditor(1);await h.end(1);
+ for(const [name,minimum] of [['KGRECNEG.EXE',30],['KGRECNON.EXE',1]]){
+  const gen=(await h.inspect()).cpu.views[1].generation;await h.run(1,name);const s=await h.until(s=>s.cpu.views[1].generation>gen&&s.cpu.views[1].state===0&&s.cpu.diagnostics[1].pm32?.samples[0]===0x3552474b,'CPL3 '+name);
+  assert(s.cpu.diagnostics[1].pm32.samples[2]>=minimum);assert.equal(s.cpu.diagnostics[1].pm32.samples[3],0,JSON.stringify(s.cpu.diagnostics[1].pm32.samples));assert.equal(s.cpu.diagnostics[1].pm32.exitCode,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);
+ }
+}
 async function normal(){
- const bytes=fixture(),vector=await h.boot(bytes);await h.launchEditor();await h.open(0,'NOTE.TXT');await h.setText(0,'unsaved source\n');await h.key('CTRL+S');
+ const bytes=fixture(),vector=await h.boot(bytes);await h.launchEditor();await negativeProbes();await h.open(0,'NOTE.TXT');await h.setText(0,'unsaved source\n');await h.key('CTRL+S');
  await h.until(s=>s.editors[0]?.error===117,'Save reports existing BAK');await h.key('ESC');const before=(await h.inspect()).editors[0],generation=(await h.inspect()).cpu.views[0].generation;
  await recovery(0);await inspectCandidate(0,'backup version');await prepare(0,'RESCUED.TXT');await h.control(0,871);await h.until(s=>s.canvases[0]?.controls.includes(860),'Cancel recovery');
  preserved(await h.inspect(),0,before);assert.equal(sha(await h.disk('hdd')),sha(bytes));
@@ -32,12 +39,8 @@ async function normal(){
  await h.control(0,861);await h.until(s=>s.canvases[0]?.controls.includes(850)&&texts(s,0).includes('NOTE.TXT'),'Fresh recovery list');await inspectCandidate(0,'backup version');await prepare(0,'RESCUED.TXT');await h.control(0,870);
  s=await h.until(s=>texts(s,0).includes('RESCUED.TXT')&&texts(s,0).some(t=>t.startsWith('Recovered as')),'Backup recovered to unused TXT');preserved(s,0,before);preserved(s,1,peer);await closeRecovery(0);
  await h.save(0,Buffer.from('unsaved source\n'));m=await media(bytes);assert.equal(m.state.files.get('WORK/NOTE.TXT').toString(),'unsaved source\n');assert.equal(m.state.files.get('WORK/RESCUED.TXT').toString(),'backup version\n');assert.equal(m.state.files.get('WORK/PEERTMP.TXT').toString(),'draft version\n');assert(!m.state.files.has('WORK/NOTE.BAK'));assert(!m.state.files.has('WORK/NOTE.TMP'));
- // Genuine CPL3 range/permission/name/state/feature probes in the free peer slot.
+ // End the explicitly dirty peer only after checking both documents.
  await h.end(1);
- for(const [name,minimum] of [['KGRECNEG.EXE',29],['KGRECNON.EXE',1]]){
-  const gen=(await h.inspect()).cpu.views[1].generation;await h.run(1,name);s=await h.until(s=>s.cpu.views[1].generation>gen&&s.cpu.views[1].state===0&&s.cpu.diagnostics[1].pm32?.samples[0]===0x3552474b,'CPL3 '+name);
-  assert(s.cpu.diagnostics[1].pm32.samples[2]>=minimum);assert.equal(s.cpu.diagnostics[1].pm32.samples[3],0);assert.equal(s.cpu.diagnostics[1].pm32.exitCode,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);
- }
  assert.equal(sha(await h.disk('hdd')),sha(m.saved));await h.exit(vector);await h.unchangedFd();await writeFile(join(output,'recovered.thd'),m.saved);await h.closeContext();
  h.pass('TMP/BAK previews, cancel, exclusive target and stale state refusal; two dirty documents retained; explicit native recovery, subsequent Save, real CPL3 negative probes and complete cleanup');
  const cold=await h.boot(m.saved);await h.launchEditor();await h.open(0,'RESCUED.TXT');await h.until(s=>s.editors[0]?.hash===fnv('backup version\n'),'Recovered copy after cold boot');assert.equal(sha(await h.disk('hdd')),sha(m.saved));await h.exit(cold);await h.unchangedFd();await h.closeContext();h.pass('Recovered bytes persist across cold boot and reopen');
