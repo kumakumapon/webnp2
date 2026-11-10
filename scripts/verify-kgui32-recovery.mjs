@@ -10,7 +10,7 @@ const h=await toolsHarness(base,output,video);
 const texts=(s,id)=>s.canvases[id]?.texts??[];
 async function recovery(id){await h.focus(id);await h.key('CTRL+T');return h.until(s=>s.editors[id]?.mode===6&&s.canvases[id]?.controls.includes(850)&&texts(s,id).includes('NOTE.TXT'),'Recovery candidates');}
 async function inspectCandidate(id,expected){await h.control(id,850);return h.until(s=>s.canvases[id]?.controls.includes(860)&&texts(s,id).includes(expected),'Candidate bytes');}
-async function destination(id,name){const s=await h.inspect();await h.input(id,112,s.canvases[id].height-96,name);}
+async function destination(id,name){const s=await h.inspect();if(!texts(s,id).includes(name))await h.input(id,112,s.canvases[id].height-96,name);}
 async function prepare(id,name){await destination(id,name);await h.control(id,860);return h.until(s=>s.canvases[id]?.controls.includes(870)&&texts(s,id).includes(name),'Explicit move confirmation');}
 async function closeRecovery(id){await h.control(id,862);return h.until(s=>s.editors[id]?.mode===0,'Recovery closed');}
 function preserved(s,id,before){const e=s.editors[id];for(const k of ['hash','bytes','dirty','history','redo'])assert.equal(e[k],before[k],k);}
@@ -48,7 +48,7 @@ async function normal(){
 async function fallback(){
  let floppy=withFdWorkFile(h.legacy,'NOTE.TMP',Buffer.from('orphan FD draft\r\n'));floppy=withFdWorkFile(floppy,'DENIED.BAK',Buffer.from('protected original\n'),1);
  const vector=await h.boot(null,floppy);await h.launchEditor();await h.setText(0,'live FD document');const live=(await h.inspect()).editors[0];
- await recovery(0);await inspectCandidate(0,'orphan FD draft');assert((await h.inspect()).canvases[0].texts.includes('TXT absent'));
+ await recovery(0);await inspectCandidate(0,'orphan FD draft');assert.equal((await h.inspect()).canvases[0].buttons.find(b=>b.id===851)?.text,'TXT absent');
  await prepare(0,'NOTE.TXT');await h.control(0,870);let s=await h.until(s=>texts(s,0).includes('NOTE.TXT')&&texts(s,0).some(t=>t.startsWith('Recovered as')),'Orphan restored to original TXT');preserved(s,0,live);
  // Remaining protected BAK is visible but cannot be previewed or restored.
  await h.until(s=>s.canvases[0]?.controls.includes(850)&&texts(s,0).includes('DENIED.TXT'),'Protected candidate list');await h.control(0,850);await h.control(0,853);await h.until(s=>texts(s,0).some(t=>t.startsWith('Protected file')),'Protected BAK refused');await h.control(0,860);await h.until(s=>!s.canvases[0]?.controls.includes(870),'No protected move confirmation');preserved(await h.inspect(),0,live);
