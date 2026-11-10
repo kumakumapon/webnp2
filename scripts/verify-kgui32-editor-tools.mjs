@@ -7,7 +7,7 @@ const [base='http://127.0.0.1:4173/',output='test-results/editor-tools',video='p
 const h=await toolsHarness(base,output,video);
 const original=Buffer.from('alpha beta alpha\nline two\n'),replaced='X beta X\nline two\n';
 const view=Buffer.from('W'.repeat(80)+'\n'+Array.from({length:44},(_,i)=>'ROW '+String(i).padStart(2,'0')+' / short line\n').join(''));
-let fixture=withHddFile(h.hdd,'EDIT.TXT',original);fixture=withHddFile(fixture,'VIEW.TXT',view);fixture=withHddFile(fixture,'MAX.TXT',Buffer.alloc(65536,97));fixture=withHddFile(fixture,'MAXLF.TXT',Buffer.concat([Buffer.alloc(65535,97),Buffer.from('\n')]));
+let fixture=withHddFile(h.hdd,'EDIT.TXT',Buffer.from(original.toString().replaceAll('\n','\r\n')));fixture=withHddFile(fixture,'VIEW.TXT',view);fixture=withHddFile(fixture,'MAX.TXT',Buffer.alloc(65536,97));fixture=withHddFile(fixture,'MAXLF.TXT',Buffer.concat([Buffer.alloc(65535,97),Buffer.from('\n')]));
 const texts=(s,id=0)=>s.canvases[id]?.texts??[];
 async function findOpen(replace=false){await h.focus(0);if(replace)await h.chord('CTRL','H');else await h.key('CTRL+F');return h.until(s=>s.editors[0]?.mode===5&&s.canvases[0]?.controls.includes(replace?842:840),'Find/Replace dialog');}
 let query='',replacement='';
@@ -17,7 +17,7 @@ async function tools(code){await h.control(0,605);await h.until(s=>s.editors[0]?
 async function doc(value){return h.until(s=>s.editors[0]?.bytes===value.length&&s.editors[0]?.hash===fnv(value),'Document contents');}
 async function media(){const saved=await h.disk('hdd');await h.unchangedFd();return {saved,state:assertHddProtected(fixture,saved)};}
 async function normal(){
- const vector=await h.boot(fixture);await h.launchEditor();await h.open(0,'EDIT.TXT');let s=await doc(original.toString());const generation=s.cpu.views[0].generation;
+ const vector=await h.boot(fixture);await h.launchEditor();await h.open(0,'EDIT.TXT');let s=await doc(original.toString());const generation=s.cpu.views[0].generation;await h.until(s=>texts(s).some(t=>t.startsWith('CRLF /')),'Loaded CRLF format detected');
  // Legacy clock remains independently scheduled while the new Editor tools run.
  await h.key('F2');await h.click(268,192);s=await h.until(s=>s.apps[1]?.magic===0x324b474b&&s.apps[1].frames>0,'Legacy clock peer');const seconds=s.apps[1].seconds;assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);await h.focus(0);
  await findOpen();await queryText('alpha');await h.control(0,840);s=await h.until(s=>s.editors[0]?.mode===0&&s.editors[0].anchor===0&&s.editors[0].cursor===5,'First literal match');assert.equal(s.editors[0].dirty,0);
