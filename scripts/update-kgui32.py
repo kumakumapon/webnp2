@@ -127,10 +127,13 @@ def main():
     assert hashlib.sha256(original).hexdigest() == base['sha256']
     up = module('kgui32_files', root/'scripts/update-msdos4-cpanel.py')
     files = up.disk_files(original)
+    # K386's 70 KiB binary stress fixture is unrelated to the GUI. Keep its
+    # original disk intact; reserve space here for recovery and FD Work.
+    del files['DATA32.BIN']
     files['KHD98.SYS'] = (source/'ports/pc98/hdd/build/KHD98.SYS').read_bytes()
     files['HDDFLT.COM'] = (source/'ports/pc98/hdd/build/HDDFLT.COM').read_bytes()
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
@@ -166,10 +169,11 @@ def main():
     (destination/'manifest.json').write_text(json.dumps({
         'enabled':True,'experimental':True,'image':name,'sha256':sha,
         'source_commit':commit,'source_dirty':dirty,
-        'base_image_sha256':base['sha256'],'files':entries,'extended_memory_mb':16,
+        'base_image_sha256':base['sha256'],'omitted_base_fixtures':['DATA32.BIN'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
         'files_workspace_browser':1,'files_editor_launch':1,
+        'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded ASCII editor saves and read-only A: root',
     },indent=2)+'\n')

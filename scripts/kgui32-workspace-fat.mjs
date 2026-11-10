@@ -40,8 +40,8 @@ export function wideWorkspace(original){
  const image=Buffer.from(original),s=inspectFat(image);
  // Remove only diagnostic data from a private fixture before boot. Never
  // modify the bundled image or a user's disk to create free space.
- for(const name of ['BROWSE.TXT','DATA32.BIN']){const e=s.entries.get(name);assert.ok(e);let c=e.cluster;while(c>=2&&c<0xff8){const next=s.next(c);for(const start of [1024,3072]){const at=start+Math.floor(c*3/2),old=image.readUInt16LE(at);image.writeUInt16LE(c&1?old&15:old&0xf000,at);}c=next;}
+ for(const name of ['BROWSE.TXT','LINES.TXT','DATA32.BIN']){const e=s.entries.get(name);if(!e&&name==='DATA32.BIN')continue;assert.ok(e);let c=e.cluster;while(c>=2&&c<0xff8){const next=s.next(c);for(const start of [1024,3072]){const at=start+Math.floor(c*3/2),old=image.readUInt16LE(at);image.writeUInt16LE(c&1?old&15:old&0xf000,at);}c=next;}
   for(let at=5*1024;at<11*1024;at+=32)if(image.readUInt16LE(at+26)===e.cluster){image[at]=0xe5;break;}
  }
- inspectFat(image);return image;
+ const ready=inspectFat(image);let free=0;for(let c=2;c<1223;c++)if(!ready.next(c))free++;assert(free*1024>=2*65536,'64 KiB replacement needs original plus temp capacity');return image;
 }

@@ -80,6 +80,7 @@ async function linked(name,bytes,drive=1){
 async function refresh(){await focus(0);await localFocus(0,3);const events=(await inspect()).files[0].events;await key('ENTER');return until(s=>s.files[0]?.events>events&&!(s.files[0].mode&2)&&s.files[0].error===0,'Files refresh');}
 async function assertMedia(before,fdBefore=original){const saved=await disk('hdd');const state=assertHddProtected(before,saved);assert.equal(sha(await disk('fd1')),sha(fdBefore));return {saved,state};}
 const initial=Buffer.from('Files Work document\r\n'),updated=Buffer.from('Edited through Files\nsecond line');
+const savedUpdated=Buffer.from(updated.toString().replaceAll('\n','\r\n')); // Preserve the opened CRLF format.
 const fixture=withHddFile(hdd,'NOTE.TXT',initial);
 async function roundtrip(){
  const old=await boot(fixture);let s=await files();assert.equal(s.files[0].mode&32,0);const generation=s.cpu.views[0].generation;
@@ -88,18 +89,18 @@ async function roundtrip(){
  s=await preview('NOTE.TXT',initial);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);
  await until(s=>s.canvases[0]?.texts.includes('Files Work document'),'preview retained frame');await shot('work-preview.png');await linked('NOTE.TXT',initial);
  await selectAll(1);await text(1,updated.toString());await key('CTRL+S');await until(s=>s.editors[1]?.hash===fnv(updated)&&!s.editors[1].dirty&&s.editors[1].mode===0,'save opened Work document');
- let media=await assertMedia(fixture);assert.deepEqual(media.state.files.get('WORK/NOTE.TXT'),updated);
- await end(1);await refresh();s=await preview('NOTE.TXT',updated);assert.equal(s.cpu.views[0].generation,generation);
- s=await linked('NOTE.TXT',updated);const editorGeneration=s.cpu.views[1].generation;
+ let media=await assertMedia(fixture);assert.deepEqual(media.state.files.get('WORK/NOTE.TXT'),savedUpdated);
+ await end(1);await refresh();s=await preview('NOTE.TXT',savedUpdated);assert.equal(s.cpu.views[0].generation,generation);
+ s=await linked('NOTE.TXT',savedUpdated);const editorGeneration=s.cpu.views[1].generation;
  await selectAll(1);await text(1,'dirty peer must survive');s=await until(s=>s.editors[1]?.dirty,'dirty peer');const peer={hash:s.editors[1].hash,bytes:s.editors[1].bytes,history:s.editors[1].history};
  await filter('NOTE.TXT');await key('CTRL+O');s=await until(s=>s.files[0]?.error===16&&(s.files[0].mode&4),'two occupied slots refused');
  assert.equal(s.cpu.views[1].generation,editorGeneration);assert.equal(s.cpu.views[0].generation,generation);for(const [k,v] of Object.entries(peer))assert.equal(s.editors[1][k],v);assert.equal(s.editors[1].dirty,1);assert([1,2].includes(s.cpu.views[1].state));
  await until(s=>s.canvases[0]?.texts.some(t=>t.startsWith('Both slots')),'busy retained frame');await shot('busy-dirty-editor.png');await key('ESC');
- media=await assertMedia(fixture);assert.deepEqual(media.state.files.get('WORK/NOTE.TXT'),updated);
+ media=await assertMedia(fixture);assert.deepEqual(media.state.files.get('WORK/NOTE.TXT'),savedUpdated);
  await end(1); // Explicit user End after checking that the refused request kept dirty text.
  await exit(old);await assertMedia(fixture);await writeFile(join(output,'saved.thd'),media.saved);await ctx.close();
  pass('HDD Work enumeration, preview, fixed Editor launch, save, refresh and reopen; busy dirty peer retains generation, bytes and history; protected FD/APPS and full cleanup');
- const cold=await boot(media.saved);await files();await work();await linked('NOTE.TXT',updated);await end(1);await exit(cold);await assertMedia(fixture);await ctx.close();pass('cold boot retains Files-opened document and actual CPL3 Editor');
+ const cold=await boot(media.saved);await files();await work();await linked('NOTE.TXT',savedUpdated);await end(1);await exit(cold);await assertMedia(fixture);await ctx.close();pass('cold boot retains Files-opened document and actual CPL3 Editor');
 }
 async function rejected(){
  const large=Buffer.alloc(65537,65),binary=Buffer.from([65,0,66]);let bytes=withHddFile(fixture,'LARGE.TXT',large);bytes=withHddFile(bytes,'BINARY.TXT',binary);
