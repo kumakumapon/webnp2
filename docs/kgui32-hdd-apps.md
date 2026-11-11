@@ -26,7 +26,9 @@ on the next start. An older workspace HDD lacks APPS: retain its original full F
 pair rather than replacing it with the compact FD. No automatic user-disk upgrade
 or formatting occurs. Files now switches between the read-only A: root and Work and can open a selected
 TXT in Editor; see [Files / Editor integration](kgui32-files-editor.md).
-Recovery UI and Japanese remain later stages.
+Editor Tools now provides explicit Work recovery and search/replace, Shift
+selection, LF/CRLF selection and expanded text display; see
+[Recovery and Editor tools](kgui32-recovery-editor.md). Japanese remains later work.
 
 ## Verification
 
@@ -49,6 +51,7 @@ for both FAT copies, unshared allocation chains, protected APPS files, WORK
 contents and FD invariance. JSON, screenshots and saved THD are CI artifacts.
 Existing full-FD and HDD workspace suites remain separate regression coverage.
 
-Track native implementation and integration in MS-DOS #31 and paired #47 PRs.
-Keep draft until acceptance and both repository CI pass. Integration order is
-MS-DOS, successful main CI, then webnp2; this implementation does not merge them.
+The distribution was merged and verified in both #47 PRs. Files/Editor
+integration and recovery were subsequently merged in #49/#50. MS-DOS #31
+tracks subsequent work. Integration order remains MS-DOS, successful main CI,
+then webnp2, post-merge CI and publication.
