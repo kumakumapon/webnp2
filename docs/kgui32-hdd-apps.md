@@ -8,8 +8,9 @@ This is FD boot with HDD applications, not HDD-only boot.
 The native manager and PM32 loader use the same application resolver. A bare
 8.3 name first checks A:\, then APPS on a KHD98 drive verified through DOS's DPB.
 Only missing files permit fallback; invalid packages, devices and I/O errors do
-not. Explicit paths retain their existing meaning. DOS CWD/default drive and
-V86's A:-only policy are unchanged. ELF/package and ownership checks still apply.
+not. Explicit paths retain their existing meaning. Host DOS CWD/default drive
+remain unchanged. V86 now has private drive/CWD state and read-only access to the same verified HDD; see [V86 HDD reads](v86-hdd-readonly.md).
+ELF/package and ownership checks still apply.
 The HDD drive letter is discovered, not hardcoded to B: or C:.
 
 `public/kgui32/manifest.json` records `application_distribution.image`, its SHA256,
