@@ -48,6 +48,7 @@ jobs:
         with:
           path: dist
   deploy:
+    timeout-minutes: 15
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -57,7 +58,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
         with:
-          # Pages 側の待ち行列は日によって伸びる。2026-08-06 は 1分未満→5分→10分と
-          # 悪化し、既定の10分ぎりぎりで成功していた(同日 WebX68k は超過して4回連続失敗)。
-          # ビルドとアップロードは常に成功しているので、単に待ちを長くしておく。
-          timeout: 1800000
+          # deploy-pages v4 は入力を最大600000ms（10分）に制限する。
+          # ジョブ上限は準備処理を含め15分。失敗時はdocs/pages-deployment.mdに従い、
+          # 状態を確認して失敗ジョブだけを再実行する。公開中の処理を自動キャンセルしない。
+          timeout: 600000
