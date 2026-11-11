@@ -135,6 +135,7 @@ def main():
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
     for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
+    files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
     files['LINES.TXT'] = b'\n'*9000+b'FINAL LINE\n'
@@ -173,6 +174,7 @@ def main():
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
         'files_workspace_browser':1,'files_editor_launch':1,
+        'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded ASCII editor saves and read-only A: root',

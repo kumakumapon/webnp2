@@ -1,0 +1,47 @@
+name: V86 HDD read-only
+on:
+  push:
+    branches: [master, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  v86-hdd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+        suite: [hdd, isolation, fallback]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned legacy FD and HDD application distribution
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Real V86 HDD services and isolation
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/v86-hdd-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-v86-hdd.mjs http://127.0.0.1:4173/webnp2/ test-results/v86-hdd ${{ matrix.video }} ${{ matrix.suite }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v86-hdd-${{ matrix.suite }}-${{ matrix.video }}
+          path: |
+            test-results/v86-hdd
+            public/kgui32/manifest.json
+            /tmp/v86-hdd-preview.log
