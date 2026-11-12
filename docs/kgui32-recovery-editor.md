@@ -35,7 +35,8 @@ revisionを再確認します。別Editorなどによる状態変更ではBack�
 
 ## 配布と検証
 
-既定はcompact FD＋APPS HDDです。全GUIアプリを収録したFD単独起動も維持します。
+既定は[HDD単独起動](hdd-boot.md)で、保存先はA:\WORKです。
+compact FD＋APPS HDDと、全GUIアプリを収録したFD単独起動も維持します。
 GUI用FDではK386専用の70 KiBバイナリ試験データDATA32.BINだけを省き、復旧用プログラムと
 FD Workの空きを確保します。独立したK386配布ディスクの収録物は変更しません。
 

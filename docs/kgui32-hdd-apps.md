@@ -1,6 +1,10 @@
 # KGUI32 applications on HDD
 
-The normal KGUI32 PEGC/Cirrus startup choices now pair a compact boot FD with a
+The following records the stage-3 FD+APPS-HDD pair, which remains available.
+The current default is the [standalone HDD boot profile](hdd-boot.md); the full
+FD is also offered through the explicit FD compatibility start choice.
+
+The stage-3 KGUI32 PEGC/Cirrus startup choices pair a compact boot FD with a
 new marked FAT16 HDD. DOS, K386, K32HOST, KGUILDR and KGUI32 remain on FD;
 Calculator, Clock, Files, Editor, COUNT32 and ARGS32 live only in `APPS` on HDD.
 This is FD boot with HDD applications, not HDD-only boot.

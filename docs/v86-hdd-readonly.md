@@ -1,6 +1,8 @@
 # V86のHDD読み取り対応
 
-通常のKGUI32 PEGC/Cirrus構成では、DOS ShellからA:と検証済みKHD98 HDDを
+通常の[HDD単独起動](hdd-boot.md)では、A:が起動元かつ検証済みHDDです。
+以下のB:の例は、従来のFD＋APPS HDD構成を対象とします。
+従来のKGUI32 PEGC/Cirrus構成では、DOS ShellからA:と検証済みKHD98 HDDを
 利用できます。HDDのドライブ文字はDOSの実DPBと常駐ドライバ記録から取得します。
 通常はB:です。シェルで `B:`、`CD \APPS`、`DIR` と入力するか、
 `TYPE B:\WORK\NOTE.TXT` のように明示します。
@@ -14,7 +16,7 @@
 読取・seek・複製・属性取得・ディレクトリ検索・子EXECを扱います。
 書込open、作成・書込・削除・rename・属性変更は禁止です。デバイスやUNC、
 未検証ドライブも拒否します。PM32 Editorの保存・復旧APIとは別の経路です。
-任意のHDD形式、HDD単独起動、完全なDOS/BIOS互換は対応範囲に含みません。
+任意のHDD形式と完全なDOS/BIOS互換は対応範囲に含みません。
 既存ユーザーディスクの自動更新やフォーマットは行いません。
 
 配布するAPPSの6本は従来どおりです。完全FDによる単独起動も維持します。
