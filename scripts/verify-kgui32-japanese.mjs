@@ -35,7 +35,7 @@ async function pixels(id,x,y,codes){
 }
 async function openWork(name,fd=false){
  await h.focus(0);await h.key('CTRL+O');await h.until(s=>s.editors[0]?.mode===1,'Open picker');
- if(fd){await h.key('CTRL+W');await h.until(s=>texts(s).includes('A:\\WORK'),'FD Work picker');}
+ if(fd){await h.key('CTRL+W');await h.until(s=>(s.editors[0]?.workspace&3)===2&&texts(s).some(t=>t==='Open / A:\\WORK / FD'),'FD Work picker');}
  await h.type(name);await h.key('TAB');await h.key('ENTER');await h.until(s=>s.editors[0]?.mode===0&&!s.editors[0].dirty,'Opened '+name);
 }
 async function save(bytes){await h.focus(0);await h.key('CTRL+S');await h.until(s=>s.editors[0]?.mode===0&&!s.editors[0].dirty&&s.editors[0].hash===fnv(bytes),'Committed Shift-JIS');}
