@@ -101,13 +101,14 @@ CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持
 通常の起動は[HDD単独起動](hdd-boot.md)です。起動メニューにはFD互換起動も残しています。
 
 実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK4、電卓・時計、
-A:ルート／Workを閲覧するFiles、ASCIIエディタとHDD/FDのWork保存です。
+A:ルート／Workを閲覧するFiles、Shift-JISエディタとHDD/FDのWork保存です。
 [Files／Editor連携](kgui32-files-editor.md)で選択文書を編集できます。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
 独立Editor間のクリップボードとUndo/Redoは[GUI SDK3](kgui32-editor.md)、検索・置換、
 Shift選択、改行形式、表示拡大とTMP/BAKの明示的復旧は[復旧・Editor操作](kgui32-recovery-editor.md)、
 DOSアプリの検証済みHDD読み取りは[V86 HDD](v86-hdd-readonly.md)を参照してください。
 ホストのクリップボードは操作しません。
-日本語・文字属性の描画、直接GDCを操作する
+[日本語表示・Shift-JIS読書](kgui32-japanese.md)にも対応します。
+IME・日本語入力、DOS端末の文字属性、直接GDCを操作する
 外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
 従来KDESKの既存機能も引き続き利用できます。
 ネイティブ設計はMS-DOSの`tools/kgui32/README.md`と`SESSIONS.md`を参照してください。
