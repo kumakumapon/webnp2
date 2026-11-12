@@ -103,7 +103,10 @@ async function saveSuite(){
  const cold=await h.bootHdd(saved);await h.launchEditor();await openWork('JP.TXT');await doc(0,plain);await openWork('WIDE.TXT');await doc(0,changed);assert.equal(sha(await h.disk('hdd')),sha(saved));await h.exit(cold);await h.unchangedFd();await h.closeContext();
  h.pass('Full 65536-byte document with pairs at 4095/4096 and EOF saves exactly, keeps peer progress, survives HDD export/cold boot and reclaims all resources');
  const floppy=withFdWorkFile(h.legacy,'JP.TXT',raw),fdVector=await h.boot(null,floppy);await h.launchEditor();await openWork('JP.TXT',true);s=await doc(0,normalized(raw));assert.equal(s.editors[0].workspace&3,2);
- await h.key('HELP');await h.type('!');await doc(0,plain);await save(plain);const fdSaved=await h.disk('fd1');const fs=assertProtected(floppy,fdSaved);assert.deepEqual(fs.files.get('WORK/JP.TXT'),encoded);await h.exit(fdVector);await writeFile(join(output,'saved-japanese.xdf'),fdSaved);await h.closeContext();
+ // An overwrite releases the old JP.TXT chain. Protect all original boot/root
+ // chains using the shipped empty-Work image, then require this one Work file.
+ await h.key('HELP');await h.type('!');await doc(0,plain);await save(plain);const fdSaved=await h.disk('fd1');const fs=assertProtected(h.legacy,fdSaved);
+ assert.deepEqual([...fs.files.keys()].filter(n=>n.startsWith('WORK/')),['WORK/JP.TXT']);assert.deepEqual(fs.files.get('WORK/JP.TXT'),encoded);await h.exit(fdVector);await writeFile(join(output,'saved-japanese.xdf'),fdSaved);await h.closeContext();
  const fdCold=await h.boot(null,fdSaved);await h.launchEditor();await openWork('JP.TXT',true);await doc(0,plain);assert.deepEqual(inspectFat(await h.disk('fd1')).files.get('WORK/JP.TXT'),encoded);assert.equal(sha(await h.disk('fd1')),sha(fdSaved));await h.exit(fdCold);await h.closeContext();
  h.pass('Explicit FD Work fallback retains exact Shift-JIS/CRLF bytes, FAT12 protected files, export/cold boot and complete cleanup');
 }
