@@ -1,14 +1,35 @@
 import {describe,it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
+import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL} from '../src/bundled-kgui32';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
  it('offers separate explicit boot choices only after generation',()=>{
   expect(KGUI32_FD_BOOT_URL).toBe(manifest.enabled?`./?fd1=./kgui32/${manifest.image}&run=1&mem=16`:undefined);
-  expect(KGUI32_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
+  expect(KGUI32_PAIRED_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
+  expect(KGUI32_BOOT_URL).toBe(manifest.enabled&&manifest.standalone_hdd?.hdd_boot_supported?`./?hdd=./kgui32/${manifest.standalone_hdd.image}&run=1&mem=16`:KGUI32_PAIRED_BOOT_URL);
   expect(KGUI32_HIGH_COLOR_BOOT_URL).toBe(KGUI32_BOOT_URL?KGUI32_BOOT_URL+'&video=cirrus':undefined);
+ });
+ it('ships a separate native HDD boot profile with exact system files and no duplicate driver',()=>{
+  if(!manifest.enabled)return;
+  const h=manifest.standalone_hdd;
+  expect(h.hdd_boot_supported).toBe(true);expect(h.fd_required).toBe(false);expect(h.dos_boot_drive).toBe('A:');
+  const bytes=readFileSync('public/kgui32/'+h.image);
+  expect(createHash('sha256').update(bytes).digest('hex')).toBe(h.sha256);
+  expect(bytes.toString('ascii',256+4,256+8)).toBe('IPL1');expect(bytes.toString('ascii',256+4*256+3,256+4*256+11)).toBe('KHDS2V1!');
+  const disk=openDiskImage(bytes,h.image),fd=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
+  for(const name of ['MSDOS.SYS','COMMAND.COM','K386.EXE','K32HOST.EXE','KGUILDR.EXE','KGUI32.EXE'])expect(fatReadFile(disk,name)).toEqual(fatReadFile(fd,name));
+  const io=fatReadFile(disk,'IO.SYS');expect(createHash('sha256').update(io).digest('hex')).toBe(h.oem.io_sha256);
+  expect(new TextDecoder().decode(io)).toContain('KHDDIOP1');
+  expect(new TextDecoder().decode(fatReadFile(disk,'CONFIG.SYS'))).not.toContain('DEVICE=KHD98.SYS');
+  expect(new TextDecoder().decode(fatReadFile(disk,'AUTOEXEC.BAT'))).toContain('SET COMSPEC=A:\\COMMAND.COM');
+  expect(fatList(disk,'/WORK')).toEqual([]);
+  expect(fatFreeSpace(disk).free).toBe(h.initial_free_bytes);
+  for(const app of manifest.application_distribution.relocated){
+   expect(fatList(disk,'/').some(e=>e.name===app)).toBe(false);
+   expect(createHash('sha256').update(fatReadFile(disk,'APPS/'+app)).digest('hex')).toBe(h.applications.find((e:{name:string})=>e.name==='APPS/'+app).sha256);
+  }
  });
  it('pins native sources, preserves the base disk and packages the private GUI ABI',()=>{
   if(!manifest.enabled)return;

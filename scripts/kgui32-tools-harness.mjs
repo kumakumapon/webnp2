@@ -35,6 +35,22 @@ export async function toolsHarness(base,output,video){
   await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
  }
  async function launchEditor(id=0){const before=await inspect(),generation=before.cpu.views[id].generation;await key('F2');await click(130,266);return until(s=>s.cpu.views[id].generation>generation&&[1,2].includes(s.cpu.views[id].state)&&s.bridge.generation[id]===s.cpu.views[id].generation&&s.bridge.tokens[id]>0&&s.editors[id]?.frames>0,'Editor '+id);}
+ async function bootHdd(bytes,ready=true){
+  const profile=manifest.standalone_hdd;assert(profile?.hdd_boot_supported);
+  if(bytes===undefined)bytes=await readFile(new URL(profile.image,root));
+  ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=null;page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/kgui32/'+profile.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
+  await page.goto(base);
+  const choice=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');
+  const target=new URL(await choice.getAttribute('href'),base);
+  assert.equal(target.searchParams.get('hdd'),'./kgui32/'+profile.image);
+  assert(!target.searchParams.has('fd1')&&!target.searchParams.has('fd2'),'Shipping start choice boots HDD only');
+  target.searchParams.set('clk','8');target.searchParams.set('worklet','0');
+  await page.goto(target.href);
+  if(!ready)return null;
+  await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'HDD-only desktop');
+  return page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
+ }
  async function setText(id,value){await focus(id);await key('CTRL+A');await until(s=>s.editors[id]?.anchor===0&&s.editors[id]?.cursor===s.editors[id]?.bytes,'selection');let prefix='';for(const c of value){await type(c==='\n'?'\r':c);prefix+=c;await until(s=>s.editors[id]?.bytes===prefix.length&&s.editors[id]?.hash===fnv(prefix),'typed '+prefix.length+'/'+value.length);}}
  async function open(id,name){await focus(id);await key('CTRL+O');await until(s=>s.editors[id]?.mode===1,'Open dialog');await type(name);await key('TAB');await key('ENTER');return until(s=>s.editors[id]?.mode===0&&!s.editors[id].dirty,'Open '+name);}
  async function save(id,raw){await focus(id);await key('CTRL+S');return until(s=>s.editors[id]?.mode===0&&!s.editors[id].dirty&&s.editors[id].hash===fnv(raw.toString().replaceAll('\r','')),'Saved');}
@@ -42,11 +58,11 @@ export async function toolsHarness(base,output,video){
  async function run(id,command){await focus(id);const generation=(await inspect()).cpu.views[id].generation;await key('CTRL+L');await type(command+'\r');return until(s=>s.cpu.views[id].generation>generation,'Run '+command);}
  async function disk(slot){if(slot==='fd1')return Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');const wait=page.waitForEvent('download');await page.evaluate(()=>window.np2debug.np2.exportDisk('hdd'));return readFile(await(await wait).path());}
  async function exit(vector){await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and complete cleanup');assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));assert.equal(await page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64),vector);assert.deepEqual(errors,[]);return s;}
- async function unchangedFd(){assert.equal(sha(await disk('fd1')),sha(fdBefore));}
+ async function unchangedFd(){if(fdBefore===null){const mounted=await page.evaluate(()=>window.np2debug.np2.getMountedImages());assert(!mounted.some(m=>m.slot==='fd1'||m.slot==='fd2'),'No FD is attached to the HDD-only boot');}else assert.equal(sha(await disk('fd1')),sha(fdBefore));}
  async function shot(name){for(let i=0;i<2;i++){const s=await inspect();await point(s.gui.app.mx===10?12:10,s.gui.height-48);await until(t=>t.gui.app.frames>s.gui.app.frames&&t.gui.app.heartbeat>=s.gui.app.heartbeat+2,'compose');}await page.screenshot({path:join(output,name)});}
  async function dragToMaximum(id){await focus(id);const s=await inspect(),o=origin(s,id),c=s.canvases[id];await point(o.x+c.width+8,o.y+c.height+96);await button(1);await point(s.gui.width-8,s.gui.height-48);await button(0);return until(t=>t.canvases[id]?.width>c.width||t.canvases[id]?.height>c.height,'Expanded Editor');}
  function pass(name){results.push(name);console.log('PASS',name);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,results},null,2)+'\n');}
  async function fail(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last),results},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});}
- return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,chord,click,point,focus,origin,control,input,boot,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
+ return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,chord,click,point,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
 }

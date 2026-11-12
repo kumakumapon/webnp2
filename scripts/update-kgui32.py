@@ -113,6 +113,31 @@ def fd_free(image):
         return value >> 4 if c & 1 else value & 4095
     return sum(not get(c) for c in range(2, 1223))*1024
 
+def standalone_hdd(source, destination, app_hdd, files, autoexec):
+    """Compose a separate bootable volume; keep the existing FD/data pair."""
+    oem = source/'ports/pc98/hdd/build/oem/IO-HDD.SYS'
+    if not oem.exists():
+        raise ValueError('Build ports/pc98/hdd/oem.py before generating HDD boot media')
+    selected = {n:d for n,d in files.items() if n not in RELOCATED}
+    selected['IO.SYS'] = oem.read_bytes()
+    selected['CONFIG.SYS'] = files['CONFIG.SYS'].replace(b'DEVICE=KHD98.SYS\r\n', b'')
+    selected['AUTOEXEC.BAT'] = autoexec.replace(b'@ECHO OFF\r\n', b'@ECHO OFF\r\nSET COMSPEC=A:\\COMMAND.COM\r\nPATH A:\\;A:\\APPS\r\n', 1)
+    selected['HDDTEST.EXE'] = (source/'ports/pc98/hdd/build/HDDTEST.EXE').read_bytes()
+    builder = module('kgui_boot_hdd', source/'ports/pc98/hdd/boot_image.py')
+    image, info = builder.compose((destination/app_hdd['image']).read_bytes(), selected,
+        (source/'ports/pc98/hdd/build/boot1.bin').read_bytes(),
+        (source/'ports/pc98/hdd/build/boot2.bin').read_bytes())
+    sha = hashlib.sha256(image).hexdigest()
+    name = f'hddboot-{sha[:12]}.thd'
+    (destination/name).write_bytes(image)
+    free = sum(struct.unpack_from('<H', image, builder.FAT+c*2)[0]==0
+               for c in range(2,builder.CLUSTERS+2))*builder.CLUSTER
+    return {**info, 'image':name, 'sha256':sha, 'bytes':len(image),
+            'filesystem':'FAT16','logical_sector_bytes':1024,'initial_free_bytes':free,
+            'disposable_volume_marker':'KHDPROOF','base_apps_hdd_sha256':app_hdd['sha256'],
+            'applications':app_hdd['files'],'hdd_boot_supported':True,
+            'oem':json.loads((oem.parent/'hdd-oem.json').read_text())}
+
 def main():
     source = Path(sys.argv[1]).resolve()
     root = Path(__file__).resolve().parents[1]
@@ -156,6 +181,7 @@ def main():
     name = f'kgui32-{sha[:12]}.xdf'
     (destination/name).write_bytes(image)
     app_hdd = application_hdd(root, destination, files)
+    boot_hdd = standalone_hdd(source, destination, app_hdd, files, autoexec)
     compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED]
     compact, compact_entries = helper.make_image(original[:1024], files['IO.SYS'],
         compact_files, kernel=files['MSDOS.SYS'], command=files['COMMAND.COM'], autoexec=autoexec)
@@ -176,6 +202,7 @@ def main():
         'files_workspace_browser':1,'files_editor_launch':1,
         'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
+        'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded ASCII editor saves and read-only A: root',
     },indent=2)+'\n')

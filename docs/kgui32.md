@@ -97,6 +97,8 @@ PlaywrightはGUIの実CPUフレーム、CR3/物理メモリ、CPUが取得した
 非アクティブ実行、停止・再開・最小化、実ファイル読み取り、起動失敗、#PFと再起動を検証します。
 CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持します。
 
+通常の起動は[HDD単独起動](hdd-boot.md)です。起動メニューにはFD互換起動も残しています。
+
 実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK4、電卓・時計、
 A:ルート／Workを閲覧するFiles、ASCIIエディタとHDD/FDのWork保存です。
 [Files／Editor連携](kgui32-files-editor.md)で選択文書を編集できます。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
