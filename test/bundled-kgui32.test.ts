@@ -40,6 +40,8 @@ describe('independent native PM32 GUI image',()=>{
   const image=readFileSync('public/kgui32/'+manifest.image);
   expect(createHash('sha256').update(image).digest('hex')).toBe(manifest.sha256);
   expect(manifest.files_workspace_browser).toBe(1);expect(manifest.files_editor_launch).toBe(1);expect(manifest.workspace_recovery_api).toBe(1);expect(manifest.keyboard_modifiers).toBe(1);expect(manifest.editor_tools).toEqual(['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery']);
+  expect(manifest.text_encoding).toBe('shift-jis');expect(manifest.japanese_glyphs).toBe('pc98-cg-rom');expect(manifest.japanese_ime).toBe(false);
+  const jp=fatReadFile(openDiskImage(image,manifest.image),'JPDEMO.TXT');expect(new TextDecoder('shift_jis').decode(jp)).toContain('日本語');expect(new TextDecoder('shift_jis').decode(jp)).toContain('ｶﾅ');
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
