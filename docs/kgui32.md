@@ -9,8 +9,9 @@ KGUI32は、PC-98ゲスト内の32bitプロテクトモードで描画・ウィ�
 CIでイメージ生成後、起動画面の「KGUI32（独立32bit GUI・実験版）」を選択します。
 PEGCは640×400・256色、Cirrusの選択肢は800×600・65,536色です。拡張メモリ16 MiBを
 指定し、イメージ内のXMSドライバを使用します。保存済みのディスクは差し替えません。
-GUI FDに加えて専用のFAT16データHDDを接続し、Editorの保存先は通常B:\WORKに
-なります。HDDなしのFD起動も利用できます。詳しくは[HDD保存基盤](kgui32-hdd-workspace.md)。
+通常は専用HDDだけから起動し、Editorの保存先はA:\WORKです。
+明示的なFD互換起動と、従来FD＋APPSデータHDDの構成も利用できます。
+詳しくは[HDD単独起動](hdd-boot.md)と[HDD保存基盤](kgui32-hdd-workspace.md)。
 
 - タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
 - WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2またはCtrl+Kで戻ります。
@@ -66,7 +67,8 @@ GUIの正常終了・ページフォールト・無限ループの強制終了�
 KDESK/386を生成後、`scripts/update-kgui32.py`で専用イメージを追加生成します。
 専用manifestにはネイティブSHA、元KDESKイメージと新イメージのSHA-256、各ファイルの
 ハッシュを記録します。通常版のバイナリ・ライセンスを引き継ぎ、AUTOEXECを
-`K386.EXE → K32HOST.EXE → KGUILDR.EXE`に変更し、CONFIGにデータHDDドライバを追加します。
+`K386.EXE → K32HOST.EXE → KGUILDR.EXE`に変更します。HDD単独起動は専用IO.SYSへ
+HDDドライバを組み込み、FD＋データHDD構成ではCONFIGから読み込みます。
 同梱THDも専用manifestのSHA-256で管理します。
 
 ```
@@ -74,12 +76,11 @@ bash scripts/prepare-msdos4-cpanel-ci.sh
 npm ci
 npm test
 npm run build
-npm run preview -- --host 127.0.0.1 --port 4173
-WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32.mjs http://127.0.0.1:4173/ test-results/kgui32-pegc pegc
-WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32.mjs http://127.0.0.1:4173/ test-results/kgui32-cirrus cirrus
-WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32-sessions.mjs http://127.0.0.1:4173/ test-results/kgui32-pegc/sessions pegc
-WEBNP2_NO_SANDBOX=1 node scripts/verify-kgui32-sessions.mjs http://127.0.0.1:4173/ test-results/kgui32-cirrus/sessions cirrus
 ```
+
+ブラウザE2EはGitHub Actionsで実行します。`Bundled PC-98 DOS disks`がGUI・セッション・
+部品・Editor・保存を、専用ワークフローがHDD起動・Files連携・復旧・V86 HDDを検証します。
+このチャットではpreviewサーバーを起動しません。
 
 生成画像・manifest・ライセンス出力はPages/CI成果物とし、生成済みイメージをコミット
 しません。MS-DOS側をマージしてmain CI成功を確認してからWebNP2側をマージします。
@@ -102,7 +103,11 @@ CIはPEGC/Cirrusの専用E2Eを実施し、既存のKDESK/K386テストも維持
 実装済みの対象はWelcome/Systemと2つのDOS/PM32混在ウィンドウ、GUI SDK4、電卓・時計、
 A:ルート／Workを閲覧するFiles、ASCIIエディタとHDD/FDのWork保存です。
 [Files／Editor連携](kgui32-files-editor.md)で選択文書を編集できます。部品・一覧・TXTプレビューは[kgui32-browser.md](kgui32-browser.md)、編集/保存は[kgui32-save.md](kgui32-save.md)を参照。
-アプリ間クリップボード、日本語・文字属性の描画、直接GDCを操作する
+独立Editor間のクリップボードとUndo/Redoは[GUI SDK3](kgui32-editor.md)、検索・置換、
+Shift選択、改行形式、表示拡大とTMP/BAKの明示的復旧は[復旧・Editor操作](kgui32-recovery-editor.md)、
+DOSアプリの検証済みHDD読み取りは[V86 HDD](v86-hdd-readonly.md)を参照してください。
+ホストのクリップボードは操作しません。
+日本語・文字属性の描画、直接GDCを操作する
 外部グラフィックアプリの仮想化、共有ディスク書き込み、実行枠の拡大は後続段階です。
 従来KDESKの既存機能も引き続き利用できます。
 ネイティブ設計はMS-DOSの`tools/kgui32/README.md`と`SESSIONS.md`を参照してください。
