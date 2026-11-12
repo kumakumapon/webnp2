@@ -67,7 +67,9 @@ jobs:
 
   kgui32:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Four native browser suites include large previews and full ownership/
+    # cleanup checks. Keep them bounded without truncating the final suite.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
