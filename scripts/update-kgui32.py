@@ -60,7 +60,7 @@ def workspace_hdd(root, destination):
             'disposable_volume_marker':'KHDPROOF'}
 
 RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
-             'COUNT32.EXE', 'ARGS32.EXE')
+             'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE')
 
 def application_hdd(root, destination, files):
     # Build offline from a NEW marked volume. No mounted/user image is opened.
@@ -161,8 +161,9 @@ def main():
     files['KXHIGH.SYS'] = (source/'tools/kxms32/build/KXHIGH.SYS').read_bytes()
     files['CONFIG.SYS'] = files['CONFIG.SYS'].replace(b'DEVICE=FDXMS286.SYS\r\n', b'DEVICE=KXHIGH.SYS\r\nDEVICE=FDXMS286.SYS\r\nDEVICE=KXMS32.SYS\r\n')
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
+    files['SAMPLE.BMP'] = (source/'tools/kgui32/build/SAMPLE.BMP').read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
     # Keep full source guides on the separate K386 disk; the complete GUI FD
@@ -221,6 +222,12 @@ def main():
                         'attribute_plane':'pc98-u16','snapshot_bytes':8032,'transport_chunk_bytes':992,
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
         'shortened_base_guides':['K386.TXT'],
+        'bitmap_sdk':{'version':1,'format':'rgb565','max_width':256,'max_height':192,
+                      'surfaces_per_client':1,'upload_chunk_bytes':3040,'atomic_replace':True,
+                      'owner_generation_checked':True,'source_crop':True,'canvas_clip':True,
+                      'viewer':'KGIMAGE.EXE','boundary_test':'KGBITBAD.EXE','sample':'SAMPLE.BMP',
+                      'decoder':'bmp24-bi-rgb','edits':['invert','horizontal-flip','undo','reset','brush'],
+                      'disk_save':False,'compact_elf_file_alignment':16},
         'ime':{'version':1,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
                'conversion':'whole-reading-word','preedit_bytes':96,'candidate_limit':16,
                'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),
@@ -228,7 +235,7 @@ def main():
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
-        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')
