@@ -66,5 +66,12 @@ async function lifecycle(){
 try{
  if(suite==='runtime')await runtime();else await lifecycle();
  await writeFile(join(output,'expanded-verification.json'),JSON.stringify({video,suite,source:m.source_commit,results},null,2)+'\n');
-}catch(e){await writeFile(join(output,'expanded-failure.json'),JSON.stringify({error:String(e),last:await inspectExpanded(h.page()).catch(()=>last),results},null,2)+'\n');await h.fail(e);throw e;}
+}catch(e){
+ const raw=await h.page().evaluate(()=>{
+  const n=window.np2debug?.np2;if(!n)return null;const s=atob(n.readMemoryBase64(0,0xa0000).base64),w=o=>s.charCodeAt(o)|s.charCodeAt(o+1)<<8;
+  const records=[];for(const sig of ['K32MUX01','K32MUX02','K386EXT1','KX32MEM1']){let at=-1;while((at=s.indexOf(sig,at+1))>=0)records.push({sig,address:at,words:Array.from({length:132},(_,i)=>w(at+i*2))});}
+  return {url:location.href,above16:w(0x594),records};
+ }).catch(String);
+ await writeFile(join(output,'expanded-native-raw.json'),JSON.stringify(raw,null,2)+'\n');
+ await writeFile(join(output,'expanded-failure.json'),JSON.stringify({error:String(e),last:await inspectExpanded(h.page()).catch(()=>last),results},null,2)+'\n');await h.fail(e);throw e;}
 finally{await h.close();}

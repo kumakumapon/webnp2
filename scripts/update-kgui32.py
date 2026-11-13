@@ -157,7 +157,8 @@ def main():
     del files['DATA32.BIN']
     files['KHD98.SYS'] = (source/'ports/pc98/hdd/build/KHD98.SYS').read_bytes()
     files['HDDFLT.COM'] = (source/'ports/pc98/hdd/build/HDDFLT.COM').read_bytes()
-    files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
+    files['KXMS32.SYS'] = (source/'tools/kxms32/build/KXMS32.SYS').read_bytes()
+    files['CONFIG.SYS'] += b'DEVICE=KXMS32.SYS\r\nLASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
     for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
@@ -207,7 +208,8 @@ def main():
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
         'runtime_profiles':{'default':{'extended_memory_mb':16,'application_slots':2},
                             'expanded':{'extended_memory_mb':32,'application_slots':4},
-                            'manager_version':2,'manager_bytes':264,'pm32_private_bytes':4194304},
+                            'manager_version':2,'manager_bytes':264,'pm32_private_bytes':4194304,
+                            'high_memory_driver':'KXMS32.SYS','physical_ceiling':33554432},
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
         'files_workspace_browser':1,'files_editor_launch':1,
         'v86_hdd_read_only':1,'v86_private_drives':1,
