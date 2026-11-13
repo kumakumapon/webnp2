@@ -18,7 +18,7 @@ const decoder=new TextDecoder('shift_jis'),encoding=new Map();
 for(let lead=0x81;lead<=0xef;lead++){if(lead>0x9f&&lead<0xe0)continue;for(let trail=0x40;trail<=0xfc;trail++){if(trail===0x7f)continue;const b=Buffer.from([lead,trail]),s=decoder.decode(b);if(s.length===1&&s!=='�'&&!encoding.has(s))encoding.set(s,b);}}
 const sjis=s=>Buffer.concat([...s].map(c=>{const n=c.codePointAt(0);if(n<128)return Buffer.from(c);if(n>=0xff61&&n<=0xff9f)return Buffer.from([n-0xff61+0xa1]);assert(encoding.has(c),c);return encoding.get(c);}));
 const texts=(s,id=0)=>s.canvases[id]?.texts??[];
-const doc=(text,id=0)=>{const bytes=Buffer.isBuffer(text)?text:sjis(text);return h.until(s=>s.editors[id]?.bytes===bytes.length&&s.editors[id].hash===fnv(bytes),'Document '+id+' '+bytes.length+' bytes');};
+const doc=(text,id=0)=>{const bytes=Buffer.isBuffer(text)?text:sjis(text);return h.until(s=>!!s.imes[id]&&s.editors[id]?.bytes===bytes.length&&s.editors[id].hash===fnv(bytes),'Document '+id+' '+bytes.length+' bytes');};
 const pre=(text,pending=0,id=0)=>h.until(s=>s.imes[id]?.bytes===sjis(text).length&&s.imes[id].hash===fnv(sjis(text))&&s.imes[id].pending===pending,'Preedit '+id+' '+text);
 const idle=(id=0)=>h.until(s=>s.imes[id]?.bytes===0&&s.imes[id].pending===0,'IME idle '+id);
 async function convert(roman,reading,id=0){await h.type(roman);await h.key('SPACE');await pre(reading,0,id);return h.until(s=>s.imes[id]?.selecting===1&&s.canvases[id]?.controls.includes(2200),'Candidates '+reading);}
@@ -50,8 +50,8 @@ async function inputSuite(){
  await clearDocument();await convert('nihon','にほん');await h.key('ENTER');await doc('日本');await h.key('CTRL+H');await h.until(s=>s.editors[0]?.mode===5,'Replace');
  await convert('nihon','にほん');await h.key('ENTER');await idle();await h.key('TAB');await convert('kanji','かんじ');await h.key('ENTER');await idle();await h.control(0,842);await doc('漢字');await h.key('CTRL+Z');await doc('日本');
  h.pass('Find and Replace fields compose Japanese directly, replace atomically and Undo restores the original document');
- await h.type('konnichiha');await pre('こんにちは');const private0=(await h.inspect()).imes[0];await h.launchEditor(1);await idle(1);assert.equal((await h.inspect()).imes[1].scheme,0);await h.key('F4');await convert('gakkou','がっこう',1);await h.key('ENTER');await doc('がっこう',1);
- await h.focus(0);await pre('こんにちは');s=await h.inspect();assert.equal(s.imes[0].hash,private0.hash);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);const tick=s.editors[1].heartbeat;await h.dragToMaximum(0);await pre('こんにちは');await h.until(s=>s.editors[1]?.heartbeat>tick,'Peer progresses during IME');assert((await h.inspect()).canvases[0].count<=40);
+ await h.type('konnichiha');const private0=(await pre('こんにちは')).imes[0];await h.launchEditor(1);const second=await idle(1);assert.equal(second.imes[1].scheme,0);await h.key('F4');await convert('gakkou','がっこう',1);await h.key('ENTER');await doc('がっこう',1);
+ await h.focus(0);s=await pre('こんにちは');assert.equal(s.imes[0].hash,private0.hash);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);const tick=s.editors[1].heartbeat;await h.dragToMaximum(0);await pre('こんにちは');await h.until(s=>s.editors[1]?.heartbeat>tick,'Peer progresses during IME');assert((await h.inspect()).canvases[0].count<=40);
  await h.key('ESC');await idle();await h.end(1);await h.end(0);assert.equal(sha(await h.disk('hdd')),sha(original));await h.exit(vector);await h.unchangedFd();await h.closeContext();
  h.pass('Two independent Editor IMEs preserve preedit over focus/resize, peer progress and complete resource cleanup with whole-media invariance');
 }
@@ -61,7 +61,7 @@ async function lifecycleSuite(){
  const plain=sjis('日本語\nこんにちは'),raw=sjis('日本語\r\nこんにちは');await doc(plain);await save(plain);let saved=await h.disk('hdd'),state=assertHddProtected(fixture,saved);assert.deepEqual(state.files.get('WORK/IME.TXT'),raw);await h.shot('ime-hdd-saved.png');
  await openWork('WIDE.TXT');
  await h.key('CTRL+A');await h.key('RIGHT');await h.until(s=>s.editors[0]?.cursor===65536&&s.editors[0].anchor===65536,'EOF at full document');
- const kept=(await h.inspect()).editors[0];await convert('kanji','かんじ');await h.key('ENTER');let s=await h.until(s=>texts(s).some(t=>t.startsWith('Document limit: 64 KiB')),'Full document retains composition');invariant(kept,s.editors[0]);await pre('かんじ');assert.equal(s.imes[0].selecting,1);await h.control(0,2191);await idle();
+ const kept=(await h.inspect()).editors[0];await convert('kanji','かんじ');await h.key('ENTER');let s=await h.until(s=>s.imes[0]?.selecting===1&&texts(s).some(t=>t.startsWith('Document limit: 64 KiB')),'Full document retains composition');invariant(kept,s.editors[0]);await pre('かんじ');assert.equal(s.imes[0].selecting,1);await h.control(0,2191);await idle();
  await h.end(0);await h.exit(vector);await h.unchangedFd();await writeFile(join(output,'ime-saved.thd'),saved);await h.closeContext();
  const cold=await h.bootHdd(saved);await h.launchEditor();await openWork('IME.TXT');await doc(plain);assert.equal(sha(await h.disk('hdd')),sha(saved));await h.exit(cold);await h.unchangedFd();await h.closeContext();
  h.pass('HDD-only shipping boot, exact native IME Shift-JIS/CRLF save/export/cold boot, 64 KiB commit rejection retaining all original state, complete cleanup');
@@ -73,7 +73,7 @@ async function lifecycleSuite(){
  // recovery is through real keys/buttons; no host write to guest memory.
  const broken=Buffer.from(h.legacy),fat=inspectFat(broken),e=fat.entries.get('KGIME.DIC');broken[(9+e.cluster)*1024+20]^=1;inspectFat(broken);
  const badVector=await h.boot(null,broken);await h.launchEditor();await h.key('F4');await convert('nihon','にほん');s=await h.until(s=>s.imes[0]?.dictionary===2&&texts(s).some(t=>t.startsWith('Dictionary unavailable')),'Corrupt dictionary safely falls back');assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);assert.equal(s.imes[0].candidates,2);
- await h.key('ENTER');await doc('にほん');await h.type('ky');await pre('',2);await h.end(0);await h.launchEditor();await idle();assert.equal((await h.inspect()).imes[0].scheme,0);assert.equal(sha(await h.disk('fd1')),sha(broken));await h.exit(badVector);await h.closeContext();
+ await h.key('ENTER');await doc('にほん');await h.type('ky');await pre('',2);await h.end(0);await h.launchEditor();s=await idle();assert.equal(s.imes[0].scheme,0);assert.equal(sha(await h.disk('fd1')),sha(broken));await h.exit(badVector);await h.closeContext();
  h.pass('Corrupt dictionary closes its handle and retains kana conversion; explicit Force End reclaims a composing app and a new generation has no stale IME state');
 }
 try{if(suite==='input')await inputSuite();else await lifecycleSuite();await h.finish();}catch(e){await h.fail(e);throw e;}finally{await h.close();}
