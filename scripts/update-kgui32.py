@@ -162,6 +162,8 @@ def main():
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
+    dictionary = (source/'tools/kgui32/build/KGIME.DIC').read_bytes()
+    files['KGIME.DIC'] = dictionary
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
     files['LINES.TXT'] = b'\n'*9000+b'FINAL LINE\n'
     files['EMPTY.TXT'] = b''
@@ -203,7 +205,12 @@ def main():
         'files_workspace_browser':1,'files_editor_launch':1,
         'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
-        'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':False,
+        'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
+        'ime':{'version':1,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
+               'conversion':'whole-reading-word','preedit_bytes':96,'candidate_limit':16,
+               'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),
+                   'readings':struct.unpack_from('<I',dictionary,16)[0],
+                   'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
