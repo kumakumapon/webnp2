@@ -18,7 +18,7 @@ const type=async value=>{await page.evaluate(v=>window.np2debug.np2.typeText(v),
 const run=async(id,program)=>{await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');await type(program+'\r');};
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 const hash=b=>createHash('sha256').update(b).digest('hex');
-const until=async(predicate,label,observe)=>{let s;for(let i=0;i<600;i++){s=await snapshot();if(s){observe?.(s);if(predicate(s.views))return s;}await pause(observe?30:100);}throw Error(label+': '+JSON.stringify(s));};
+const until=async(predicate,label,observe)=>{let s;for(let i=0;i<600;i++){s=await snapshot();if(s){observe?.(s);if(predicate(s.views,s))return s;}await pause(observe?30:100);}throw Error(label+': '+JSON.stringify(s));};
 const save=(stage,s)=>{snapshots.push({stage,...s});};
 const done=label=>{results.push(label);console.log('PASS '+label);};
 try{
@@ -42,8 +42,12 @@ try{
   await run(1,'TIMER.EXE EXEC');await until(v=>v[1].state===1&&v[1].psp!==0x8000&&v[1].counter>0,'Parent timer during child EXEC');
   // Let the parent's timer interrupt the child repeatedly with the child's FS/PSP.
   await pause(1500);
-  await type('q');s=await until(v=>v[1].state===2&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT'),'Timer parent resumes');
-  const callbacks=s.views[1].counter;s=await until(v=>v[1].state===2&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
+  // A continuously rearmed timer can wake input before the host observes the
+  // WAITING state. Require the real parent's blocked AH=08 input call instead;
+  // the following Z and PASS still prove that input and normal exit work.
+  const parentInput=(v,state)=>[1,2].includes(v[1].state)&&v[1].psp===0x8000&&v[1].screen.includes('TIMER WAIT')&&state.diagnostics[1].calls.some(c=>c[0]===0x21&&(c[1]&0xff00)===0x0800);
+  await type('q');s=await until(parentInput,'Timer parent resumes at DOS input');
+  const callbacks=s.views[1].counter;s=await until((v,state)=>parentInput(v,state)&&v[1].counter>callbacks+2,'Parent timer remains armed after child exit');save('parent-timer-after-child',s);
   await type('Z');await until(v=>v[1].state===0&&v[1].screen.includes('PC98 TIMER PASS'),'Rearmed parent timer completion');
   done('a parent-owned timer continues across child EXEC, callback rearm and child exit');
   await run(1,'BADTIMER.EXE');s=await until(v=>v[1].state===4&&v[1].fault===13,'Tampered IRQ callback contained');
