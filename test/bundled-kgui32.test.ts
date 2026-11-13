@@ -74,6 +74,17 @@ describe('independent native PM32 GUI image',()=>{
    let count=0;for(let at=32;at<b.length;){const end=at+b.readUInt16LE(at);expect(end).toBeGreaterThan(at+4);expect(end).toBeLessThanOrEqual(b.length);const n=b[at+2],c=b[at+3];expect(n).toBeGreaterThan(0);expect(c).toBeGreaterThan(0);expect(c).toBeLessThanOrEqual(12);let p=at+4+n;for(let i=0;i<c;i++)p+=1+b[p];expect(p).toBe(end);count++;at=end;}expect(count).toBe(info.readings);
   }
  });
+ it('ships native DOS Japanese terminal planes, diagnostic and concise guide',()=>{
+  if(!manifest.enabled)return;
+  expect(manifest.dos_terminal).toMatchObject({version:2,columns:80,rows:25,character_plane:'pc98-tvram-u16',attribute_plane:'pc98-u16',snapshot_bytes:8032,transport_chunk_bytes:992,shift_jis_output:true,pc98_attributes:true,blink:true,diagnostic:'TERM98.COM'});
+  expect(manifest.shortened_base_guides).toEqual(['K386.TXT']);
+  for(const image of [manifest.image,manifest.application_distribution.image,manifest.standalone_hdd.image]){
+   const disk=openDiskImage(readFileSync('public/kgui32/'+image),image);
+   expect(fatReadFile(disk,'TERM98.COM').length).toBeGreaterThan(100);
+   const guide=fatReadFile(disk,'K386.TXT');expect(guide.length).toBeLessThan(4096);expect(new TextDecoder().decode(guide)).toContain('TERM98.COM');
+  }
+  expect(manifest.application_distribution.legacy_fd_free_bytes).toBeGreaterThanOrEqual(8192);
+ });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
   if(!manifest.enabled)return;
   const hdd=manifest.workspace_hdd,bytes=readFileSync('public/kgui32/'+hdd.image);

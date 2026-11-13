@@ -74,7 +74,7 @@ try{
  pass('F10 returns to DOS and frees only GUI-owned workers, XMS, mappings, graphics/font/palette and all conventional allocations; whole FAT12 image unchanged');
  // Five original pointer/rectangle cases plus six CG-ROM request failures
  // (supervisor pointer, three codes, version and read-only output).
- await command('badapi');await wait('KGUI32 DONE');s=await until(s=>s.state===3&&!s.ready&&s.rejected===11,'invalid GUI service pointers, rectangles and CG-ROM requests');reclaimed(s);assert.equal(s.cpu.exitCode,0);save('service boundary rejection',s);
+ await command('badapi');await wait('KGUI32 DONE');s=await until(s=>s.state===3&&!s.ready&&s.rejected===15,'invalid GUI service pointers, rectangles, CG-ROM and terminal snapshots');reclaimed(s);assert.equal(s.cpu.exitCode,0);save('service boundary rejection',s);
  await command('fault');await wait('KGUI32 FAULT');s=await until(s=>s.state===4&&!s.ready,'contained GUI page fault');reclaimed(s);assert.equal(s.cpu.reason,14);assert.equal(s.cpu.cr2,0x10000);assert.equal(s.cpu.faultError,7);save('real user page fault',s);
  await command('spin');s=await until(s=>s.ready&&s.app?.heartbeat>100&&s.cpu.irqs>3,'uncooperative GUI preemption');assert.equal(s.app.frames,1);const heartbeat=s.app.heartbeat;
  await until(s=>s.app?.heartbeat>heartbeat&&s.cpu.irqs>5,'spin makes protected progress');await key('ESC');await wait('KGUI32 DONE');s=await until(s=>s.state===3&&!s.ready,'force-stop spin');reclaimed(s);assert.equal(s.cpu.reason,65);save('IRQ-preempted GUI stop',s);
