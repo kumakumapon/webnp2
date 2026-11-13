@@ -27,12 +27,8 @@ function pass(label){results.push(label);console.log('PASS',label);}
 async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/s.expanded.capacity;await h.click(s.expanded.capacity===2?330+146*id:Math.round(300+step*(id+0.5)),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
 async function stop(id){const s=await focus(id),w=s.bitmaps[id].window;await h.click(w.x+230,w.y+48);return until(s=>s.expanded.slots[id].state===0,'End '+id);}
 async function run(id,command){
- await focus(id);const generation=last.expanded.slots[id].generation;let events=last.gui.app.events;
- await h.key('CTRL+L');await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===12,'Run command editor');
- // Four independently painted windows can outlive a complete host key macro.
- // Acknowledge each real GUI key before sending the next command character.
- for(const c of command){events=last.gui.app.events;await h.type(c);await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===c.charCodeAt(0),'command character '+c);}
- await h.key('ENTER');return until(s=>s.expanded.slots[id].generation!==generation,'Run '+command);
+ await focus(id);const generation=last.expanded.slots[id].generation;
+ await h.enterCommand(command);return until(s=>s.expanded.slots[id].generation!==generation,'Run '+command);
 }
 async function launcher(){await h.key('F2');await h.click(292,266);return until(s=>accepted(s),'launcher Images');}
 async function finished(vector,before,floppy=false){assert.equal(sha(await h.disk(floppy?'fd1':'hdd')),sha(before));await h.exit(vector);const s=await h.until(s=>s.gui.completed===1,'complete cleanup');assert.equal(s.gui.stackGuard,1);assert.equal(s.gui.owned,0);await h.unchangedFd();await h.closeContext();}

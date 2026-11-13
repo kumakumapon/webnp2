@@ -11,7 +11,7 @@ let last;const results=[];
 async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectExpanded(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see expanded-failure.json');}
 const pass=name=>{results.push(name);console.log('PASS',name);};
 async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/4;await h.click(Math.round(300+step*id+step/2),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
-async function run(id,command){await focus(id);const generation=last.slots[id].generation;await h.key('CTRL+L');await h.type(command+'\r');return until(s=>s.slots[id].generation!==generation&&[1,2,4].includes(s.slots[id].state),'run '+id+' '+command);}
+async function run(id,command){await focus(id);const generation=last.slots[id].generation;await h.enterCommand(command);return until(s=>s.slots[id].generation!==generation&&[1,2,4].includes(s.slots[id].state),'run '+id+' '+command);}
 async function stop(id){
  const s=await focus(id),c=s.bridge?.clients[id];
  if(c?.token&&s.slots[id].kind){const x=id?s.gui.width-c.width-32:16,y=id?Math.max(40,s.gui.height-c.height-144):40;await h.click(x+230,y+48);}else await h.key('CTRL+E');
@@ -73,5 +73,5 @@ try{
   return {url:location.href,above16:w(0x594),records};
  }).catch(String);
  await writeFile(join(output,'expanded-native-raw.json'),JSON.stringify(raw,null,2)+'\n');
- await writeFile(join(output,'expanded-failure.json'),JSON.stringify({error:String(e),last:await inspectExpanded(h.page()).catch(()=>last),results},null,2)+'\n');await h.fail(e);throw e;}
+ await writeFile(join(output,'expanded-failure.json'),JSON.stringify({error:String(e),last:(await inspectExpanded(h.page()).catch(()=>null))??last,results},null,2)+'\n');await h.fail(e);throw e;}
 finally{await h.close();}
