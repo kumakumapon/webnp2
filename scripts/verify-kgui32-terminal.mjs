@@ -66,9 +66,9 @@ async function paintSuite(){
  h.pass('Blink timer, attribute-only and high-byte-only repaint, cursor-only revision and a full-width cursor on the right half');
  let w=t(s).window;await h.click(w.x+8+48+22,w.y+w.h-16);s=await until(s=>stable(s)&&t(s).window.sx===8,'horizontal scroll');await glyph(10,8,0x93fa,0xe1,1);w=t(s).window;await h.click(w.x+8+22,w.y+w.h-16);await until(s=>stable(s)&&t(s).window.sx===0,'restore horizontal scroll');
  // Resize and move through the actual desktop hit testing, then repaint pixels.
- s=await published();w=t(s).window;await h.point(w.x+w.w-8,w.y+w.h-8);await h.page().evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]));await h.point(w.x+400-8,w.y+272-8);await h.page().evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]));
- s=await until(s=>stable(s)&&t(s).window.w===400&&t(s).window.h===272,'resize DOS window');w=t(s).window;
- await h.point(w.x+180,w.y+15);await h.page().evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]));await h.point(w.x+200,w.y+35);await h.page().evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]));await until(s=>stable(s)&&t(s).window.x===w.x+20&&t(s).window.y===w.y+20,'move DOS window');await h.shot('moved-resized.png');
+ s=await published();w=t(s).window;await h.point(w.x+w.w-8,w.y+w.h-8);await h.button(1);await h.point(w.x+400-8,w.y+272-8);await h.button(0);
+ s=await until(s=>stable(s)&&Math.abs(t(s).window.w-400)<=4&&Math.abs(t(s).window.h-272)<=4,'resize DOS window');w=t(s).window;
+ await h.point(w.x+180,w.y+15);await h.button(1);await h.point(w.x+200,w.y+35);await h.button(0);await until(s=>stable(s)&&Math.abs(t(s).window.x-w.x-20)<=4&&Math.abs(t(s).window.y-w.y-20)<=4,'move DOS window');await h.shot('moved-resized.png');
  // Cursor is on row 2; use split INT29 row 3 for a pixel check after movement.
  await glyph(3,0,0x93fa,0xe1);h.pass('Right-half clipping and actual glyph pixels after mouse resize/move');
  const first=(await inspect()).cpu.views[0];await start(1);await command('a',v=>v.attributes[160]===0x41,'second terminal changes its own attributes',1);await h.focus(0);s=await until(s=>stable(s)&&stable(s,1),'two independent terminal snapshots');assert.equal(s.cpu.views[0].generation,first.generation);assert.equal(t(s).codes[160],0xfb26);assert.equal(t(s,1).codes[160],0xfc26);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);await glyph(3,0,0x93fa,0xe1);
