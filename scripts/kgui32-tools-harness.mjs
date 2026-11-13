@@ -26,7 +26,16 @@ export async function toolsHarness(base,output,video){
  async function focus(id){let s=await inspect();if(s.gui.app.active!==id+2)await click(330+146*id,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'active '+id);}
  function origin(s,id){const c=s.canvases[id];return {x:id?s.gui.width-c.width-32:16,y:id?Math.max(40,s.gui.height-c.height-144):40};}
  async function control(id,code){await focus(id);const s=await until(s=>s.canvases[id]?.buttons.some(b=>b.id===code),'control '+code),b=s.canvases[id].buttons.find(b=>b.id===code),o=origin(s,id);await click(o.x+8+b.x+Math.floor(b.w/2),o.y+70+b.y+Math.floor(b.h/2));}
- async function input(id,x,y,value,oldLength=12){await focus(id);const s=await inspect(),o=origin(s,id);await click(o.x+8+x,o.y+70+y);await key('HOME');for(let i=0;i<oldLength;i++)await key('DEL');await type(value);}
+ async function input(id,x,y,value,oldLength=12){
+  await focus(id);const s=await inspect(),o=origin(s,id);await click(o.x+8+x,o.y+70+y);
+  const fields=(await inspect()).canvases[id].draws.filter(d=>d.x<=x&&d.y<=y&&y-d.y<20).sort((a,b)=>b.x-a.x||b.y-a.y),field=fields[0];assert(field,'retained input field');
+  const shown=s=>s.canvases[id]?.draws.find(d=>d.x===field.x&&d.y===field.y)?.text;
+  await key('HOME');let text=shown(await inspect());
+  // Wait for actual retained input after each real key. A 200 ms host delay
+  // cannot acknowledge a CPL3 frame while another large window is painting.
+  for(let i=0;i<oldLength&&text;i++){const c=text.charCodeAt(0),unit=(c>=0x81&&c<=0x9f||c>=0xe0&&c<=0xef)?2:1;text=text.slice(unit);await key('DEL');await until(s=>shown(s)===text,'input deletion '+id);}
+  for(const c of value){text+=c;await type(c);await until(s=>shown(s)===text,'input character '+id+' '+text.length);}
+ }
  async function boot(bytes=hdd,floppy=fd,memory=16){
   ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=floppy;page.on('pageerror',e=>errors.push(e.message));
   if(bytes)await page.route('**/kgui32/'+distribution.hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
