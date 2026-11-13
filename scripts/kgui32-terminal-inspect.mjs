@@ -16,7 +16,7 @@ export async function inspectTerminal(page){
   const matches=at=>at>=0&&at+132<=heap.length&&heap[at+64]===0x4b&&heap[at+65]===0x47&&heap[at+66]===0x54&&heap[at+67]===0x32&&Array.from({length:64},(_,i)=>heap[at+i]===r.charCodeAt(880+i)).every(Boolean);
   let at=window.kguiTerminalXmsBacking===undefined?-1:window.kguiTerminalXmsBacking+physical;
   if(!matches(at)){
-   const found=[];for(let p=heap.indexOf(0x4b);p>=0;p=heap.indexOf(0x4b,p+1))if(heap[p+1]===0x47&&heap[p+2]===0x55&&heap[p+3]===0x31&&matches(p))found.push(p);
+   const found=[];for(let p=heap.indexOf(0x4b);p>=0;p=heap.indexOf(0x4b,p+1))if(heap[p+1]===0x55&&heap[p+2]===0x47&&heap[p+3]===0x31&&matches(p))found.push(p);
    if(found.length!==1)return null;at=found[0];window.kguiTerminalXmsBacking=at-physical;
   }
   const u=o=>(heap[at+o]|heap[at+o+1]<<8|heap[at+o+2]<<16|heap[at+o+3]<<24)>>>0;
