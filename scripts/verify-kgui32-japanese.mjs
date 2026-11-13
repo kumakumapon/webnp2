@@ -10,7 +10,7 @@ import {cgGlyph,sjisUnits,normalized} from './kgui32-shiftjis.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/japanese',video='pegc',suite='text']=process.argv.slice(2);
 assert(['text','save'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
-assert.equal(m.text_encoding,'shift-jis');assert.equal(m.japanese_glyphs,'pc98-cg-rom');assert.equal(m.japanese_ime,false);
+assert.equal(m.text_encoding,'shift-jis');assert.equal(m.japanese_glyphs,'pc98-cg-rom');assert.equal(m.japanese_ime,true);
 const root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root));
 assert.equal(sha(original),m.standalone_hdd.sha256);
 const bmp=await readFile(new URL('../public/core/font.bmp',import.meta.url));

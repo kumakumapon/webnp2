@@ -40,7 +40,7 @@ describe('independent native PM32 GUI image',()=>{
   const image=readFileSync('public/kgui32/'+manifest.image);
   expect(createHash('sha256').update(image).digest('hex')).toBe(manifest.sha256);
   expect(manifest.files_workspace_browser).toBe(1);expect(manifest.files_editor_launch).toBe(1);expect(manifest.workspace_recovery_api).toBe(1);expect(manifest.keyboard_modifiers).toBe(1);expect(manifest.editor_tools).toEqual(['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery']);
-  expect(manifest.text_encoding).toBe('shift-jis');expect(manifest.japanese_glyphs).toBe('pc98-cg-rom');expect(manifest.japanese_ime).toBe(false);
+  expect(manifest.text_encoding).toBe('shift-jis');expect(manifest.japanese_glyphs).toBe('pc98-cg-rom');expect(manifest.japanese_ime).toBe(true);
   const jp=fatReadFile(openDiskImage(image,manifest.image),'JPDEMO.TXT');expect(new TextDecoder('shift_jis').decode(jp)).toContain('日本語');expect(new TextDecoder('shift_jis').decode(jp)).toContain('ｶﾅ');
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
@@ -59,6 +59,20 @@ describe('independent native PM32 GUI image',()=>{
   expect(auto).not.toContain('HDDFLT');
   const exe=fatReadFile(disk,'KGUI32.EXE');expect(new TextDecoder().decode(exe.slice(72,80))).toBe('K32EXE01');expect(exe[80]|exe[81]<<8).toBe(257);expect(exe[92]).toBe(23);
   for(const name of ['KGUILDR.EXE','KGUI32.EXE']){const b=fatReadFile(disk,name);expect(b[0]|b[1]<<8).toBe(0x5a4d);}
+ });
+ it('ships the same bounded original IME dictionary on all boot profiles',()=>{
+  if(!manifest.enabled)return;
+  expect(manifest.ime.schemes).toEqual(['romaji','jis-kana']);expect(manifest.ime.scripts).toEqual(['hiragana','katakana']);
+  expect(manifest.ime.conversion).toBe('whole-reading-word');expect(manifest.ime.learning).toBe(false);
+  expect(manifest.ime.preedit_bytes).toBe(96);expect(manifest.ime.candidate_limit).toBe(16);
+  const info=manifest.ime.dictionary;
+  for(const image of [manifest.image,manifest.application_distribution.image,manifest.standalone_hdd.image]){
+   const d=fatReadFile(openDiskImage(readFileSync('public/kgui32/'+image),image),info.name);
+   expect(d.length).toBe(info.bytes);expect(d.length).toBeLessThanOrEqual(32768);expect(createHash('sha256').update(d).digest('hex')).toBe(info.sha256);
+   const b=Buffer.from(d);expect(b.subarray(0,8).toString('ascii')).toBe('KGIMED1\0');expect(b.readUInt32LE(8)).toBe(1);expect(b.readUInt32LE(12)).toBe(b.length);expect(b.readUInt32LE(16)).toBe(info.readings);expect(info.readings).toBeGreaterThan(700);
+   let h=2166136261;for(const c of b.subarray(32))h=Math.imul(h^c,16777619)>>>0;expect(h).toBe(b.readUInt32LE(20));
+   let count=0;for(let at=32;at<b.length;){const end=at+b.readUInt16LE(at);expect(end).toBeGreaterThan(at+4);expect(end).toBeLessThanOrEqual(b.length);const n=b[at+2],c=b[at+3];expect(n).toBeGreaterThan(0);expect(c).toBeGreaterThan(0);expect(c).toBeLessThanOrEqual(12);let p=at+4+n;for(let i=0;i<c;i++)p+=1+b[p];expect(p).toBe(end);count++;at=end;}expect(count).toBe(info.readings);
+  }
  });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
   if(!manifest.enabled)return;

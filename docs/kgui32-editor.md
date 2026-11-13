@@ -4,6 +4,7 @@ SDK3は実装・検証・マージ済みです。SDK4で保存が追加されま
 現在の利用方法は [保存できるエディタ](kgui32-save.md) と
 [復旧・検索置換・改行形式・拡大表示](kgui32-recovery-editor.md) を参照してください。
 [日本語表示・Shift-JIS読書](kgui32-japanese.md)も追加されています。
+同ページに、F4/F5で切り替えるかな／ローマ字IMEと、変換・候補・明示的な確定／取消を記載しています。
 以下はSDK3時点の制限と操作の記録です。
 
 KGUI32のWelcome > Editor、またはRunから `KGEDIT.EXE` で起動します。

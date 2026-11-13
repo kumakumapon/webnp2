@@ -1,4 +1,4 @@
-# 独立GUIの日本語表示・Shift-JIS読書
+# 独立GUIの日本語表示・Shift-JIS読書・IME
 
 Editor、FilesのTXTプレビュー、復旧のTXT/TMP/BAKプレビューは、ASCII、半角カナ、
 JIS X 0208のShift-JIS文書を表示できます。通常のHDD単独起動ではA:ルートの
@@ -6,7 +6,7 @@ JIS X 0208のShift-JIS文書を表示できます。通常のHDD単独起動で�
 
 Editorでは、既存の日本語文書を開き、ASCIIの追記、日本語の選択・コピー・貼付・削除、
 Undo/Redo、検索・置換、保存ができます。検索語や置換文字列に日本語を使う場合は、
-文書内で選択してCtrl+C、Find/Replaceの入力欄でCtrl+Vを使います。入力欄は単一行・
+IMEで直接入力するか、文書内で選択してCtrl+C、Find/Replaceの入力欄でCtrl+Vを使います。入力欄は単一行・
 63バイトまで、ゲスト内クリップボードは1,024バイトまでです。
 ホストのクリップボードは使いません。
 
@@ -23,14 +23,41 @@ Undo/Redo、検索・置換、保存ができます。検索語や置換文字�
 - Work保存先は通常HDDのA:\WORKです。FD互換起動はFDのA:\WORK、従来FD＋HDD構成は
   HDDのB:\WORKです。名前は引き続きASCIIの8.3 TXTで、競合・保護・満杯・復旧の条件を維持します。
 
-この段階ではIME、Unicode/UTF-8変換、CP932の拡張領域、日本語ファイル名、DOS端末の
-日本語・文字属性の完全な再現は追加していません。日本語の新規入力・変換は次の開発段階です。
+Unicode/UTF-8変換、CP932の拡張領域、日本語ファイル名、DOS端末の
+日本語・文字属性の完全な再現は追加していません。
 既存の2実行枠、各4 MiB＋GUI専用4 MiB、拡張メモリ16 MiB、公開ABIも維持します。
+
+## 日本語入力・変換
+
+Editorの初期入力モードはOffです。**F4**でOff／ローマ字、**F5**でローマ字／JISかな、
+**Ctrl+J**でOff→ローマ字→かなを切り替えます。Tools→IMEからも選択できます。
+**F6**はひらがな、**F7**はカタカナで、切替時に本文へ確定しません。
+
+- ローマ字は `nihongo` → にほんご、`konnichiha` → こんにちは、`gakkou` → がっこう。
+  ヘボン式／訓令式、小書きのx/l、拗音、促音、`n`／`nn`／`n'`に対応します。
+- JISかなは `t` → か、`f` → は、`@` → 濁点、`[` → 半濁点です。
+  Shift+3/4/5/6/7/8/9、Shift+E/Zは小書き文字になります。
+- 未確定文字列は本文と別のパネルに表示します。左右・Home/EndとBackspace/Deleteで編集し、
+  **Space**で単語変換、Space/Down・Shift+Space/Upで候補移動、Page Up/Downでページ移動。
+  数字・クリックは候補の選択だけを行い、**Enter／Commit**で明示的に確定します。
+- Escは候補→読みに戻り、もう一度で取消。Cancel／Ctrl+Zは未確定入力だけを取り消します。
+  確定は現在の選択範囲を置換する一回の編集で、Undo/Redoに対応します。
+- Find/Replaceの両入力欄でも同じIMEを使えます。入力モード・未確定入力・候補はEditorごとに独立し、
+  フォーカス移動やリサイズで保持されます。
+- 未確定中の保存・New・Open・モード切替・通常終了は、先に確定か取消が必要です。
+  F10終了も取り消され、解決後に再操作します。明示的なForce Endは従来どおり破棄します。
+  96バイトの未確定上限、64 KiBの本文上限、63バイトの検索欄上限に達しても原文を保持します。
+
+同梱の`KGIME.DIC`は原作MITの840読み・約14 KBの小型辞書です。読み全体の**単語変換**を行い、
+辞書候補の後に重複のないひらがな／カタカナ候補を用意します。未知語もかなで確定できます。
+文節解析、活用推定、予測、学習、ユーザー辞書書込は次の拡張です。
+辞書は既存の読取専用APIで遅延読込し、ヘッダ・チェックサム・件数・長さ・全文字列を検証します。
+欠落・破損時は通知し、かな入力・確定・取消を継続できます。新しい特権APIや保存先は追加しません。
 
 ## 配布・受入検証
 
 manifestはnativeの固定コミットと、`text_encoding: shift-jis`、
-`japanese_glyphs: pc98-cg-rom`、`japanese_ime: false`を記録します。
+`japanese_glyphs: pc98-cg-rom`、`japanese_ime: true`とIME方式・上限・辞書のハッシュを記録します。
 HDD単独起動、従来FD＋APPS HDD、明示的FD互換起動を同じソースから生成します。
 既存の利用者媒体を変換・更新する処理はありません。
 
@@ -41,6 +68,12 @@ GitHub Actionsの **KGUI32 Japanese text** がPEGC/Cirrus × text/saveの4構成
 HDD/FDの保存・export・cold boot、4 KiBをまたぐ文字と64 KiB末尾の文字、明示的な
 日本語TMP復旧、独立時計の進行、正常終了時の資源回収も確認します。
 スクリーンショット・verification.json・保存媒体をartifactへ記録します。
+
+**KGUI32 Japanese IME**はPEGC/Cirrus × input/lifecycleの4構成です。
+実CPL3のキー／ボタン操作、未確定文字のCG-ROM画素、ローマ字／JISかな、濁点・小書き、
+候補の選択・ページ・確定・取消、選択置換と一回Undo、検索置換へのIME入力を検証します。
+独立Editor・リサイズ・終了取消、64 KiB確定失敗の原文保持、辞書破損時のかな継続、
+HDD/FDのバイト単位保存・export・cold boot、資源回収も確認します。
 
 このチャットではpreviewを起動せず、ブラウザE2EはGitHub Actionsで実行します。
 ネイティブ契約は[MS-DOS JAPANESE.md](https://github.com/kumakumapon/MS-DOS/blob/main/tools/kgui32/JAPANESE.md)。
