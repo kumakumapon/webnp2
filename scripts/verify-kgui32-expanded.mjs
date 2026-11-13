@@ -10,7 +10,7 @@ const h=await toolsHarness(base,output,video),m=h.manifest;assert.equal(m.runtim
 let last;const results=[];
 async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectExpanded(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see expanded-failure.json');}
 const pass=name=>{results.push(name);console.log('PASS',name);};
-async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/4;await h.click(300+step*id+step/2,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
+async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/4;await h.click(Math.round(300+step*id+step/2),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
 async function run(id,command){await focus(id);const generation=last.slots[id].generation;await h.key('CTRL+L');await h.type(command+'\r');return until(s=>s.slots[id].generation!==generation&&[1,2,4].includes(s.slots[id].state),'run '+id+' '+command);}
 async function stop(id){
  const s=await focus(id),c=s.bridge?.clients[id];
