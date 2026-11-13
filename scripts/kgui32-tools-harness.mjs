@@ -27,25 +27,25 @@ export async function toolsHarness(base,output,video){
  function origin(s,id){const c=s.canvases[id];return {x:id?s.gui.width-c.width-32:16,y:id?Math.max(40,s.gui.height-c.height-144):40};}
  async function control(id,code){await focus(id);const s=await until(s=>s.canvases[id]?.buttons.some(b=>b.id===code),'control '+code),b=s.canvases[id].buttons.find(b=>b.id===code),o=origin(s,id);await click(o.x+8+b.x+Math.floor(b.w/2),o.y+70+b.y+Math.floor(b.h/2));}
  async function input(id,x,y,value,oldLength=12){await focus(id);const s=await inspect(),o=origin(s,id);await click(o.x+8+x,o.y+70+y);await key('HOME');for(let i=0;i<oldLength;i++)await key('DEL');await type(value);}
- async function boot(bytes=hdd,floppy=fd){
+ async function boot(bytes=hdd,floppy=fd,memory=16){
   ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=floppy;page.on('pageerror',e=>errors.push(e.message));
   if(bytes)await page.route('**/kgui32/'+distribution.hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
   if(!floppy.equals(fd))await page.route('**/kgui32/'+distribution.image,r=>r.fulfill({body:floppy,contentType:'application/octet-stream'}));
-  await page.goto(new URL(`?fd1=./kgui32/${distribution.image}${bytes?'&hdd=./kgui32/'+distribution.hdd.image:''}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+  await page.goto(new URL(`?fd1=./kgui32/${distribution.image}${bytes?'&hdd=./kgui32/'+distribution.hdd.image:''}&run=1&mem=${memory}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
   await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
  }
  async function launchEditor(id=0){const before=await inspect(),generation=before.cpu.views[id].generation;await key('F2');await click(130,266);return until(s=>s.cpu.views[id].generation>generation&&[1,2].includes(s.cpu.views[id].state)&&s.bridge.generation[id]===s.cpu.views[id].generation&&s.bridge.tokens[id]>0&&s.editors[id]?.frames>0,'Editor '+id);}
- async function bootHdd(bytes,ready=true){
+ async function bootHdd(bytes,ready=true,memory=16){
   const profile=manifest.standalone_hdd;assert(profile?.hdd_boot_supported);
   if(bytes===undefined)bytes=await readFile(new URL(profile.image,root));
   ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=null;page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/kgui32/'+profile.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
   await page.goto(base);
-  const choice=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');
+  const choice=page.locator(memory===32?(video==='cirrus'?'.start-btn-kgui32-expanded-highcolor':'.start-btn-kgui32-expanded'):(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32'));
   const target=new URL(await choice.getAttribute('href'),base);
   assert.equal(target.searchParams.get('hdd'),'./kgui32/'+profile.image);
   assert(!target.searchParams.has('fd1')&&!target.searchParams.has('fd2'),'Shipping start choice boots HDD only');
-  target.searchParams.set('clk','8');target.searchParams.set('worklet','0');
+  target.searchParams.set('mem',String(memory));target.searchParams.set('clk','8');target.searchParams.set('worklet','0');
   await page.goto(target.href);
   if(!ready)return null;
   await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'HDD-only desktop');

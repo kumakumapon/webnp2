@@ -16,3 +16,9 @@ export const KGUI32_BOOT_URL = manifest.enabled && standalone?.hdd_boot_supporte
   ? `./?hdd=./kgui32/${standalone.image}&run=1&mem=16`
   : KGUI32_PAIRED_BOOT_URL;
 export const KGUI32_HIGH_COLOR_BOOT_URL = KGUI32_BOOT_URL ? `${KGUI32_BOOT_URL}&video=cirrus` : undefined;
+
+const expanded = (manifest as {runtime_profiles?: {expanded: {extended_memory_mb: number; application_slots: number}}}).runtime_profiles?.expanded;
+export const KGUI32_EXPANDED_BOOT_URL = KGUI32_BOOT_URL && expanded?.application_slots === 4
+  ? KGUI32_BOOT_URL.replace('mem=16', `mem=${expanded.extended_memory_mb}`) : undefined;
+export const KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL = KGUI32_EXPANDED_BOOT_URL
+  ? `${KGUI32_EXPANDED_BOOT_URL}&video=cirrus` : undefined;

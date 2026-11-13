@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL} from '../src/bundled-kgui32';
+import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL,KGUI32_EXPANDED_BOOT_URL,KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
@@ -10,6 +10,8 @@ describe('independent native PM32 GUI image',()=>{
   expect(KGUI32_PAIRED_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
   expect(KGUI32_BOOT_URL).toBe(manifest.enabled&&manifest.standalone_hdd?.hdd_boot_supported?`./?hdd=./kgui32/${manifest.standalone_hdd.image}&run=1&mem=16`:KGUI32_PAIRED_BOOT_URL);
   expect(KGUI32_HIGH_COLOR_BOOT_URL).toBe(KGUI32_BOOT_URL?KGUI32_BOOT_URL+'&video=cirrus':undefined);
+  expect(KGUI32_EXPANDED_BOOT_URL).toBe(KGUI32_BOOT_URL&&manifest.runtime_profiles?.expanded?KGUI32_BOOT_URL.replace('mem=16','mem=32'):undefined);
+  expect(KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL).toBe(KGUI32_EXPANDED_BOOT_URL?KGUI32_EXPANDED_BOOT_URL+'&video=cirrus':undefined);
  });
  it('ships a separate native HDD boot profile with exact system files and no duplicate driver',()=>{
   if(!manifest.enabled)return;
@@ -47,7 +49,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
-  expect(manifest.dedicated_gui_context).toBe(true);expect(manifest.application_slots).toBe(2);expect(manifest.gui_bits).toBe(32);expect(manifest.dos_files_read_only).toBe(false);expect(manifest.workspace_save_api).toBe(1);expect(manifest.workspace_information_api).toBe(1);expect(manifest.writable_workspace).toBe('auto: verified HDD / WORK');expect(manifest.workspace_fd_fallback).toBe('A:\\WORK');expect(manifest.root_browser_read_only).toBe(true);
+  expect(manifest.runtime_profiles).toEqual({default:{extended_memory_mb:16,application_slots:2},expanded:{extended_memory_mb:32,application_slots:4},manager_version:2,manager_bytes:264,pm32_private_bytes:4194304});expect(manifest.dedicated_gui_context).toBe(true);expect(manifest.application_slots).toBe(2);expect(manifest.gui_bits).toBe(32);expect(manifest.dos_files_read_only).toBe(false);expect(manifest.workspace_save_api).toBe(1);expect(manifest.workspace_information_api).toBe(1);expect(manifest.writable_workspace).toBe('auto: verified HDD / WORK');expect(manifest.workspace_fd_fallback).toBe('A:\\WORK');expect(manifest.root_browser_read_only).toBe(true);
   expect(manifest.omitted_base_fixtures).toEqual(['DATA32.BIN']);
   expect(manifest.files.some((f:{name:string})=>f.name==='DATA32.BIN')).toBe(false);
   const disk=openDiskImage(image,manifest.image),old=openDiskImage(readFileSync('public/k386/'+base.image),base.image);
