@@ -19,6 +19,12 @@ export async function toolsHarness(base,output,video){
  async function until(f,label){console.log('CHECK',label);let s,observerError;for(let end=Date.now()+120000;Date.now()<end;){s=await inspect().catch(e=>{observerError=String(e);return null;});if(s&&f(s)){last=s;return s;}await page.waitForTimeout(100);}throw Error(label+' '+JSON.stringify({observerError,editors:s?.editors,imes:s?.imes,gui:s?.gui.app,canvases:s?.canvases,states:s?.cpu.views.map(v=>({state:v.state,generation:v.generation}))}));}
  async function key(value){await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await page.waitForTimeout(200);}
  async function type(value){await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await page.waitForTimeout(200);}
+ async function enterCommand(value){
+  let s=await until(s=>s.gui.app?.frames,'command input ready'),events=s.gui.app.events;
+  await key('CTRL+L');s=await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===12,'Run command editor');
+  for(const c of value){events=s.gui.app.events;await type(c);s=await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===c.charCodeAt(0),'command character '+c);}
+  await key('ENTER');
+ }
  async function chord(modifier,value){await page.evaluate(({modifier,value})=>window.np2debug.np2.runKeySequence([{type:'down',keys:modifier},{type:'wait',ms:200},{type:'press',keys:value,holdMs:60},{type:'wait',ms:700},{type:'up',keys:modifier}]),{modifier,value});}
  async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return until(s=>s.gui.app.mx===x&&s.gui.app.my===y,'pointer');}
  async function button(d){const hb=(await inspect()).gui.app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await until(s=>s.gui.app.heartbeat>=hb+3,'mouse '+d);}
@@ -64,7 +70,7 @@ export async function toolsHarness(base,output,video){
  async function open(id,name){await focus(id);await key('CTRL+O');await until(s=>s.editors[id]?.mode===1,'Open dialog');await type(name);await key('TAB');await key('ENTER');return until(s=>s.editors[id]?.mode===0&&!s.editors[id].dirty,'Open '+name);}
  async function save(id,raw){await focus(id);await key('CTRL+S');return until(s=>s.editors[id]?.mode===0&&!s.editors[id].dirty&&s.editors[id].hash===fnv(raw.toString().replaceAll('\r','')),'Saved');}
  async function end(id){await focus(id);const s=await inspect(),o=origin(s,id);await click(o.x+230,o.y+48);return until(s=>s.cpu.views[id].state===0,'End '+id);}
- async function run(id,command){await focus(id);const generation=(await inspect()).cpu.views[id].generation;await key('CTRL+L');await type(command+'\r');return until(s=>s.cpu.views[id].generation>generation,'Run '+command);}
+ async function run(id,command){await focus(id);const generation=(await inspect()).cpu.views[id].generation;await enterCommand(command);return until(s=>s.cpu.views[id].generation>generation,'Run '+command);}
  async function disk(slot){if(slot==='fd1')return Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');const wait=page.waitForEvent('download');await page.evaluate(()=>window.np2debug.np2.exportDisk('hdd'));return readFile(await(await wait).path());}
  async function exit(vector){await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and complete cleanup');assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));assert.equal(await page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64),vector);assert.deepEqual(errors,[]);return s;}
  async function unchangedFd(){if(fdBefore===null){const mounted=await page.evaluate(()=>window.np2debug.np2.getMountedImages());assert(!mounted.some(m=>m.slot==='fd1'||m.slot==='fd2'),'No FD is attached to the HDD-only boot');}else assert.equal(sha(await disk('fd1')),sha(fdBefore));}
@@ -73,5 +79,5 @@ export async function toolsHarness(base,output,video){
  function pass(name){results.push(name);console.log('PASS',name);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,results},null,2)+'\n');}
  async function fail(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last),results},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});}
- return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
+ return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,enterCommand,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
 }
