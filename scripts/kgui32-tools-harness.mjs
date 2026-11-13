@@ -16,7 +16,7 @@ export async function toolsHarness(base,output,video){
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
  let page,ctx,errors=[],fdBefore=fd,last;const results=[];
  const inspect=()=>inspectWorkspace(page);
- async function until(f,label){console.log('CHECK',label);let s;for(let end=Date.now()+120000;Date.now()<end;){s=await inspect().catch(()=>null);if(s&&f(s)){last=s;return s;}await page.waitForTimeout(100);}throw Error(label+' '+JSON.stringify({editors:s?.editors,gui:s?.gui.app,canvases:s?.canvases,states:s?.cpu.views.map(v=>({state:v.state,generation:v.generation}))}));}
+ async function until(f,label){console.log('CHECK',label);let s,observerError;for(let end=Date.now()+120000;Date.now()<end;){s=await inspect().catch(e=>{observerError=String(e);return null;});if(s&&f(s)){last=s;return s;}await page.waitForTimeout(100);}throw Error(label+' '+JSON.stringify({observerError,editors:s?.editors,imes:s?.imes,gui:s?.gui.app,canvases:s?.canvases,states:s?.cpu.views.map(v=>({state:v.state,generation:v.generation}))}));}
  async function key(value){await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await page.waitForTimeout(200);}
  async function type(value){await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await page.waitForTimeout(200);}
  async function chord(modifier,value){await page.evaluate(({modifier,value})=>window.np2debug.np2.runKeySequence([{type:'down',keys:modifier},{type:'wait',ms:200},{type:'press',keys:value,holdMs:60},{type:'wait',ms:700},{type:'up',keys:modifier}]),{modifier,value});}

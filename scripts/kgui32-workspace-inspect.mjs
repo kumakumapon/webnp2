@@ -15,6 +15,7 @@ export async function inspectWorkspace(page){
   const read=(p,n)=>atob(window.np2debug.np2.readMemoryBase64(p,n).base64);
   const d=(b,o)=>(b.charCodeAt(o)|b.charCodeAt(o+1)<<8|b.charCodeAt(o+2)<<16|b.charCodeAt(o+3)<<24)>>>0;
   const m=read(mixed,200),heap=window.Module.HEAPU8;
+  if(m.charCodeAt(22)||m.charCodeAt(23))return [null,null];
   return [0,1].map(id=>{
    const r=read(d(m,176+id*4),1024);if(d(r,880)!==0x3345474b||!d(r,24)||!d(r,40))return null;
    const table=read(d(r,24)+8192,4096);let physical=0;for(let i=0;i<1024;i++){const p=d(table,i*4);if((p&7)===7){physical=(p&0xfffff000)>>>0;break;}}
