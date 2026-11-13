@@ -44,7 +44,14 @@ async function text(id,value){
  let prefix='',s;for(const c of value){await type(c==='\n'?'\r':c);prefix+=c;s=await until(s=>s.editors[id]?.bytes===prefix.length&&s.editors[id]?.hash===fnv(prefix),'typed document '+prefix.length+'/'+value.length);}return s;
 }
 async function picker(id,mode,drive){return until(s=>s.editors[id]?.mode===mode&&s.canvases[id]?.texts.some(t=>t.includes(String.fromCharCode(65+drive)+':\\WORK'))&&s.canvases[id]?.texts.some(t=>t.startsWith('Free ')||t.includes('unavailable')),'workspace picker');}
-async function saveAs(id,name,drive){await key('CTRL+W');await picker(id,3,drive);await key('HOME');for(let i=0;i<12;i++)await key('DEL');await type(name);await key('ENTER');}
+async function saveAs(id,name,drive){
+ await key('CTRL+W');await picker(id,3,drive);
+ const shown=s=>s.canvases[id]?.draws.find(d=>d.x===12&&d.y===s.canvases[id].height-74)?.text;
+ await key('HOME');let value=shown(await inspect());assert.equal(typeof value,'string');
+ for(let i=0;i<12&&value;i++){value=value.slice(1);await key('DEL');await until(s=>shown(s)===value,'Save As deletion');}
+ for(const c of name){value+=c;await type(c);await until(s=>shown(s)===value,'Save As filename '+value.length);}
+ await key('ENTER');
+}
 function reclaimed(s){assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));}
 async function exit(oldVector){await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and resource reclamation');reclaimed(s);assert.equal(await vector(),oldVector);assert.deepEqual(errors,[]);return s;}
 function pass(name,more={}){results.push({name,...more});console.log('PASS',name);}

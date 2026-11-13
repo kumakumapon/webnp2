@@ -221,6 +221,8 @@ export interface PlayerOptions {
   k386HighColorBootUrl?: string;
   kgui32BootUrl?: string;
   kgui32HighColorBootUrl?: string;
+  kgui32ExpandedBootUrl?: string;
+  kgui32ExpandedHighColorBootUrl?: string;
   kgui32FdBootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
@@ -757,6 +759,12 @@ export function buildPlayerUI(
   const kgui32HighColorBtn = options.kgui32HighColorBootUrl
     ? el('a', {class:'start-btn start-btn-kgui32-highcolor',href:kgui32HighColorHref()}, [t('startBtnKgui32HighColor')])
     : undefined;
+  const kgui32ExpandedHref = () => `${options.kgui32ExpandedBootUrl}&lang=${getLang()}`;
+  const kgui32ExpandedBtn = options.kgui32ExpandedBootUrl
+    ? el('a', {class:'start-btn start-btn-kgui32-expanded',href:kgui32ExpandedHref()}, [t('startBtnKgui32Expanded')]) : undefined;
+  const kgui32ExpandedHighColorHref = () => `${options.kgui32ExpandedHighColorBootUrl}&lang=${getLang()}`;
+  const kgui32ExpandedHighColorBtn = options.kgui32ExpandedHighColorBootUrl
+    ? el('a', {class:'start-btn start-btn-kgui32-expanded-highcolor',href:kgui32ExpandedHighColorHref()}, [t('startBtnKgui32ExpandedHighColor')]) : undefined;
   const kgui32FdHref = () => `${options.kgui32FdBootUrl}&lang=${getLang()}`;
   const kgui32FdBtn = options.kgui32FdBootUrl
     ? el('a', {class:'start-btn start-btn-kgui32-fd',href:kgui32FdHref()}, [t('startBtnKgui32Fd')])
@@ -773,6 +781,8 @@ export function buildPlayerUI(
   if (k386HighColorBtn) overlayButtonList.push(k386HighColorBtn);
   if (kgui32Btn) overlayButtonList.push(kgui32Btn);
   if (kgui32HighColorBtn) overlayButtonList.push(kgui32HighColorBtn);
+  if (kgui32ExpandedBtn) overlayButtonList.push(kgui32ExpandedBtn);
+  if (kgui32ExpandedHighColorBtn) overlayButtonList.push(kgui32ExpandedHighColorBtn);
   if (kgui32FdBtn) overlayButtonList.push(kgui32FdBtn);
   overlayButtonList.push(libraryStartBtn);
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
@@ -2825,6 +2835,8 @@ export function buildPlayerUI(
         kgui32HighColorBtn.textContent = t('startBtnKgui32HighColor');
         kgui32HighColorBtn.href = kgui32HighColorHref();
       }
+      if (kgui32ExpandedBtn) {kgui32ExpandedBtn.textContent = t('startBtnKgui32Expanded');kgui32ExpandedBtn.href = kgui32ExpandedHref();}
+      if (kgui32ExpandedHighColorBtn) {kgui32ExpandedHighColorBtn.textContent = t('startBtnKgui32ExpandedHighColor');kgui32ExpandedHighColorBtn.href = kgui32ExpandedHighColorHref();}
       if (kgui32FdBtn) {
         kgui32FdBtn.textContent = t('startBtnKgui32Fd');
         kgui32FdBtn.href = kgui32FdHref();

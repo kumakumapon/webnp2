@@ -157,6 +157,9 @@ def main():
     del files['DATA32.BIN']
     files['KHD98.SYS'] = (source/'ports/pc98/hdd/build/KHD98.SYS').read_bytes()
     files['HDDFLT.COM'] = (source/'ports/pc98/hdd/build/HDDFLT.COM').read_bytes()
+    files['KXMS32.SYS'] = (source/'tools/kxms32/build/KXMS32.SYS').read_bytes()
+    files['KXHIGH.SYS'] = (source/'tools/kxms32/build/KXHIGH.SYS').read_bytes()
+    files['CONFIG.SYS'] = files['CONFIG.SYS'].replace(b'DEVICE=FDXMS286.SYS\r\n', b'DEVICE=KXHIGH.SYS\r\nDEVICE=FDXMS286.SYS\r\nDEVICE=KXMS32.SYS\r\n')
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
     for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
@@ -205,6 +208,10 @@ def main():
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'omitted_base_fixtures':['DATA32.BIN'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,
+        'runtime_profiles':{'default':{'extended_memory_mb':16,'application_slots':2},
+                            'expanded':{'extended_memory_mb':32,'application_slots':4},
+                            'manager_version':2,'manager_bytes':264,'pm32_private_bytes':4194304,
+                            'high_memory_driver':'KXMS32.SYS','capture_driver':'KXHIGH.SYS','physical_ceiling':33554432},
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
         'files_workspace_browser':1,'files_editor_launch':1,
         'v86_hdd_read_only':1,'v86_private_drives':1,
@@ -221,7 +228,7 @@ def main():
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
-        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')

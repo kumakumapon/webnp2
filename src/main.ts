@@ -19,7 +19,7 @@ import { WEBNP2_VERSION_FOOTER } from './version.ts';
 import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
 import { MSDOS4_BOOT_URL, MSDOS4_IMAGE_URL } from './bundled-msdos4.ts';
 import { K386_BOOT_URL, K386_HIGH_COLOR_BOOT_URL } from './bundled-k386.ts';
-import { KGUI32_BOOT_URL, KGUI32_HIGH_COLOR_BOOT_URL, KGUI32_FD_BOOT_URL } from './bundled-kgui32.ts';
+import { KGUI32_BOOT_URL, KGUI32_HIGH_COLOR_BOOT_URL, KGUI32_FD_BOOT_URL, KGUI32_EXPANDED_BOOT_URL, KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL } from './bundled-kgui32.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -2061,6 +2061,8 @@ function init(): void {
       kgui32BootUrl: !diskSpecified ? KGUI32_BOOT_URL : undefined,
       kgui32HighColorBootUrl: !diskSpecified ? KGUI32_HIGH_COLOR_BOOT_URL : undefined,
       kgui32FdBootUrl: !diskSpecified ? KGUI32_FD_BOOT_URL : undefined,
+      kgui32ExpandedBootUrl: !diskSpecified ? KGUI32_EXPANDED_BOOT_URL : undefined,
+      kgui32ExpandedHighColorBootUrl: !diskSpecified ? KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL : undefined,
       trackingEnabled: params.get('mousetrack') !== '0',
       aspectModeParam,
     },
