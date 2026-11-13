@@ -7,6 +7,7 @@ import {inspectGUI} from './kgui32-inspect.mjs';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {pm32CounterReady} from './k386-counter-progress.mjs';
+import {inspectTerminal} from './kgui32-terminal-inspect.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/kgui32-sessions',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -20,8 +21,12 @@ const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exp
 const hasLine=(v,line)=>v&&v.state===2&&v.keys===0&&Array.from({length:25},(_,i)=>v.screen.slice(i*80,i*80+80).trim()).includes(line);
 const hash=b=>createHash('sha256').update(b).digest('hex');
 async function until(test,label){console.log('CHECK '+label);let last,report=Date.now();for(let end=Date.now()+120000;Date.now()<end;){last={gui:await inspectGUI(page).catch(()=>null),peers:await inspectK386(page).catch(()=>null),resources:await inspectResources(page).catch(()=>null)};if(test(last))return last;if(Date.now()-report>10000){console.log(JSON.stringify({label,frames:last.gui?.app?.frames,events:last.gui?.app?.events,irqs:last.gui?.cpu?.irqs,eip:last.gui?.cpu?.frame.eip,keys:last.peers?.views.map(v=>v.keys)}));report=Date.now();}await page.waitForTimeout(100);}throw Error(label+' timed out; see failure.json');}
-const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await page.waitForTimeout(180);};
-const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await page.waitForTimeout(220);};
+const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await until(s=>s.gui?.app?.mx===x&&s.gui.app.my===y,'native pointer');};
+const button=async down=>{const heartbeat=(await inspectGUI(page)).app.heartbeat;await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await until(s=>s.gui?.app?.heartbeat>=heartbeat+3,'native mouse button '+down);};
+async function terminalWindow(id,test=()=>true){
+ for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectTerminal(page),t=s?.terminals?.slots[id];if(t?.consistent&&test(t.window))return t.window;await page.waitForTimeout(100);}
+ throw Error('Published native terminal geometry '+id+' timed out');
+}
 async function idle(id){
  const first=await until(s=>s.gui?.app?.active===id,'focus window '+id);
  return until(s=>s.gui?.app?.active===id&&(s.gui.cpu.state===7||s.gui.app.frames>first.gui.app.frames),'completed composition for window '+id);
@@ -98,12 +103,14 @@ try{
  await settledPointer(20,height-48,3);
  const [accent,border]=await pixels([[24+399,60],[24,100]]);
  await point(24+ww-8,48+wh-8);await button(1);await point(24+400-8,48+240-8);await button(0);
+ const resized=await terminalWindow(1,w=>Math.abs(w.w-400)<=4&&Math.abs(w.h-240)<=4);
  await settledPointer(20,height-48,3);
- assert.deepEqual((await pixels([[24+399,60]]))[0],border);
+ assert.deepEqual((await pixels([[resized.x+resized.w-1,resized.y+12]]))[0],border);
  const newX=width-408,newY=height-280;
- await point(72,60);await button(1);await point(newX+48,newY+12);await button(0);
+ await point(resized.x+48,resized.y+12);await button(1);await point(newX+48,newY+12);await button(0);
+ const placed=await terminalWindow(1,w=>Math.abs(w.x-newX)<=4&&Math.abs(w.y-newY)<=4);
  await settledPointer(20,height-48,3);
- const moved=await pixels([[newX+250,newY+20],[274,68]]);
+ const moved=await pixels([[placed.x+250,placed.y+20],[274,68]]);
  assert.deepEqual(moved[0],accent);assert.notDeepEqual(moved[1],accent);
  await page.screenshot({path:join(output,'resized-moved-session.png')});
  await type('echo AFTERMOVE\r');await until(s=>hasLine(s.peers?.views[1],'AFTERMOVE'),'input after resize and move');

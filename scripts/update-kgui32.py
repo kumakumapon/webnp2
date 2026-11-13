@@ -162,6 +162,10 @@ def main():
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
+    # Keep full source guides on the separate K386 disk; the complete GUI FD
+    # gets a concise offline guide and usable Work capacity.
+    files['K386.TXT'] = (source/'tools/kgui32/TERMINAL.TXT').read_bytes()
+    files['TERM98.COM'] = (source/'tools/k386/build/TERM98.COM').read_bytes()
     dictionary = (source/'tools/kgui32/build/KGIME.DIC').read_bytes()
     files['KGIME.DIC'] = dictionary
     files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
@@ -206,6 +210,10 @@ def main():
         'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
+        'dos_terminal':{'version':2,'columns':80,'rows':25,'character_plane':'pc98-tvram-u16',
+                        'attribute_plane':'pc98-u16','snapshot_bytes':8032,'transport_chunk_bytes':992,
+                        'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
+        'shortened_base_guides':['K386.TXT'],
         'ime':{'version':1,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
                'conversion':'whole-reading-word','preedit_bytes':96,'candidate_limit':16,
                'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),

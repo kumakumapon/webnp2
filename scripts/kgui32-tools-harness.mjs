@@ -64,5 +64,5 @@ export async function toolsHarness(base,output,video){
  function pass(name){results.push(name);console.log('PASS',name);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,results},null,2)+'\n');}
  async function fail(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last),results},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});}
- return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,chord,click,point,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
+ return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
 }
