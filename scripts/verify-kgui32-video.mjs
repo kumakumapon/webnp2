@@ -59,6 +59,12 @@ async function lifecycle(){
  assert.deepEqual(slot(s,1).font,Array(32).fill(0x42));assert.notEqual(slot(s,1).fontHash,a);assert.equal(slot(s).fontHash,a);assert.notEqual(slot(s).origin,slot(s,1).origin);assert.notEqual(slot(s).cr3,slot(s,1).cr3);
  await h.focus(0);await pixels(0);await h.focus(1);await pixels(1);await input('g',m=>!!(m.flags&2),1);s=await until(s=>ready(s,0)&&ready(s,1),'two isolated displays');assert.equal(slot(s).fontHash,a);assert(!(slot(s).meta.flags&2));
  const old=slot(s,1).generation;await h.type('f');s=await h.until(s=>s.cpu.views[1].state===4,'unsupported word I/O faults only owner');assert.equal(s.cpu.views[1].fault,13);assert.equal(s.cpu.views[0].state,2);
+ await h.run(1,'KVTERM.COM 0');s=await until(s=>slot(s,1)?.generation!==old&&slot(s,1)?.meta.fontWrites===0&&s.cpu.views[1].state===2&&s.terminals?.slots[1]?.consistent,'recycled generation with unset gaiji');
+ assert.deepEqual(slot(s,1).rawFont,Array(32).fill(0));
+ const r=s.terminals.slots[1].window;
+ const blank=await h.page().evaluate(({x,y})=>{const c=document.querySelector('#canvas'),out=document.createElement('canvas');out.width=c.width;out.height=c.height;const g=out.getContext('2d');g.drawImage(c,0,0);return Array.from(g.getImageData(x+8,y+70,16,16).data);},r);
+ assert(blank.every((c,i)=>i%4===3?c===255:c===0),'unset gaiji are blank in the legacy renderer after a generation with private glyphs');
+ await h.key('CTRL+E');await h.until(s=>s.cpu.views[1].state===0,'End unset generation');
  await h.run(1,'KVTERM.COM 2');s=await until(s=>ready(s,1)&&slot(s,1).generation!==old,'new generation after fault');assert.deepEqual(slot(s,1).font,Array(32).fill(0x42));assert(!(slot(s,1).meta.flags&2));assert.equal(slot(s).fontHash,a);
  await h.focus(0);await h.type('q');await h.until(s=>s.cpu.views[0].state===0,'normal DOS exit');await h.focus(1);await h.key('CTRL+E');await h.until(s=>s.cpu.views[1].state===0,'force end display owner');await finish(vector);
  h.pass('Two actual V86 owners isolate CGRAM/VRAM/modes, fault only the unsupported owner, reset a recycled generation and reclaim all XMS/DOS resources');
