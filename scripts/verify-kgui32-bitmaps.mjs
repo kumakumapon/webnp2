@@ -9,7 +9,7 @@ import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/bitmaps',video='pegc',suite='paint']=process.argv.slice(2);
 assert(['paint','lifecycle','save','recovery'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
-assert.equal(m.bitmap_sdk.version,1);assert.equal(m.bitmap_sdk.disk_save,true);
+assert.equal(m.bitmap_sdk.version,2);assert.equal(m.bitmap_sdk.disk_save,true);
 const root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root));
 const sample=new Uint16Array(64*48);
 // Independently decode the deterministic shipped BMP fixture.

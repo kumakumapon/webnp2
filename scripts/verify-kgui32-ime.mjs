@@ -10,7 +10,7 @@ import {cgGlyph,sjisUnits} from './kgui32-shiftjis.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/ime',video='pegc',suite='input']=process.argv.slice(2);
 assert(['input','lifecycle','interface'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
-assert.equal(m.japanese_ime,true);assert.equal(m.ime.dictionary.readings,1024);
+assert.equal(m.japanese_ime,true);assert.equal(m.ime.dictionary.readings,1076);
 const root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root)),bmp=await readFile(new URL('../public/core/font.bmp',import.meta.url));
 assert.equal(sha(original),m.standalone_hdd.sha256);
 // Independent expected bytes, derived from the standard encoding's decoder.

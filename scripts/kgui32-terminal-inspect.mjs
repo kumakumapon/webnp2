@@ -1,6 +1,8 @@
 import {inspectClients} from './kgui32-client-inspect.mjs';
 // Read only the actual GUI's CPL3 pages and each V86's private TVRAM. PTEs and
-// all 64 CPU-published GUI samples identify the live WASM XMS backing. No guest
+// all 64 CPU-published GUI samples initially identify the WASM XMS backing.
+// Later reads follow the current real PTEs; live counters may have advanced.
+// No guest
 // memory is written, and no address or expected screen is taken from an EXE.
 export async function inspectTerminal(page){
  const s=await inspectClients(page);if(!s)return null;
@@ -15,7 +17,8 @@ export async function inspectTerminal(page){
   if(!physical)return null;
   const matches=at=>at>=0&&at+132<=heap.length&&heap[at+64]===0x4b&&heap[at+65]===0x47&&heap[at+66]===0x54&&heap[at+67]===0x32&&Array.from({length:64},(_,i)=>heap[at+i]===r.charCodeAt(880+i)).every(Boolean);
   let at=window.kguiTerminalXmsBacking===undefined?-1:window.kguiTerminalXmsBacking+physical;
-  if(!matches(at)){
+  const identified=at>=0&&at+132<=heap.length&&heap[at]===0x4b&&heap[at+1]===0x55&&heap[at+2]===0x47&&heap[at+3]===0x31&&heap[at+4]===1&&heap[at+5]===0&&heap[at+6]===0&&heap[at+7]===0&&heap[at+64]===0x4b&&heap[at+65]===0x47&&heap[at+66]===0x54&&heap[at+67]===0x32;
+  if(!identified){
    const found=[];for(let p=heap.indexOf(0x4b);p>=0;p=heap.indexOf(0x4b,p+1))if(heap[p+1]===0x55&&heap[p+2]===0x47&&heap[p+3]===0x31&&matches(p))found.push(p);
    if(found.length!==1)return null;at=found[0];window.kguiTerminalXmsBacking=at-physical;
   }

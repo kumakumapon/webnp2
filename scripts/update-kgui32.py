@@ -60,7 +60,7 @@ def workspace_hdd(root, destination):
             'disposable_volume_marker':'KHDPROOF'}
 
 RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
-             'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE')
+             'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE', 'KGWORDS.EXE', 'PRACT32.EXE')
 
 def application_hdd(root, destination, files):
     # Build offline from a NEW marked volume. No mounted/user image is opened.
@@ -161,8 +161,10 @@ def main():
     files['KXHIGH.SYS'] = (source/'tools/kxms32/build/KXHIGH.SYS').read_bytes()
     files['CONFIG.SYS'] = files['CONFIG.SYS'].replace(b'DEVICE=FDXMS286.SYS\r\n', b'DEVICE=KXHIGH.SYS\r\nDEVICE=FDXMS286.SYS\r\nDEVICE=KXMS32.SYS\r\n')
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE', 'KGWORDS.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
+    files['PRACT32.EXE'] = (source/'tools/k38632/build/PRACT32.EXE').read_bytes()
+    files['K32IO.EXE'] = (source/'tools/k32io/build/K32IO.EXE').read_bytes()
     files['SAMPLE.BMP'] = (source/'tools/kgui32/build/SAMPLE.BMP').read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
     files['KGLIC.TXT'] = (source/'tools/kgui32/LICENSE').read_bytes()
@@ -180,7 +182,7 @@ def main():
     files['EDITTEST.TXT'] = b'EDITOR FIXTURE\r\nSecond line\r\n'
     files['JPDEMO.TXT'] = '日本語\u3000カタカナ\u3000ひらがな\r\n半角: ｶﾅ / Shift-JIS\r\n'.encode('shift_jis')
     files['BINARY.TXT'] = bytes(range(256))
-    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
+    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32IO.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
     helper = module('kgui32_image', source/'ports/pc98/image.py')
     excluded = {'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
@@ -229,20 +231,22 @@ def main():
                         'attribute_plane':'pc98-u16','snapshot_bytes':8032,'transport_chunk_bytes':992,
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
         'shortened_base_guides':['K386.TXT'],
-        'bitmap_sdk':{'version':1,'format':'rgb565','max_width':256,'max_height':192,
-                      'surfaces_per_client':1,'upload_chunk_bytes':3040,'atomic_replace':True,
+        'practical_sdk':{'version':1,'abi':258,'resource_descriptor':'K32RES01','private_bytes':4194304,'stack_min_bytes':4096,'stack_max_bytes':262144,'guard_pages':1,'diagnostic':'PRACT32.EXE','diagnostic_stack_bytes':65536,'min_heap_bytes':1048576},
+        'common_io':{'version':1,'feature':256,'helper':'K32IO.EXE','max_bytes':1048576,'chunk_bytes':4096,'gui_independent':True,'revision_checked':True,'explicit_recovery':True,'retains_original_on_failure':True},
+        'bitmap_sdk':{'version':2,'format':'rgb565','max_width':384,'max_height':256,
+                      'surfaces_per_client':2,'secondary_max_width':128,'secondary_max_height':128,'desktop_buffer_bytes':1835008,'present_strip_rows':64,'upload_chunk_bytes':3040,'atomic_replace':True,
                       'owner_generation_checked':True,'source_crop':True,'canvas_clip':True,
                       'viewer':'KGIMAGE.EXE','boundary_test':'KGBITBAD.EXE','sample':'SAMPLE.BMP',
-                      'decoder':'bmp24-bi-rgb','edits':['invert','horizontal-flip','undo','reset','brush'],
-                      'disk_save':True,'workspace_flag':2,'encoded_max_bytes':147510,'recovery':True,'compact_elf_file_alignment':16},
-        'ime':{'version':1,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
-               'conversion':'whole-reading-word','preedit_bytes':96,'candidate_limit':16,
+                      'decoder':'bmp8-16-24-32-bi-rgb','zoom_percent':[50,100,200,400],'original_preview':True,'edits':['invert','horizontal-flip','undo','reset','brush'],
+                      'disk_save':True,'workspace_flag':2,'encoded_max_bytes':294966,'legacy_encoded_max_bytes':147510,'recovery':True,'compact_elf_file_alignment':16},
+        'ime':{'version':2,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
+               'conversion':'dictionary-phrase','common_input_api':1,'inflected_lexemes':True,'user_dictionary':{'name':'USERIME.DIC','manager':'KGWORDS.EXE','max_readings':256,'max_bytes':32768,'explicit_save':True,'editor_reload':'F9','recovery_destination':'RECIME.DIC'},'preedit_bytes':96,'candidate_limit':16,
                'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),
                    'readings':struct.unpack_from('<I',dictionary,16)[0],
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
-        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')

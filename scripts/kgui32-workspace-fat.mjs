@@ -38,10 +38,10 @@ export function fullWorkspace(original){
 
 export function wideWorkspace(original){
  const image=Buffer.from(original),s=inspectFat(image);
- // Remove diagnostic data, unused negative probes and the unused IME dictionary
+ // Remove diagnostic data, unused apps/probes and the unused IME dictionary
  // from this ASCII-only wide-save fixture before boot. Never
  // modify the bundled image or a user's disk to create free space.
- for(const name of ['BROWSE.TXT','LINES.TXT','K386.TXT','DATA32.BIN','KGIME.DIC','KGDIRBAD.EXE','KGDIRNO.EXE','KGRECNEG.EXE','KGRECNON.EXE']){const e=s.entries.get(name);if(!e&&name==='DATA32.BIN')continue;assert.ok(e);let c=e.cluster;while(c>=2&&c<0xff8){const next=s.next(c);for(const start of [1024,3072]){const at=start+Math.floor(c*3/2),old=image.readUInt16LE(at);image.writeUInt16LE(c&1?old&15:old&0xf000,at);}c=next;}
+ for(const name of ['BROWSE.TXT','LINES.TXT','K386.TXT','DATA32.BIN','KGIME.DIC','KGDIRBAD.EXE','KGDIRNO.EXE','KGRECNEG.EXE','KGRECNON.EXE','KGWORDS.EXE','PRACT32.EXE','KGIMAGE.EXE','KGBITBAD.EXE','SAMPLE.BMP']){const e=s.entries.get(name);if(!e&&['DATA32.BIN','KGWORDS.EXE','PRACT32.EXE'].includes(name))continue;assert.ok(e);let c=e.cluster;while(c>=2&&c<0xff8){const next=s.next(c);for(const start of [1024,3072]){const at=start+Math.floor(c*3/2),old=image.readUInt16LE(at);image.writeUInt16LE(c&1?old&15:old&0xf000,at);}c=next;}
   for(let at=5*1024;at<11*1024;at+=32)if(image.readUInt16LE(at+26)===e.cluster){image[at]=0xe5;break;}
  }
  const ready=inspectFat(image);let free=0;for(let c=2;c<1223;c++)if(!ready.next(c))free++;assert(free*1024>=2*65536,'64 KiB replacement needs original plus temp capacity');return image;

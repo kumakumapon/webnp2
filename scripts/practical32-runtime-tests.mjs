@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {inspectHdd,withHddFile} from './kgui32-hdd-fat.mjs';
+import {sha} from './practical32-harness.mjs';
+import {inspectMemoryRunner} from './k38632-memory-inspect.mjs';
+export async function runtimeTests(p){
+ const {h,until,samples}=p;
+ const vector=await h.bootHdd();await p.launch('editor');await p.end(0);await p.run(0,'PRACT32.EXE hold');
+ let s=await until(s=>s.expanded.slots[0].state===2&&samples(s)[0]===0x3252504b&&samples(s)[1]===2,'64 KiB stack and zeroed 1 MiB heap in real CPL3');
+ const a=s.expanded.slots[0],v=samples(s);assert.equal(a.pm.abi,258);assert.equal(a.pm.frame.cs,59);assert.equal(a.pm.features,271);assert.equal(v[4],65536);assert.equal(v[7],4177920);assert.equal(v[8],1);assert.equal(a.pm.heap,0);
+ const guard=(v[3]-4096-0x800000)/4096;assert.equal(a.ptes[guard],0);for(let i=guard+1;i<1021;i++)assert.equal(a.ptes[i]&7,7);assert.equal(a.ptes[1021]&7,5);assert.equal(a.ptes[1022],0);assert.equal(a.ptes[1023],0);assert.equal(a.pm.heapLimit,v[3]-4096);
+ await p.launch('editor',1);await p.end(1);await p.run(1,'PRACT32.EXE hold');
+ s=await until(s=>s.expanded.slots[1].state===2&&samples(s,1)[1]===2,'second independent resource owner');const b=s.expanded.slots[1];assert.notEqual(a.pd,b.pd);assert.notEqual(a.physical,b.physical);assert.notEqual(a.ptes[guard+1]&0xfffff000,b.ptes[guard+1]&0xfffff000);
+ p.pass('Actual 32 KiB stack workload, declared 64 KiB stacks, zero/fill/reallocation checks, real guard/RO PTEs and two private CR3/backing owners',{samples:v,firstPd:a.pd,secondPd:b.pd});
+ await p.end(0);await p.run(0,'PRACT32.EXE fault');s=await until(s=>s.expanded.slots[0].state===4,'genuine stack-guard page fault');const fault=s.expanded.slots[0].pm;assert.equal(fault.reason,14);assert.equal(fault.cr2,v[3]-4096);assert.equal(fault.faultError,6);assert.equal(fault.openFiles,0);assert.equal(fault.heap,0);assert.equal(fault.tablesCleared,1);assert.equal(fault.freed,1);
+ const peer=s.expanded.slots[1].usage.runs;await until(s=>s.expanded.slots[1].usage.runs>peer,'peer resumes after isolated fault');await p.end(0);await p.run(0,'PRACT32.EXE bounds');s=await until(s=>s.expanded.slots[0].state===0&&samples(s)[1]===4,'actual CPL3 negative I/O requests');assert.equal(s.expanded.slots[0].pm.exitCode,0);assert.equal(samples(s)[14],13);assert.equal(samples(s)[15],0);
+ p.pass('Real #PF containment and complete reclamation; 13 genuine CPL3 invalid pointer/permission/size/version/name/token/unknown-call checks',{fault,boundarySamples:samples(s)});
+ assert.equal(sha(await h.disk('hdd')),sha(p.original));await p.cleanup(vector,true);
+ await h.type('K32RUN PRACT32.EXE bounds\r');let standalone;
+ for(let deadline=Date.now()+120000;Date.now()<deadline;){standalone=await inspectMemoryRunner(h.page(),null,'K32RUN01');if(standalone?.state===3&&standalone.freed===1)break;await h.page().waitForTimeout(100);}
+ assert(standalone,'standalone CPU producer');assert.equal(standalone.state,3);assert.equal(standalone.exitCode,0);assert.equal(standalone.abi,258);assert.equal(standalone.features,271);assert.equal(standalone.final.cs,59);assert.equal(standalone.heapPages,0);assert.equal(standalone.openFiles,0);assert.equal(standalone.freeAfter,standalone.freeBefore);assert.equal(standalone.largestAfter,standalone.largestBefore);assert.equal(standalone.allocations,standalone.frees);assert.equal(standalone.returnedCR0,standalone.savedCR0);assert.equal(standalone.returnedCR3,standalone.savedCR3);assert.equal(standalone.userPtClear,true);assert.equal(sha(await h.disk('hdd')),sha(p.original));p.pass('The same resource ABI and file permissions execute through real-DOS K32RUN with no GUI, real CPL3 frames and exact XMS/CPU restoration',standalone);await h.closeContext();
+ // Only pre-boot disk fixtures are modified. No emulator RAM is written.
+ const source=Buffer.from(inspectHdd(p.original).files.get('APPS/PRACT32.EXE'));assert(source);const disabled=Buffer.from(source);disabled.writeUInt32LE(15,92);
+ const impossible=Buffer.from(source),descriptor=impossible.readUInt32LE(84)-24;assert.equal(impossible.toString('ascii',descriptor,descriptor+8),'K32RES01');impossible.writeUInt32LE(4194304,descriptor+16);
+ let fixture=withHddFile(p.original,'PRIONO.EXE',disabled);fixture=withHddFile(fixture,'PMOOM.EXE',impossible);
+ const vector2=await h.bootHdd(fixture);await p.launch('editor');await p.end(0);await p.run(0,'A:\\WORK\\PRIONO.EXE bounds');s=await until(s=>s.expanded.slots[0].state===0&&samples(s)[1]===4,'feature refusal in actual CPL3');assert.equal(s.expanded.slots[0].pm.exitCode,0);assert.equal(samples(s)[14],1);
+ const before=s.expanded.slots[0].generation;await p.focus(0);await h.enterCommand('A:\\WORK\\PMOOM.EXE');await until(s=>s.native.failure.loaderError===10,'minimum-heap rejection before allocation');s=await p.inspect();assert.equal(s.expanded.slots[0].generation,before);assert.equal(s.native.failure.handle,0);assert.equal(s.native.failure.openFiles,0);assert.equal(sha(await h.disk('hdd')),sha(fixture));p.pass('Real capability refusal and impossible memory declaration reject before XMS publication, retaining the previous slot generation');await p.cleanup(vector2);
+ const fdVector=await h.boot(null,h.legacy);await p.launch('editor');await p.end(0);await p.run(0,'PRACT32.EXE bounds');s=await until(s=>s.expanded.slots[0].state===0&&samples(s)[1]===4,'complete FD resource ABI and I/O boundaries');assert.equal(s.expanded.slots[0].pm.exitCode,0);assert.equal(samples(s)[14],13);assert.equal(sha(await h.disk('fd1')),sha(h.legacy));await p.cleanup(fdVector);p.pass('Complete FD boots the same resource ABI/broker and passes real CPL3 boundaries without media mutation');
+}

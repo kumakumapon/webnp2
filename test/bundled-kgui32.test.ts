@@ -4,8 +4,16 @@ import {createHash} from 'node:crypto';
 import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL,KGUI32_EXPANDED_BOOT_URL,KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
 import {fullHdd,withHddFile,inspectHdd} from '../scripts/kgui32-hdd-fat.mjs';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
+import {wideWorkspace,inspectFat} from '../scripts/kgui32-workspace-fat.mjs';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
+ it('reserves both 64 KiB file generations in the disposable ASCII FD fixture',()=>{
+  if(!manifest.enabled)return;
+  const original=readFileSync('public/kgui32/'+manifest.image),before=createHash('sha256').update(original).digest('hex'),fixture=wideWorkspace(original),disk=inspectFat(fixture),source=inspectFat(original);
+  expect(createHash('sha256').update(original).digest('hex')).toBe(before);
+  let free=0;for(let c=2;c<1223;c++)if(!disk.next(c))free+=1024;expect(free).toBeGreaterThanOrEqual(131072);
+  for(const name of ['IO.SYS','MSDOS.SYS','COMMAND.COM','K386.EXE','K32IO.EXE','K32HOST.EXE','KGUILDR.EXE','KGUI32.EXE','KGEDIT.EXE','KGSAVE64.EXE'])expect(disk.files.get(name)).toEqual(source.files.get(name));
+ });
  it('offers separate explicit boot choices only after generation',()=>{
   expect(KGUI32_FD_BOOT_URL).toBe(manifest.enabled?`./?fd1=./kgui32/${manifest.image}&run=1&mem=16`:undefined);
   expect(KGUI32_PAIRED_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
@@ -22,7 +30,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(createHash('sha256').update(bytes).digest('hex')).toBe(h.sha256);
   expect(bytes.toString('ascii',256+4,256+8)).toBe('IPL1');expect(bytes.toString('ascii',256+4*256+3,256+4*256+11)).toBe('KHDS2V1!');
   const disk=openDiskImage(bytes,h.image),fd=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
-  for(const name of ['MSDOS.SYS','COMMAND.COM','K386.EXE','K32HOST.EXE','KV98VID.EXE','KVTERM.COM','KGUILDR.EXE','KGUI32.EXE'])expect(fatReadFile(disk,name)).toEqual(fatReadFile(fd,name));
+  for(const name of ['MSDOS.SYS','COMMAND.COM','K386.EXE','K32IO.EXE','K32HOST.EXE','KV98VID.EXE','KVTERM.COM','KGUILDR.EXE','KGUI32.EXE'])expect(fatReadFile(disk,name)).toEqual(fatReadFile(fd,name));
   const io=fatReadFile(disk,'IO.SYS');expect(createHash('sha256').update(io).digest('hex')).toBe(h.oem.io_sha256);
   expect(new TextDecoder().decode(io)).toContain('KHDDIOP1');
   expect(new TextDecoder().decode(fatReadFile(disk,'CONFIG.SYS'))).not.toContain('DEVICE=KHD98.SYS');
@@ -47,7 +55,7 @@ describe('independent native PM32 GUI image',()=>{
   const jp=fatReadFile(openDiskImage(image,manifest.image),'JPDEMO.TXT');expect(new TextDecoder('shift_jis').decode(jp)).toContain('日本語');expect(new TextDecoder('shift_jis').decode(jp)).toContain('ｶﾅ');
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
-  expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:256,max_height:192,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:true,compact_elf_file_alignment:16});
+  expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:384,max_height:256,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:true,compact_elf_file_alignment:16});
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
@@ -59,7 +67,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(new TextDecoder().decode(fatReadFile(disk,'CONFIG.SYS'))).toBe(new TextDecoder().decode(fatReadFile(old,'CONFIG.SYS')).replace('DEVICE=FDXMS286.SYS\r\n','DEVICE=KXHIGH.SYS\r\nDEVICE=FDXMS286.SYS\r\nDEVICE=KXMS32.SYS\r\n')+'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n');
   expect(fatReadFile(disk,'KHD98.SYS').length).toBeGreaterThan(0);expect(fatReadFile(disk,'HDDFLT.COM').length).toBeGreaterThan(0);
   const auto=new TextDecoder().decode(fatReadFile(disk,'AUTOEXEC.BAT'));
-  expect(auto).toContain('K386.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\n');expect(auto).not.toContain('\r\nKDESK.EXE\r\n');
+  expect(auto).toContain('K386.EXE\r\nK32IO.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\n');expect(auto).not.toContain('\r\nKDESK.EXE\r\n');
   expect(auto).not.toContain('HDDFLT');
   const exe=fatReadFile(disk,'KGUI32.EXE');expect(new TextDecoder().decode(exe.slice(72,80))).toBe('K32EXE01');expect(exe[80]|exe[81]<<8).toBe(257);expect(exe[92]).toBe(23);
   for(const name of ['KGUILDR.EXE','KGUI32.EXE']){const b=fatReadFile(disk,name);expect(b[0]|b[1]<<8).toBe(0x5a4d);}
@@ -67,7 +75,7 @@ describe('independent native PM32 GUI image',()=>{
  it('ships the same bounded original IME dictionary on all boot profiles',()=>{
   if(!manifest.enabled)return;
   expect(manifest.ime.schemes).toEqual(['romaji','jis-kana']);expect(manifest.ime.scripts).toEqual(['hiragana','katakana']);
-  expect(manifest.ime.conversion).toBe('whole-reading-word');expect(manifest.ime.learning).toBe(false);
+  expect(manifest.ime.conversion).toBe('dictionary-phrase');expect(manifest.ime.learning).toBe(false);
   expect(manifest.ime.preedit_bytes).toBe(96);expect(manifest.ime.candidate_limit).toBe(16);
   const info=manifest.ime.dictionary;
   for(const image of [manifest.image,manifest.application_distribution.image,manifest.standalone_hdd.image]){
@@ -76,6 +84,22 @@ describe('independent native PM32 GUI image',()=>{
    const b=Buffer.from(d);expect(b.subarray(0,8).toString('ascii')).toBe('KGIMED1\0');expect(b.readUInt32LE(8)).toBe(1);expect(b.readUInt32LE(12)).toBe(b.length);expect(b.readUInt32LE(16)).toBe(info.readings);expect(info.readings).toBeGreaterThan(700);
    let h=2166136261;for(const c of b.subarray(32))h=Math.imul(h^c,16777619)>>>0;expect(h).toBe(b.readUInt32LE(20));
    let count=0;for(let at=32;at<b.length;){const end=at+b.readUInt16LE(at);expect(end).toBeGreaterThan(at+4);expect(end).toBeLessThanOrEqual(b.length);const n=b[at+2],c=b[at+3];expect(n).toBeGreaterThan(0);expect(c).toBeGreaterThan(0);expect(c).toBeLessThanOrEqual(12);let p=at+4+n;for(let i=0;i<c;i++)p+=1+b[p];expect(p).toBe(end);count++;at=end;}expect(count).toBe(info.readings);
+  }
+ });
+ it('ships resource declarations and GUI-independent binary I/O on HDD and complete FD',()=>{
+  if(!manifest.enabled)return;
+  expect(manifest.practical_sdk).toMatchObject({abi:258,resource_descriptor:'K32RES01',private_bytes:4194304,guard_pages:1});
+  expect(manifest.common_io).toMatchObject({feature:256,helper:'K32IO.EXE',chunk_bytes:4096,max_bytes:1048576,gui_independent:true,revision_checked:true});
+  expect(manifest.ime.user_dictionary).toMatchObject({name:'USERIME.DIC',manager:'KGWORDS.EXE',max_readings:256,explicit_save:true});
+  for(const [name,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
+   const disk=openDiskImage(readFileSync('public/kgui32/'+name),name);
+   expect(fatReadFile(disk,'K32IO.EXE').length).toBeGreaterThan(1000);
+   for(const app of ['PRACT32.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE']){
+    const packed=Buffer.from(fatReadFile(disk,prefix+app)),resource=packed.readUInt32LE(84)-24;
+    expect(packed.readUInt16LE(80)).toBe(258);expect(packed.readUInt32LE(92)&256).toBe(256);
+    expect(packed.toString('ascii',resource,resource+8)).toBe('K32RES01');expect(packed.readUInt16LE(resource+10)).toBe(24);
+    expect(packed.readUInt32LE(resource+12)).toBe(app==='PRACT32.EXE'?65536:16384);
+   }
   }
  });
  it('ships native DOS Japanese terminal planes, diagnostic and concise guide',()=>{
@@ -90,7 +114,7 @@ describe('independent native PM32 GUI image',()=>{
   }
   const disk=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
   const sample=fatReadFile(disk,'SAMPLE.BMP');expect(sample[0]).toBe(66);expect(sample[1]).toBe(77);
-  const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(239);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
+  const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(495);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
   expect(manifest.application_distribution.legacy_fd_free_bytes).toBeGreaterThanOrEqual(8192);
  });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
