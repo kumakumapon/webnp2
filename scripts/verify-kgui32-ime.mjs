@@ -8,9 +8,9 @@ import {assertProtected,inspectFat} from './kgui32-workspace-fat.mjs';
 import {withFdWorkFile} from './kgui32-tools-fixtures.mjs';
 import {cgGlyph,sjisUnits} from './kgui32-shiftjis.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/ime',video='pegc',suite='input']=process.argv.slice(2);
-assert(['input','lifecycle'].includes(suite));
+assert(['input','lifecycle','interface'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
-assert.equal(m.japanese_ime,true);assert.equal(m.ime.dictionary.readings,840);
+assert.equal(m.japanese_ime,true);assert.equal(m.ime.dictionary.readings,1024);
 const root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root)),bmp=await readFile(new URL('../public/core/font.bmp',import.meta.url));
 assert.equal(sha(original),m.standalone_hdd.sha256);
 // Independent expected bytes, derived from the standard encoding's decoder.
@@ -24,9 +24,9 @@ const idle=(id=0)=>h.until(s=>s.imes[id]?.bytes===0&&s.imes[id].pending===0,'IME
 async function convert(roman,reading,id=0){await h.type(roman);await h.key('SPACE');await pre(reading,0,id);return h.until(s=>s.imes[id]?.selecting===1&&s.canvases[id]?.controls.includes(2200),'Candidates '+reading);}
 function invariant(before,after){for(const k of ['bytes','hash','cursor','anchor','dirty','history','redo'])assert.equal(after[k],before[k],k);}
 async function clearDocument(){await h.key('F4');await h.key('CTRL+A');await h.key('BS');await doc('');await h.key('F4');}
-async function pixels(id,text){
+async function pixels(id,text,row=24){
  const s=await h.inspect(),o=h.origin(s,id),glyphs=sjisUnits(sjis(text)).map(c=>cgGlyph(bmp,c)),width=sjis(text).length*8;
- const rgba=await h.page().evaluate(({x,y,width})=>{const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return Array.from(g.getImageData(x,y,width,16).data);},{x:o.x+16,y:o.y+94,width});
+ const rgba=await h.page().evaluate(({x,y,width})=>{const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return Array.from(g.getImageData(x,y,width,16).data);},{x:o.x+16,y:o.y+70+row,width});
  let at=0;for(const g of glyphs){for(let y=0;y<16;y++)for(let x=0;x<g.columns*8;x++)assert.equal(rgba[(y*width+at+x)*4]<100,!!(g.bits[Math.floor(x/8)*16+y]&(128>>(x%8))),'native preedit CG-ROM pixel');at+=g.columns*8;}
 }
 async function openWork(name,fd=false){await h.focus(0);await h.key('CTRL+O');await h.until(s=>s.editors[0]?.mode===1,'Open');if(fd)await h.key('CTRL+W');await h.type(name);await h.key('TAB');await h.key('ENTER');return h.until(s=>s.editors[0]?.mode===0&&!s.editors[0].dirty,'Opened '+name);}
@@ -76,4 +76,21 @@ async function lifecycleSuite(){
  await h.key('ENTER');await doc('にほん');await h.type('ky');await pre('',2);await h.end(0);await h.launchEditor();s=await idle();assert.equal(s.imes[0].scheme,0);assert.equal(sha(await h.disk('fd1')),sha(broken));await h.exit(badVector);await h.closeContext();
  h.pass('Corrupt dictionary closes its handle and retains kana conversion; explicit Force End reclaims a composing app and a new generation has no stale IME state');
 }
-try{if(suite==='input')await inputSuite();else await lifecycleSuite();await h.finish();}catch(e){await h.fail(e);throw e;}finally{await h.close();}
+
+async function interfaceSuite(){
+ const vector=await h.bootHdd();await h.launchEditor();await h.setText(0,'Save');
+ await h.key('F4');await h.type('gazou');let s=await pre('がぞう');
+ const before=s.editors[0],composition={...s.imes[0]};
+ await h.key('F8');s=await h.until(s=>texts(s).includes(sjis('日本語入力／文書').toString('latin1'))&&s.canvases[0].buttons.some(b=>b.id===2190&&b.text===sjis('確定').toString('latin1')),'Japanese interface with live composition');
+ invariant(before,s.editors[0]);for(const key of ['bytes','hash','pending','scheme','selecting','selected'])assert.equal(s.imes[0][key],composition[key],key);
+ await h.shot('japanese-interface.png');await pixels(0,'日本語入力／文書',4);await pixels(0,'がぞう');
+ await h.key('SPACE');await h.until(s=>s.imes[0]?.selecting===1&&s.canvases[0].buttons.some(b=>Buffer.from(b.text,'latin1').includes(sjis('画像'))),'new image vocabulary');await h.key('ENTER');await doc('Save画像');
+ await h.key('F8');s=await h.until(s=>s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'English interface restored');assert.equal(s.editors[0].hash,fnv(sjis('Save画像')));assert(texts(s).some(t=>Buffer.from(t,'latin1').includes(sjis('Save画像'))),'document data is never translated');
+ await clearDocument();await convert('fukkyuu','ふっきゅう');await h.key('ENTER');await doc('復旧');
+ await h.key('F8');await h.until(s=>s.canvases[0]?.buttons.some(b=>b.id===603&&b.text===sjis('保存').toString('latin1')),'Japanese editor commands');
+ await h.key('F2');await h.click(292,266);s=await h.until(s=>s.canvases[1]?.buttons.some(b=>b.id===19&&b.text===sjis('保存').toString('latin1')),'new Images instance adopts Japanese');
+ const document=s.editors[0];await h.key('F8');s=await h.until(s=>s.canvases[1]?.buttons.some(b=>b.id===19&&b.text==='Save')&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'both applications return to English');invariant(document,s.editors[0]);
+ assert.equal(sha(await h.disk('hdd')),sha(original));await h.end(1);await h.end(0);await h.exit(vector);await h.unchangedFd();await h.closeContext();
+ h.pass('F8 switches desktop and open/new apps without changing document, Undo or preedit; actual Japanese UI and preedit CG-ROM pixels, original new vocabulary, English round trip and complete cleanup');
+}
+try{if(suite==='input')await inputSuite();else if(suite==='interface')await interfaceSuite();else await lifecycleSuite();await h.finish();}catch(e){await h.fail(e);throw e;}finally{await h.close();}

@@ -218,6 +218,7 @@ def main():
         'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
+        'ui_language':{'version':1,'languages':['en','ja'],'default':'en','switch':'F8','live_apps':True,'preserves_document_and_composition':True},
         'dos_terminal':{'version':2,'columns':80,'rows':25,'character_plane':'pc98-tvram-u16',
                         'attribute_plane':'pc98-u16','snapshot_bytes':8032,'transport_chunk_bytes':992,
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
