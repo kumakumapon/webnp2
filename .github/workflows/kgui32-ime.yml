@@ -1,7 +1,7 @@
 name: KGUI32 Japanese IME
 on:
   push:
-    branches: [master, 'feature/native-ime-distribution']
+    branches: [master, 'feature/japanese-ui-distribution']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         video: [pegc, cirrus]
-        suite: [input, lifecycle]
+        suite: [input, lifecycle, interface]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
