@@ -4,8 +4,16 @@ import {createHash} from 'node:crypto';
 import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL,KGUI32_EXPANDED_BOOT_URL,KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
 import {fullHdd,withHddFile,inspectHdd} from '../scripts/kgui32-hdd-fat.mjs';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
+import {wideWorkspace,inspectFat} from '../scripts/kgui32-workspace-fat.mjs';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
+ it('reserves both 64 KiB file generations in the disposable ASCII FD fixture',()=>{
+  if(!manifest.enabled)return;
+  const original=readFileSync('public/kgui32/'+manifest.image),before=createHash('sha256').update(original).digest('hex'),fixture=wideWorkspace(original),disk=inspectFat(fixture),source=inspectFat(original);
+  expect(createHash('sha256').update(original).digest('hex')).toBe(before);
+  let free=0;for(let c=2;c<1223;c++)if(!disk.next(c))free+=1024;expect(free).toBeGreaterThanOrEqual(131072);
+  for(const name of ['IO.SYS','MSDOS.SYS','COMMAND.COM','K386.EXE','K32IO.EXE','K32HOST.EXE','KGUILDR.EXE','KGUI32.EXE','KGEDIT.EXE','KGSAVE64.EXE'])expect(disk.files.get(name)).toEqual(source.files.get(name));
+ });
  it('offers separate explicit boot choices only after generation',()=>{
   expect(KGUI32_FD_BOOT_URL).toBe(manifest.enabled?`./?fd1=./kgui32/${manifest.image}&run=1&mem=16`:undefined);
   expect(KGUI32_PAIRED_BOOT_URL).toBe(manifest.enabled&&manifest.application_distribution?`./?fd1=./kgui32/${manifest.application_distribution.image}&hdd=./kgui32/${manifest.application_distribution.hdd.image}&run=1&mem=16`:KGUI32_FD_BOOT_URL&&manifest.workspace_hdd?`${KGUI32_FD_BOOT_URL}&hdd=./kgui32/${manifest.workspace_hdd.image}`:KGUI32_FD_BOOT_URL);
