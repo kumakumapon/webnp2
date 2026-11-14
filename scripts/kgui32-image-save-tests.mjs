@@ -60,7 +60,7 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
    let before=withHddFile(original,'NOTE.BMP',bmp(sample));
    if(mode==='full')before=fullHdd(before);
    else if(mode==='protected')before=withHddFile(before,'LOCKED.BMP',bmp(sample),33);
-   else before=withHddFile(before,'NOTE.TMP',Buffer.from('invalid BMP candidate'));
+   else before=withHddFile(before,'NOTE.TMP',Buffer.alloc(64,0x78));
    const v=await h.bootHdd(before);await start(0,'KGIMAGE.EXE work NOTE.BMP');await waitImage();await change(0,'i',inverse);
    if(mode==='protected')await name('LOCKED.BMP');
    if(mode==='invalid'){await h.key('CTRL+R');await until(s=>modal(s)===2,'invalid candidate inspection');await h.control(0,84);}
