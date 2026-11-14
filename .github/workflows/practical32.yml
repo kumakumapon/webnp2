@@ -1,0 +1,51 @@
+name: Practical protected 32-bit environment
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: practical32-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+jobs:
+  practical32:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        video: [pegc, cirrus]
+        suite: [runtime, io, images, ime]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Generate pinned native applications and complete HDD/FD media
+        run: bash scripts/prepare-msdos4-cpanel-ci.sh
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Real CPL3, PTE, binary persistence, Canvas and common IME acceptance
+        env:
+          CHROMIUM: /usr/bin/google-chrome
+          WEBNP2_NO_SANDBOX: '1'
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort --base /webnp2/ > /tmp/practical32-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/webnp2/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/verify-practical32.mjs http://127.0.0.1:4173/webnp2/ test-results/practical32 ${{ matrix.video }} ${{ matrix.suite }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: practical32-${{ matrix.suite }}-${{ matrix.video }}
+          path: |
+            test-results/practical32
+            test-results/practical32-sdk
+            public/kgui32/manifest.json
+            /tmp/practical32-preview.log

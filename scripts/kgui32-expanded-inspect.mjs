@@ -18,7 +18,7 @@ export async function inspectExpanded(page){
     usage:{generation:d(u,0),ticks:d(u,4),runs:d(u,8),limit:d(u,12),memory:w(u,20),heap:w(u,22),handles:w(u,24),psp:w(u,28),program:u.slice(44,60).split('\0')[0]},
     frame:{eip:d(f,kind?56:40),cs:d(f,kind?60:44),eflags:d(f,kind?64:48)},
     pde0:tables?d(tables,0):null,pde2:tables?d(tables,8):null,ptes:tables?Array.from({length:1024},(_,i)=>d(tables,8192+i*4)):null,
-    pm:kind?{state:d(p,12),error:d(p,16),handle:w(p,40),locked:w(p,42),reason:d(p,68),heap:d(p,788),openFiles:d(p,820),samples:Array.from({length:d(p,944)},(_,i)=>d(p,880+i*4)),frame:{cs:d(p,380),eflags:d(p,384)},freed:d(p,156),unmapped:d(p,464),tablesCleared:d(p,948)}:null});
+    pm:kind?{state:d(p,12),error:d(p,16),exitCode:d(p,628),cr2:d(p,72),faultError:d(p,76),abi:d(p,768),features:d(p,772),heapBase:d(p,780),heapLimit:d(p,784),allocations:d(p,796),frees:d(p,800),waitPolls:d(p,812),handle:w(p,40),locked:w(p,42),reason:d(p,68),heap:d(p,788),openFiles:d(p,820),samples:Array.from({length:d(p,944)},(_,i)=>d(p,880+i*4)),frame:{eip:d(p,376),cs:d(p,380),eflags:d(p,384),esp:d(p,388),ss:d(p,392)},freed:d(p,156),unmapped:d(p,464),tablesCleared:d(p,948)}:null});
   }
   const events=Array.from({length:w(r,18)},(_,i)=>{const o=140+((w(r,16)+16-w(r,18)+i)%16)*32;return {session:w(r,o+20),generation:d(r,o+4),type:w(r,o+22),fault:w(r,o+26)};});
   const scan=read(0x10000,0x90000);let b=-1,bridge=null;

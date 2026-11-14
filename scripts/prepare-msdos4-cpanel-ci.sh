@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_commit=c677bfd1801fa3f077835394d46e363ee81cbf60
+source_commit=ad08a5fd7f6d2c8a764d694bbda99881afec9ed9
 source_dir="$(mktemp -d)"
 trap 'rm -rf "$source_dir"' EXIT
 
@@ -38,3 +38,7 @@ python3 scripts/update-msdos4-cpanel.py "$source_dir" --with-window
 
 python3 scripts/update-k386.py "$source_dir"
 python3 scripts/update-kgui32.py "$source_dir"
+
+# Preserve exact symbol-matched SDK diagnostics before removing the source tree.
+mkdir -p test-results/practical32-sdk
+cp "$source_dir/tools/k38632/build/PRACT32.debug.json" "$source_dir/tools/k38632/build/practical.ext.elf" "$source_dir/tools/k38632/build/PRACT32.EXE" test-results/practical32-sdk/
