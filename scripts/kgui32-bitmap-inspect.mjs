@@ -12,8 +12,11 @@ export async function inspectBitmaps(page){
   const table=read(d(r,24)+8192,4096);let first=-1;
   for(let i=0;i<1024;i++)if((d(table,i*4)&7)===7){first=i;break;}if(first<0)return null;
   const start=base+(d(table,first*4)&0xfffff000);if(start<0||start+212>heap.length)return null;
-  if(!Array.from({length:64},(_,i)=>heap[start+i]===r.charCodeAt(880+i)).every(Boolean))return null;
   const u=o=>(heap[start+o]|heap[start+o+1]<<8|heap[start+o+2]<<16|heap[start+o+3]<<24)>>>0;
+  // inspectTerminal already bound this backing using all actual CPU samples.
+  // Read current private pages atomically, rather than comparing live frame
+  // counters with an earlier context switch's sample.
+  if(u(0)!==d(r,880)||u(4)!==d(r,884)||u(64)!==0x3254474b)return null;
   if(u(192)!==0x3153474b||u(132)!==capacity||![196608,393216].includes(u(204)))return null;
   function app(ptr,n){
    if(ptr<0x800000||n>0x100000||ptr>0xc00000-n)return null;

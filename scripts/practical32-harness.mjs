@@ -30,9 +30,12 @@ export async function practicalHarness(base,output,video){
    return slots.map(slot=>{
     if(!slot.pm?.handle||!slot.ptes||slot.pm.samples.length!==16||base===undefined)return null;
     const table=read(slot.pd+8192,4096);let physical=0;for(let i=0;i<1024;i++){const p=d(table,i*4);if((p&7)===7){physical=p&0xfffff000;break;}}if(!physical)return null;
+    if(physical<slot.physical||physical>=slot.physical+4194304)return null;
     const at=base+physical;if(at<0||at+120>heap.length)return null;
     const u=o=>(heap[at+o]|heap[at+o+1]<<8|heap[at+o+2]<<16|heap[at+o+3]<<24)>>>0;
-    if(!slot.pm.samples.every((v,i)=>u(i*4)===v))return null;
+    // The actual owner's current RW PTE and CPU-published immutable header
+    // identify live private stats; mutable events/IME can advance after yield.
+    if(u(0)!==slot.pm.samples[0]||u(4)!==slot.pm.samples[1])return null;
     return Array.from({length:30},(_,i)=>u(i*4));
    });
   },s.expanded.slots);
@@ -47,10 +50,10 @@ export async function practicalHarness(base,output,video){
  async function control(id,code){await focus(id);const s=await until(s=>s.bitmaps[id].draws.some(d=>d.op===3&&d.handle===code),'retained control '+code),events=samples(s,id)[3];const b=s.bitmaps[id].draws.find(d=>d.op===3&&d.handle===code);const r=s.bitmaps[id].window;await h.click(r.x+8+b.x+Math.floor(b.w/2),r.y+70+b.y+Math.floor(b.h/2));return until(s=>samples(s,id)[3]>events||s.expanded.slots[id].state===0,'control '+code);}
  async function appKey(id,key){await focus(id);const s=last,before=samples(s,id);if(key.length===1&&key.charCodeAt(0)>=32)await h.type(key);else await h.key(key);return until(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2]||s.expanded.slots[id].state===0,'app key '+key);}
  async function appType(id,text){for(const c of text){await focus(id);const before=samples(last,id);await h.type(c);await until(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2],'app character '+c);}}
- async function stopAll(){const s=await until(s=>s.gui.app?.frames,'before cleanup');for(let id=s.expanded.capacity-1;id>=0;id--)if((await inspect()).expanded.slots[id].state!==0)await end(id);}
+ async function stopAll(){const s=await until(s=>s.gui.app?.frames,'before cleanup');for(let id=s.expanded.capacity-1;id>=0;id--)if((await until(()=>true,'cleanup slot '+id)).expanded.slots[id].state!==0)await end(id);}
  async function cleanup(vector,keepContext=false){await stopAll();const s=await until(s=>s.native.broker.owners.every(o=>!o.handles),'all broker handles closed');assert.equal(s.native.broker.stackOk,1);const done=await h.exit(vector);assert.equal(done.gui.stackGuard,1);assert.equal(done.gui.cpu.freeBefore,done.gui.cpu.freeAfter);await h.unchangedFd();if(!keepContext)await h.closeContext();}
  function pass(label,data){results.push(label);if(data)proof.push({label,data});console.log('PASS',label);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:h.manifest.source_commit,results,proof},null,2)+'\n');}
  async function fail(e){await writeFile(join(output,'practical-failure.json'),JSON.stringify({error:String(e),last,results},null,2)+'\n');await h.fail(e);}
- return {h,original,inspect,until,samples,focus,launch,end,run,control,appKey,appType,cleanup,pass,finish,fail,last:()=>last};
+ return {h,original,inspect:()=>until(()=>true,'coherent snapshot'),until,samples,focus,launch,end,run,control,appKey,appType,cleanup,pass,finish,fail,last:()=>last};
 }

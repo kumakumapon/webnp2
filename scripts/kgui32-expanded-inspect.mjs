@@ -21,8 +21,12 @@ export async function inspectExpanded(page){
     pm:kind?{state:d(p,12),error:d(p,16),exitCode:d(p,628),cr2:d(p,72),faultError:d(p,76),abi:d(p,768),features:d(p,772),heapBase:d(p,780),heapLimit:d(p,784),allocations:d(p,796),frees:d(p,800),waitPolls:d(p,812),handle:w(p,40),locked:w(p,42),reason:d(p,68),heap:d(p,788),openFiles:d(p,820),samples:Array.from({length:d(p,944)},(_,i)=>d(p,880+i*4)),frame:{eip:d(p,376),cs:d(p,380),eflags:d(p,384),esp:d(p,388),ss:d(p,392)},freed:d(p,156),unmapped:d(p,464),tablesCleared:d(p,948)}:null});
   }
   const events=Array.from({length:w(r,18)},(_,i)=>{const o=140+((w(r,16)+16-w(r,18)+i)%16)*32;return {session:w(r,o+20),generation:d(r,o+4),type:w(r,o+22),fault:w(r,o+26)};});
-  const scan=read(0x10000,0x90000);let b=-1,bridge=null;
-  while((b=scan.indexOf('KGCLNT01',b+1))>=0)if(d(scan,b+8)===1&&d(scan,b+12)===84&&d(scan,b+16)===gui.owner){const arena=d(scan,b+20),ready=d(scan,b+32);bridge={arena,ready,clients:ready?Array.from({length:capacity},(_,id)=>{const c=read(arena*16+id*4096+3200,76);return {generation:d(c,0),token:d(c,4),revision:d(c,8),width:d(c,12),height:d(c,16),title:c.slice(44,76).split('\0')[0]};}):[]};break;}
+  let address=window.kguiClientBridgeAddress,producer=address?read(address,84):null,bridge=null;
+  if(!producer||producer.slice(0,8)!=='KGCLNT01'||d(producer,8)!==1||d(producer,12)!==84||d(producer,16)!==gui.owner){
+   const scan=read(0x10000,0x90000);let b=-1;producer=null;
+   while((b=scan.indexOf('KGCLNT01',b+1))>=0)if(d(scan,b+8)===1&&d(scan,b+12)===84&&d(scan,b+16)===gui.owner){address=b+0x10000;producer=scan.slice(b,b+84);window.kguiClientBridgeAddress=address;break;}
+  }
+  if(producer){const arena=d(producer,20),ready=d(producer,32);bridge={arena,ready,clients:ready?Array.from({length:capacity},(_,id)=>{const c=read(arena*16+id*4096+3200,76);return {generation:d(c,0),token:d(c,4),revision:d(c,8),width:d(c,12),height:d(c,16),title:c.slice(44,76).split('\0')[0]};}):[]};}
   return {gui,address:at,capacity,profile:w(m,260),slots,events,bridge};
  },gui);
 }

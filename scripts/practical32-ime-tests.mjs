@@ -13,7 +13,7 @@ export async function imeTests(p){
   s=await until(s=>s.appRaw[id]?.[0]===0x32574b47,'dictionary input scheme');if(s.appRaw[id][19]!==1)await p.appKey(id,'F4');
   await p.appType(id,key);await p.appKey(id,'ENTER');await p.appKey(id,'TAB');await p.appType(id,value);await p.appKey(id,'SPACE');await until(s=>samples(s,id)[13]>1,'dictionary word candidates');await p.appKey(id,'ENTER');await p.control(id,101);return until(s=>samples(s,id)[6]===1,'explicit unsaved dictionary edit');
  }
- async function convert(id,roman,text){await p.appType(id,roman);await p.appKey(id,'SPACE');await until(s=>ime(s,id)?.selecting===1,'Editor candidates '+roman);await p.appKey(id,'ENTER');const bytes=sjis(text);return until(s=>samples(s,id)[4]===bytes.length&&samples(s,id)[5]===fnv(bytes),'Editor committed '+text);}
+ async function convert(id,roman,text){await p.appType(id,roman);await p.appKey(id,'SPACE');await until(s=>ime(s,id)?.selecting===1,'Editor candidates '+roman);await p.appKey(id,'ENTER');const bytes=sjis(text);return until(s=>samples(s,id)[4]===bytes.length&&samples(s,id)[5]===fnv(bytes)&&s.appRaw[id]?.[0]===0x3345474b,'Editor committed '+text);}
  async function pixels(id,text){
   await p.focus(id);await h.shot('common-ime-glyphs.png');const s=await p.inspect(),r=s.bitmaps[id].window,glyphs=sjisUnits(sjis(text)).map(c=>cgGlyph(font,c)),width=sjis(text).length*8;
   const got=await h.page().evaluate(({x,y,w})=>{const source=document.querySelector('#canvas'),out=document.createElement('canvas');out.width=source.width;out.height=source.height;const g=out.getContext('2d');g.drawImage(source,0,0);return Array.from(g.getImageData(x,y,w,16).data);},{x:r.x+16,y:r.y+110,w:width});
@@ -24,6 +24,7 @@ export async function imeTests(p){
  await p.launch('editor',1);await p.appKey(1,'F4');let s=await convert(1,'kuma','画像');assert.equal(s.appRaw[1][28],1);await pixels(1,'画像');
  await p.appKey(1,'F4');await p.appKey(1,'CTRL+A');await p.appKey(1,'BS');await p.appKey(1,'F4');await convert(1,'nihongowokakimasu','日本語を書きます');
  await p.appType(1,'gazou');s=await until(s=>ime(s,1)?.bytes===6&&!ime(s,1).pending,'pending shared composition');const before={doc:samples(s,1).slice(4,10),ime:ime(s,1)};
+ await p.focus(0);await p.focus(1);s=await until(s=>ime(s,1)?.hash===before.ime.hash,'composition survives another input consumer');assert.deepEqual(ime(s,1),before.ime);assert.deepEqual(samples(s,1).slice(4,10),before.doc);
  await h.key('F8');await until(s=>ime(s,1)?.hash===before.ime.hash&&s.appRaw[1]?.[19]===6,'F8 composition retained');await p.appKey(1,'F9');s=await until(s=>ime(s,1)?.hash===before.ime.hash,'reload refused during composition');assert.deepEqual(samples(s,1).slice(4,10),before.doc);assert.deepEqual(ime(s,1),before.ime);await p.appKey(1,'ESC');
  p.pass('KGWORDS and Editor consume the same actual IME API; explicit user registration/save overrides a system word, complete-word/particle/inflection conversion works, real CG-ROM pixels match, F8/F9 retain active composition');await p.cleanup(vector);
  const cold=await h.bootHdd(exported);await p.launch('editor');await p.appKey(0,'F4');s=await convert(0,'kuma','画像');assert.equal(s.appRaw[0][28],1);assert.equal(sha(await h.disk('hdd')),sha(exported));await p.cleanup(cold);
