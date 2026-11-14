@@ -81,15 +81,15 @@ async function interfaceSuite(){
  const vector=await h.bootHdd();await h.launchEditor();await h.setText(0,'Save');
  await h.key('F4');await h.type('gazou');let s=await pre('がぞう');
  const before=s.editors[0],composition={...s.imes[0]};
- await h.key('F8');s=await h.until(s=>texts(s).includes(sjis('日本語入力／文書').toString('latin1'))&&s.canvases[0].buttons.some(b=>b.id===2190&&b.text===sjis('確定').toString('latin1')),'Japanese interface with live composition');
+ await h.key('F8');s=await h.until(s=>s.imes[0]&&s.editors[0]&&texts(s).includes(sjis('日本語入力／文書').toString('latin1'))&&s.canvases[0].buttons.some(b=>b.id===2190&&b.text===sjis('確定').toString('latin1')),'Japanese interface with live composition');
  invariant(before,s.editors[0]);for(const key of ['bytes','hash','pending','scheme','selecting','selected'])assert.equal(s.imes[0][key],composition[key],key);
  await h.shot('japanese-interface.png');await pixels(0,'日本語入力／文書',4);await pixels(0,'がぞう');
  await h.key('SPACE');await h.until(s=>s.imes[0]?.selecting===1&&s.canvases[0].buttons.some(b=>Buffer.from(b.text,'latin1').includes(sjis('画像'))),'new image vocabulary');await h.key('ENTER');await doc('Save画像');
- await h.key('F8');s=await h.until(s=>s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'English interface restored');assert.equal(s.editors[0].hash,fnv(sjis('Save画像')));assert(texts(s).some(t=>Buffer.from(t,'latin1').includes(sjis('Save画像'))),'document data is never translated');
+ await h.key('F8');s=await h.until(s=>s.editors[0]&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'English interface restored');assert.equal(s.editors[0].hash,fnv(sjis('Save画像')));assert(texts(s).some(t=>Buffer.from(t,'latin1').includes(sjis('Save画像'))),'document data is never translated');
  await clearDocument();await convert('fukkyuu','ふっきゅう');await h.key('ENTER');await doc('復旧');
  await h.key('F8');await h.until(s=>s.canvases[0]?.buttons.some(b=>b.id===603&&b.text===sjis('保存').toString('latin1')),'Japanese editor commands');
- await h.key('F2');await h.click(292,266);s=await h.until(s=>s.canvases[1]?.buttons.some(b=>b.id===19&&b.text===sjis('保存').toString('latin1')),'new Images instance adopts Japanese');
- const document=s.editors[0];await h.key('F8');s=await h.until(s=>s.canvases[1]?.buttons.some(b=>b.id===19&&b.text==='Save')&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'both applications return to English');invariant(document,s.editors[0]);
+ await h.key('F2');await h.click(292,266);s=await h.until(s=>s.editors[0]&&s.canvases[1]?.buttons.some(b=>b.id===19&&b.text===sjis('保存').toString('latin1')),'new Images instance adopts Japanese');
+ const document=s.editors[0];await h.key('F8');s=await h.until(s=>s.editors[0]&&s.canvases[1]?.buttons.some(b=>b.id===19&&b.text==='Save')&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'both applications return to English');invariant(document,s.editors[0]);
  assert.equal(sha(await h.disk('hdd')),sha(original));await h.end(1);await h.end(0);await h.exit(vector);await h.unchangedFd();await h.closeContext();
  h.pass('F8 switches desktop and open/new apps without changing document, Undo or preedit; actual Japanese UI and preedit CG-ROM pixels, original new vocabulary, English round trip and complete cleanup');
 }
