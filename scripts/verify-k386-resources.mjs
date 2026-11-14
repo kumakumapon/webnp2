@@ -116,9 +116,9 @@ try{
 
   await run(0,'FAULT.EXE');
   record=await until(r=>r.cpu.views[0].state===4&&r.resources.usage[0].lastFault===14,'actual page fault journal');
-  assert.equal(record.resources.usage[0].lastCR2,0xe0000);
+  assert.equal(record.resources.usage[0].lastCR2,0xc0000);
   const fault=record.resources.events.at(-1);
-  assert.equal(fault.type,3);assert.equal(fault.cr2,0xe0000);assert.equal(fault.cs,0x8010);
+  assert.equal(fault.type,3);assert.equal(fault.cr2,0xc0000);assert.equal(fault.cs,0x8010);
   assert.equal(fault.ip,record.cpu.diagnostics[0].frame.eip);
   await key('CTRL+T');await wait('Reason: Fault');await wait('Fault: 14');
   await tasksPresented();

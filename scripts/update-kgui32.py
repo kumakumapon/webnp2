@@ -169,6 +169,8 @@ def main():
     # Keep full source guides on the separate K386 disk; the complete GUI FD
     # gets a concise offline guide and usable Work capacity.
     files['K386.TXT'] = (source/'tools/kgui32/TERMINAL.TXT').read_bytes()
+    files['KV98VID.EXE'] = (source/'tools/kvideo/build/KV98VID.EXE').read_bytes()
+    files['KVTERM.COM'] = (source/'tools/kvideo/build/KVTERM.COM').read_bytes()
     files['TERM98.COM'] = (source/'tools/k386/build/TERM98.COM').read_bytes()
     dictionary = (source/'tools/kgui32/build/KGIME.DIC').read_bytes()
     files['KGIME.DIC'] = dictionary
@@ -178,7 +180,7 @@ def main():
     files['EDITTEST.TXT'] = b'EDITOR FIXTURE\r\nSecond line\r\n'
     files['JPDEMO.TXT'] = '日本語\u3000カタカナ\u3000ひらがな\r\n半角: ｶﾅ / Shift-JIS\r\n'.encode('shift_jis')
     files['BINARY.TXT'] = bytes(range(256))
-    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32HOST.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
+    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
     helper = module('kgui32_image', source/'ports/pc98/image.py')
     excluded = {'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
@@ -219,6 +221,10 @@ def main():
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
         'ui_language':{'version':1,'languages':['en','ja'],'default':'en','switch':'F8','live_apps':True,'preserves_document_and_composition':True},
+        'dos_terminal_modes':{'version':1,'helper':'KV98VID.EXE','diagnostic':'KVTERM.COM',
+            'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':131072,
+            'graphics_max_width':640,'graphics_max_height':400,'graphics_colors':16,
+            'semigraphics':True,'snapshot_chunk_bytes':848,'read_only':True},
         'dos_terminal':{'version':2,'columns':80,'rows':25,'character_plane':'pc98-tvram-u16',
                         'attribute_plane':'pc98-u16','snapshot_bytes':8032,'transport_chunk_bytes':992,
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},

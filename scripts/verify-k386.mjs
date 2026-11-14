@@ -133,7 +133,7 @@ try{
   results.push('native DOS window move/resize/minimize/restore, retained state, focused input and existing GUI coexistence');
 
   await run(1,'FAULT.EXE');states=await until(s=>s[1].state===4,'Isolated page violation');
-  assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0xe0000);
+  assert.equal(states[1].fault,14);assert.equal(states[1].cr2,0xc0000);
   before=states;await until(s=>s[0].counter>before[0].counter,'Other VM survives the fault');
   await run(1,'PORT.EXE');states=await until(s=>s[1].state===4&&s[1].fault===13,'Denied port I/O');
   await run(1,'FPU.EXE');states=await until(s=>s[1].state===4&&s[1].fault===7,'Unvirtualized FPU is contained');
