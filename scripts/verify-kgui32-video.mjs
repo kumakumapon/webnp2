@@ -19,7 +19,10 @@ async function start(id=0,variant=1){
 }
 async function input(key,test,id=0){await h.focus(id);await h.type(key);return until(s=>ready(s,id)&&test(slot(s,id).meta,s),'video command '+key);}
 async function pixels(id=0){
- let s=await until(s=>ready(s,id),'coherent native display before pixels'),v=slot(s,id),r=s.terminals.slots[id].window;
+ let s=await until(s=>ready(s,id),'coherent native display before pixels');
+ if(slot(s,id).meta.flags&16)s=await input('c',m=>!(m.flags&16),id);
+ const v=slot(s,id),r=s.terminals.slots[id].window;
+ await h.shot('pixels-'+id+'.png');
  const width=Math.floor((r.w-16)/8)*8,height=Math.floor((r.h-104)/16)*16;let dw=width,dh=height;
  if(dw*400>dh*640)dw=Math.floor(dh*640/400);else dh=Math.floor(dw*400/640);
  const points=[];
@@ -61,6 +64,7 @@ async function lifecycle(){
  const old=slot(s,1).generation;await h.type('f');s=await h.until(s=>s.cpu.views[1].state===4,'unsupported word I/O faults only owner');assert.equal(s.cpu.views[1].fault,13);assert.equal(s.cpu.views[0].state,2);
  await h.run(1,'KVTERM.COM 0');s=await until(s=>slot(s,1)?.generation!==old&&slot(s,1)?.meta.fontWrites===0&&s.cpu.views[1].state===2&&s.terminals?.slots[1]?.consistent,'recycled generation with unset gaiji');
  assert.deepEqual(slot(s,1).rawFont,Array(32).fill(0));
+ await h.shot('unset-gaiji-after-generation.png');
  const r=s.terminals.slots[1].window;
  const blank=await h.page().evaluate(({x,y})=>{const c=document.querySelector('#canvas'),out=document.createElement('canvas');out.width=c.width;out.height=c.height;const g=out.getContext('2d');g.drawImage(c,0,0);return Array.from(g.getImageData(x+8,y+70,16,16).data);},r);
  assert(blank.every((c,i)=>i%4===3?c===255:c===0),'unset gaiji are blank in the legacy renderer after a generation with private glyphs');
