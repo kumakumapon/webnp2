@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL,KGUI32_EXPANDED_BOOT_URL,KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
+import {fullHdd,withHddFile,inspectHdd} from '../scripts/kgui32-hdd-fat.mjs';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
@@ -120,6 +121,20 @@ describe('independent native PM32 GUI image',()=>{
   expect(d.fd_free_bytes).toBeGreaterThan(d.legacy_fd_free_bytes+65536);
   expect(fatFreeSpace(hd).free).toBe(d.hdd.initial_free_bytes);
   expect(d.hdd_boot_supported).toBe(false);
+ });
+
+ it('fills an HDD fixture without orphaning pre-existing Work files',()=>{
+  if(!manifest.enabled)return;
+  const original=readFileSync('public/kgui32/'+manifest.standalone_hdd.image);
+  const payload=Buffer.from('pre-existing BMP bytes');
+  const before=withHddFile(original,'NOTE.BMP',payload);
+  for(const directoryFull of [false,true]){
+   const after=inspectHdd(fullHdd(before,{directoryFull}));
+   expect(after.files.get('WORK/NOTE.BMP')).toEqual(payload);
+   expect(after.files.get('WORK/BASE.TXT')?.toString()).toBe('preserve me\n');
+   expect(after.files.get('WORK/NOTE.TXT')?.toString()).toBe('original on HDD\n');
+   expect(after.free).toBe(directoryFull?1:0);
+  }
  });
 
 });
