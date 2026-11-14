@@ -11,13 +11,14 @@ export async function inspectVideo(page){
   const table=read(d(r,24)+8192,4096);
   function app(ptr,n){if(ptr<0x800000||n>0x400000||ptr>0xc00000-n)return null;const out=new Uint8Array(n);for(let j=0;j<n;){const v=ptr+j,p=d(table,((v-0x800000)>>>12)*4);if((p&5)!==5)return null;const k=Math.min(n-j,4096-(v&4095)),at=base+(p&0xfffff000)+(v&4095);if(at<0||at+k>heap.length)return null;out.set(heap.subarray(at,at+k),j);j+=k;}return out;}
 
-  // The root state is the first writable byte, located through its actual
-  // PTE and the 64 matching CPU samples used by inspectTerminal.
-  let rootAt=-1;for(let p=heap.indexOf(0x4b);p>=0;p=heap.indexOf(0x4b,p+1)){
-   if(heap[p+1]!==0x55||heap[p+2]!==0x47||heap[p+3]!==0x31)continue;
-   if(Array.from({length:64},(_,i)=>heap[p+i]===r.charCodeAt(880+i)).every(Boolean)){if(rootAt>=0)return null;rootAt=p;}
-  }
-  if(rootAt<0)return null;
+  // inspectTerminal located the shared XMS backing through CPU samples.
+  // Select the first actual writable root PTE, avoiding the identical 64-byte
+  // diagnostic sample stored in the resident runtime itself.
+  let physical;
+  for(let i=0;i<1024;i++){const p=d(table,i*4);if((p&7)===7){physical=p&0xfffff000;break;}}
+  if(!physical)return null;
+  const rootAt=base+physical;
+  if(rootAt<0||rootAt+236>heap.length||!Array.from({length:64},(_,i)=>heap[rootAt+i]===r.charCodeAt(880+i)).every(Boolean))return null;
   const u=o=>(heap[rootAt+o]|heap[rootAt+o+1]<<8|heap[rootAt+o+2]<<16|heap[rootAt+o+3]<<24)>>>0;
   if(u(212)!==0x3156474b||u(220)!==153600)return null;
   const gens=app(u(224),16),revs=app(u(228),16),valid=app(u(232),16);if(!gens||!revs||!valid)return null;
