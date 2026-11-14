@@ -16,9 +16,15 @@ export async function inspectTerminal(page){
   const matches=at=>at>=0&&at+132<=heap.length&&heap[at+64]===0x4b&&heap[at+65]===0x47&&heap[at+66]===0x54&&heap[at+67]===0x32&&Array.from({length:64},(_,i)=>heap[at+i]===r.charCodeAt(880+i)).every(Boolean);
   let at=window.kguiTerminalXmsBacking===undefined?-1:window.kguiTerminalXmsBacking+physical;
   if(!matches(at)){
+   // A running guest can advance beyond the last CPU-published sample. The
+   // known backing is still valid; avoid scanning the whole WASM heap on
+   // every transient mismatch. Relearn only after bounded repeated misses.
+   if(window.kguiTerminalXmsBacking!==undefined&&(window.kguiTerminalSampleMisses=(window.kguiTerminalSampleMisses??0)+1)<32)return null;
+   window.kguiTerminalSampleMisses=0;
    const found=[];for(let p=heap.indexOf(0x4b);p>=0;p=heap.indexOf(0x4b,p+1))if(heap[p+1]===0x55&&heap[p+2]===0x47&&heap[p+3]===0x31&&matches(p))found.push(p);
    if(found.length!==1)return null;at=found[0];window.kguiTerminalXmsBacking=at-physical;
   }
+  window.kguiTerminalSampleMisses=0;
   const u=o=>(heap[at+o]|heap[at+o+1]<<8|heap[at+o+2]<<16|heap[at+o+3]<<24)>>>0;
   function app(ptr,n){
    if(ptr<0x800000||n>0x400000||ptr>0xc00000-n)return null;

@@ -8,7 +8,7 @@ export async function imageTests(p,video){
  const {h,until,samples}=p;
  let fixture=p.original;const large=bitmap(384,256,24,2),formats=[8,16,32].map(bits=>bitmap(31,23,bits,bits));fixture=withHddFile(fixture,'LARGE.BMP',large.bytes);for(const image of formats)fixture=withHddFile(fixture,'B'+image.bits+'.BMP',image.bytes);
  const vector=await h.bootHdd(fixture,true,32);let s=await until(s=>s.expanded.capacity===4,'32 MiB four-owner profile');
- async function accepted(id,expected){return until(s=>s.bitmaps[id]?.consistent&&s.bitmaps[id].hash===pixelHash(expected)&&samples(s,id)[8]===pixelHash(expected)&&samples(s,id)[2]>0,'accepted actual image '+id);}
+ async function accepted(id,expected){const hash=pixelHash(expected);return until(s=>{assert.notEqual(s.expanded.slots[id].state,4,'image owner fault');return s.bitmaps[id]?.consistent&&s.bitmaps[id].hash===hash&&samples(s,id)[8]===hash&&samples(s,id)[2]>0;},'accepted actual image '+id,600000);}
  async function rendered(id,secondary=false){
   await p.focus(id);await h.point(10,(await p.inspect()).gui.height-48);const s=await until(s=>s.bitmaps[id]?.draws.some(d=>d.op===4||d.op===5),'retained bitmap drawing'),b=s.bitmaps[id],image=secondary?b.secondary:b;
   const d=b.draws.find(d=>(d.op===4||d.op===5)&&d.handle===image.handle);assert(d,'visible requested surface');
