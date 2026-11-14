@@ -23,7 +23,7 @@ const stats=(s,id)=>s.expanded.slots[id]?.pm?.samples;
 const image=(s,id=0)=>stats(s,id)?.[0]===0x3149474b?stats(s,id):null;
 const accepted=(s,id=0)=>image(s,id)?.[2]>0&&s.bitmaps?.[id]?.consistent&&image(s,id)[8]===s.bitmaps[id].hash;
 let last;const results=[];
-async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectBitmaps(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see bitmap-failure.json');}
+async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectBitmaps(h.page());if(s?.bitmaps){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see bitmap-failure.json');}
 function pass(label){results.push(label);console.log('PASS',label);}
 async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/s.expanded.capacity;await h.click(s.expanded.capacity===2?330+146*id:Math.round(300+step*(id+0.5)),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
 async function stop(id){const s=await focus(id),w=s.bitmaps[id].window;await h.click(w.x+230,w.y+48);return until(s=>s.expanded.slots[id].state===0,'End '+id);}
