@@ -50,10 +50,10 @@ export function fullHdd(original,{directoryFull=false}={}){
  let image=withHddFile(original,'NOTE.TXT',Buffer.from('original on HDD\n'));
  image=withHddFile(image,'BASE.TXT',Buffer.from('preserve me\n'));
  const s=inspectHdd(image),free=[];for(let c=2;c<=s.clusters+1;c++)if(!s.next(c))free.push(c);
- if(directoryFull)free.pop();const at=directoryOffset(s,4);
+ if(directoryFull)free.pop();let index=2;while(image[directoryOffset(s,index)])index++;const at=directoryOffset(s,index);
  for(let i=0;i<free.length;i++)link(image,s,free[i],free[i+1]??0xffff);
  image.write('FULL    BIN',at,'ascii');image[at+11]=32;image.writeUInt16LE(0x21,at+24);image.writeUInt16LE(free[0],at+26);image.writeUInt32LE(free.length*s.clusterBytes,at+28);
- if(directoryFull)for(let i=5;i<s.clusterBytes/32;i++){
+ if(directoryFull)for(let i=index+1;i<s.clusterBytes/32;i++){
   const p=directoryOffset(s,i);image.write('Z'+i.toString().padStart(7,'0')+'TXT',p,'ascii');image[p+11]=32;image.writeUInt16LE(0x21,p+24);
  }
  const done=inspectHdd(image);assert.equal(done.free,directoryFull?1:0);return image;

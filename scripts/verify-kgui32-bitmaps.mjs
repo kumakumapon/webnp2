@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
+import {imageSaveTests} from './kgui32-image-save-tests.mjs';
 import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/bitmaps',video='pegc',suite='paint']=process.argv.slice(2);
-assert(['paint','lifecycle'].includes(suite));
+assert(['paint','lifecycle','save','recovery'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
-assert.equal(m.bitmap_sdk.version,1);assert.equal(m.bitmap_sdk.disk_save,false);
+assert.equal(m.bitmap_sdk.version,1);assert.equal(m.bitmap_sdk.disk_save,true);
 const root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root));
 const sample=new Uint16Array(64*48);
 // Independently decode the deterministic shipped BMP fixture.
@@ -22,7 +23,7 @@ const stats=(s,id)=>s.expanded.slots[id]?.pm?.samples;
 const image=(s,id=0)=>stats(s,id)?.[0]===0x3149474b?stats(s,id):null;
 const accepted=(s,id=0)=>image(s,id)?.[2]>0&&s.bitmaps?.[id]?.consistent&&image(s,id)[8]===s.bitmaps[id].hash;
 let last;const results=[];
-async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectBitmaps(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see bitmap-failure.json');}
+async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectBitmaps(h.page());if(s?.bitmaps){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see bitmap-failure.json');}
 function pass(label){results.push(label);console.log('PASS',label);}
 async function focus(id){const s=await until(s=>s.gui.app?.frames,'desktop'),step=(s.gui.width-300)/s.expanded.capacity;await h.click(s.expanded.capacity===2?330+146*id:Math.round(300+step*(id+0.5)),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
 async function stop(id){const s=await focus(id),w=s.bitmaps[id].window;await h.click(w.x+230,w.y+48);return until(s=>s.expanded.slots[id].state===0,'End '+id);}
@@ -90,6 +91,6 @@ async function lifecycle(){
  await finished(vector,original);pass('Four image owners exit with exact XMS/DOS/vector/stack restoration and unchanged HDD');
  const floppyVector=await h.boot(null,h.legacy,16);await launcher();assert.deepEqual(last.bitmaps[0].pixels,Array.from(sample));await rendered();await finished(floppyVector,h.legacy,true);pass('The complete standalone FD also loads, renders and closes Images without an HDD');
 }
-try{if(suite==='paint')await paint();else await lifecycle();await writeFile(join(output,'bitmap-verification.json'),JSON.stringify({video,suite,source:m.source_commit,results},null,2)+'\n');}
+try{if(suite==='paint')await paint();else if(suite==='lifecycle')await lifecycle();else await imageSaveTests({suite,h,until,image,accepted,run,launcher,sample,hash,pass,original});await writeFile(join(output,'bitmap-verification.json'),JSON.stringify({video,suite,source:m.source_commit,results},null,2)+'\n');}
 catch(e){await writeFile(join(output,'bitmap-failure.json'),JSON.stringify({error:String(e),last:(await inspectBitmaps(h.page()).catch(()=>null))??last,results},null,2)+'\n');await h.fail(e);throw e;}
 finally{await h.close();}

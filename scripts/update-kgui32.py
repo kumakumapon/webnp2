@@ -227,7 +227,7 @@ def main():
                       'owner_generation_checked':True,'source_crop':True,'canvas_clip':True,
                       'viewer':'KGIMAGE.EXE','boundary_test':'KGBITBAD.EXE','sample':'SAMPLE.BMP',
                       'decoder':'bmp24-bi-rgb','edits':['invert','horizontal-flip','undo','reset','brush'],
-                      'disk_save':False,'compact_elf_file_alignment':16},
+                      'disk_save':True,'workspace_flag':2,'encoded_max_bytes':147510,'recovery':True,'compact_elf_file_alignment':16},
         'ime':{'version':1,'schemes':['romaji','jis-kana'],'scripts':['hiragana','katakana'],
                'conversion':'whole-reading-word','preedit_bytes':96,'candidate_limit':16,
                'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),
@@ -235,7 +235,7 @@ def main():
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
-        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE'],'widget_sdk':4,'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')

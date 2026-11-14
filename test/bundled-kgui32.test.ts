@@ -2,6 +2,7 @@ import {describe,it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {KGUI32_BOOT_URL,KGUI32_FD_BOOT_URL,KGUI32_HIGH_COLOR_BOOT_URL,KGUI32_PAIRED_BOOT_URL,KGUI32_EXPANDED_BOOT_URL,KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL} from '../src/bundled-kgui32';
+import {fullHdd,withHddFile,inspectHdd} from '../scripts/kgui32-hdd-fat.mjs';
 import {fatReadFile,fatList,fatFreeSpace,openDiskImage} from '../src/api/fat';
 const manifest=JSON.parse(readFileSync('public/kgui32/manifest.json','utf8'));
 describe('independent native PM32 GUI image',()=>{
@@ -46,7 +47,7 @@ describe('independent native PM32 GUI image',()=>{
   const jp=fatReadFile(openDiskImage(image,manifest.image),'JPDEMO.TXT');expect(new TextDecoder('shift_jis').decode(jp)).toContain('日本語');expect(new TextDecoder('shift_jis').decode(jp)).toContain('ｶﾅ');
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
-  expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:256,max_height:192,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:false,compact_elf_file_alignment:16});
+  expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:256,max_height:192,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:true,compact_elf_file_alignment:16});
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
@@ -88,7 +89,7 @@ describe('independent native PM32 GUI image',()=>{
   }
   const disk=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
   const sample=fatReadFile(disk,'SAMPLE.BMP');expect(sample[0]).toBe(66);expect(sample[1]).toBe(77);
-  const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(47);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
+  const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(239);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
   expect(manifest.application_distribution.legacy_fd_free_bytes).toBeGreaterThanOrEqual(8192);
  });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
@@ -120,6 +121,20 @@ describe('independent native PM32 GUI image',()=>{
   expect(d.fd_free_bytes).toBeGreaterThan(d.legacy_fd_free_bytes+65536);
   expect(fatFreeSpace(hd).free).toBe(d.hdd.initial_free_bytes);
   expect(d.hdd_boot_supported).toBe(false);
+ });
+
+ it('fills an HDD fixture without orphaning pre-existing Work files',()=>{
+  if(!manifest.enabled)return;
+  const original=readFileSync('public/kgui32/'+manifest.standalone_hdd.image);
+  const payload=Buffer.from('pre-existing BMP bytes');
+  const before=withHddFile(original,'NOTE.BMP',payload);
+  for(const directoryFull of [false,true]){
+   const after=inspectHdd(fullHdd(before,{directoryFull}));
+   expect(after.files.get('WORK/NOTE.BMP')).toEqual(payload);
+   expect(after.files.get('WORK/BASE.TXT')?.toString()).toBe('preserve me\n');
+   expect(after.files.get('WORK/NOTE.TXT')?.toString()).toBe('original on HDD\n');
+   expect(after.free).toBe(directoryFull?1:0);
+  }
  });
 
 });
