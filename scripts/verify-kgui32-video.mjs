@@ -11,7 +11,7 @@ assert.equal(m.dos_terminal_modes.gaiji_glyphs,188);assert.equal(m.dos_terminal_
 const original=await readFile(new URL('../public/kgui32/'+m.standalone_hdd.image,import.meta.url));
 let last;
 const slot=(s,id=0)=>s.video?.slots[id];
-const ready=(s,id=0)=>slot(s,id)?.consistent&&slot(s,id).meta.fontWrites===48&&s.cpu.views[id].state===2&&s.cpu.views[id].keys===0;
+const ready=(s,id=0)=>s.terminals?.slots[id]?.consistent&&slot(s,id)?.consistent&&slot(s,id).meta.fontWrites===48&&s.cpu.views[id].state===2&&s.cpu.views[id].keys===0;
 async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectVideo(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+'; see video-failure.json');}
 async function start(id=0,variant=1){
  let s=await h.inspect();await h.click(s.gui.width-280+id*92,15);await h.until(s=>s.cpu.views[id].state===2,'DOS shell '+id);await h.focus(id);await h.key('CTRL+E');await h.until(s=>s.cpu.views[id].state===0,'End shell '+id);
@@ -38,8 +38,10 @@ async function pixels(id=0){
   return [0,0,0];
  }
  for(let i=0;i<points.length;i++){
-  const p=points[i],rgb=want(p.sx,p.sy).map((c,k)=>video==='pegc'?Math.floor((c+25)/51)*51:Math.floor(c/(k===1?4:8))*255/(k===1?63:31));
-  for(let k=0;k<3;k++)assert(Math.abs(got[i][k]-rgb[k])<=3,`Canvas ${id} ${p.sx},${p.sy} channel ${k}: ${got[i]} vs ${rgb}`);assert.equal(got[i][3],255);
+  // PEGC uses a 6-level palette through a 6-bit DAC; the emulator
+  // then presents RGB565. Cirrus receives native RGB565 directly.
+  const p=points[i],rgb=want(p.sx,p.sy).map((c,k)=>{const q=video==='pegc'?(Math.floor((c+25)/51)*51)&252:c;return Math.floor(q/(k===1?4:8))*255/(k===1?63:31);});
+  for(let k=0;k<3;k++)assert(Math.abs(got[i][k]-rgb[k])<=2,`Canvas ${id} ${p.sx},${p.sy} channel ${k}: ${got[i]} vs ${rgb}`);assert.equal(got[i][3],255);
  }
 }
 async function finish(vector,bytes=original,fd=false){assert.equal(sha(await h.disk(fd?'fd1':'hdd')),sha(bytes));const s=await h.exit(vector);assert.equal(s.gui.stackGuard,1);await h.unchangedFd();await h.closeContext();}
