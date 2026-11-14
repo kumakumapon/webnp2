@@ -13,6 +13,14 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
    b[at]=blue<<3|blue>>2;b[at+1]=g<<2|g>>4;b[at+2]=r<<3|r>>2;
   }return b;
  };
+ async function start(id,command){
+  const before=await until(s=>s.gui.app?.frames,'desktop before DOS launcher');
+  const generation=before.expanded.slots[id].generation;
+  await h.key('F2');await h.click(130,230);
+  await until(s=>s.expanded.slots[id].generation!==generation&&s.expanded.slots[id].state===2,'owned DOS launcher '+id);
+  await h.focus(id);await h.key('CTRL+E');await until(s=>s.expanded.slots[id].state===0,'end DOS launcher '+id);
+  return run(id,command);
+ }
  const modal=(s,id=0)=>image(s,id)?.[15]>>>4;
  async function waitImage(id=0){return until(s=>accepted(s,id),'real image '+id);}
  async function change(id,key,want){await h.focus(id);const before=(await waitImage(id)).bitmaps[id].hash;await h.key(key);return until(s=>accepted(s,id)&&image(s,id)[8]===hash(want)&&s.bitmaps[id].hash!==before,'image edit '+id);}
@@ -29,20 +37,20 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
   await change(0,'u',sample);assert.equal(image(await waitImage())[14],1);await h.key('q');await until(s=>modal(s)===3,'unsaved Close prompt');await h.key('ESC');await until(s=>modal(s)===0&&image(s)[14]===1,'cancel Close keeps pixels');await change(0,'u',inverse);
   await name('SAMPLE.BMP');const before=sha(await h.disk('hdd'));await h.key('CTRL+S');await until(s=>modal(s)===1,'explicit replace confirmation');await h.key('ESC');await until(s=>modal(s)===0,'cancel replace');assert.equal(sha(await h.disk('hdd')),before);
   await h.key('CTRL+S');await until(s=>modal(s)===1,'replace requires confirmation again');await h.key('r');await until(s=>modal(s)===0&&!image(s)[13],'explicit Replace');assert.deepEqual(inspectHdd(await h.disk('hdd')).files.get('WORK/SAMPLE.BMP'),bmp(inverse));
-  await workOpen('EDIT.BMP');await run(1,'KGIMAGE.EXE work EDIT.BMP');await waitImage(1);
+  await workOpen('EDIT.BMP');await start(1,'KGIMAGE.EXE work EDIT.BMP');await waitImage(1);
   await change(1,'h',flipped);await save(1);disk=await h.disk('hdd');assert.deepEqual(inspectHdd(disk).files.get('WORK/EDIT.BMP'),bmp(flipped));
   await change(0,'i',sample);await h.key('CTRL+S');let s=await until(s=>image(s)?.[13]===116,'stale BMP revision rejected');
   assert.equal(image(s)[8],hash(sample));assert.equal(image(s)[14],1);assert.equal(s.expanded.slots[0].pm.openFiles,0);assert.equal(sha(await h.disk('hdd')),sha(disk));
   await h.shot('bmp-conflict.png');disk=await finish(vector,fixture);
-  let next=await h.bootHdd(disk);await run(0,'KGIMAGE.EXE work EDIT.BMP');s=await until(s=>accepted(s)&&image(s)[8]===hash(flipped),'exported BMP cold boot');assert.equal(image(s)[14],0);assert.equal(sha(await h.disk('hdd')),sha(disk));await finish(next,disk);
+  let next=await h.bootHdd(disk);await start(0,'KGIMAGE.EXE work EDIT.BMP');s=await until(s=>accepted(s)&&image(s)[8]===hash(flipped),'exported BMP cold boot');assert.equal(image(s)[14],0);assert.equal(sha(await h.disk('hdd')),sha(disk));await finish(next,disk);
   pass('Actual BMP save, Undo retained across commit, explicit replace/cancel, two-owner conflict, exact FAT bytes and exported-image cold boot');
   const wide=Uint16Array.from({length:256*192},(_,i)=>i*137&65535),wideBytes=bmp(wide,256,192),wideFixture=withHddFile(original,'MAX.BMP',wideBytes);
-  assert.equal(wideBytes.length,147510);next=await h.bootHdd(wideFixture);await run(0,'KGIMAGE.EXE work MAX.BMP');await until(s=>accepted(s)&&image(s)[8]===hash(wide),'maximum BMP loaded');
+  assert.equal(wideBytes.length,147510);next=await h.bootHdd(wideFixture);await start(0,'KGIMAGE.EXE work MAX.BMP');await until(s=>accepted(s)&&image(s)[8]===hash(wide),'maximum BMP loaded');
   const edited=wide.map(v=>v^65535);await change(0,'i',edited);await save();const result=await h.disk('hdd');assert.deepEqual(assertHddProtected(wideFixture,result).files.get('WORK/MAX.BMP'),bmp(edited,256,192));assert.equal(inspectHdd(result).chains.get('WORK/MAX.BMP').length,37);await finish(next,wideFixture);
   pass('Maximum 147510-byte BMP is loaded, edited, atomically replaced and read from independently validated FAT16 allocation');
  }else{
   let fixture=withHddFile(original,'NOTE.BMP',bmp(sample));fixture=withHddFile(fixture,'NOTE.TMP',bmp(inverse));fixture=withHddFile(fixture,'NOTE.BAK',bmp(sample));
-  const vector=await h.bootHdd(fixture);await run(0,'KGIMAGE.EXE work NOTE.BMP');await waitImage();await change(0,'i',inverse);await h.key('CTRL+S');await until(s=>image(s)?.[13]===117,'existing BAK blocks save');assert.equal(sha(await h.disk('hdd')),sha(fixture));
+  const vector=await h.bootHdd(fixture);await start(0,'KGIMAGE.EXE work NOTE.BMP');await waitImage();await change(0,'i',inverse);await h.key('CTRL+S');await until(s=>image(s)?.[13]===117,'existing BAK blocks save');assert.equal(sha(await h.disk('hdd')),sha(fixture));
   await h.key('CTRL+R');await until(s=>modal(s)===2,'BMP recovery inspect');await h.control(0,84);await until(s=>modal(s)===4,'TMP validated without replacing live pixels');
   await h.input(0,50,88,'NOTE.BMP');await h.key('ENTER');await until(s=>image(s)?.[13]===17,'restore refuses occupied destination');assert.equal(sha(await h.disk('hdd')),sha(fixture));
   await h.input(0,50,88,'RESCUED.BMP');await h.key('ENTER');let s=await until(s=>modal(s)===0&&!image(s)[13],'explicit BMP recovery');assert.equal(image(s)[8],hash(inverse));assert.equal(image(s)[14],1);
@@ -53,7 +61,7 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
    if(mode==='full')before=fullHdd(before);
    else if(mode==='protected')before=withHddFile(before,'LOCKED.BMP',bmp(sample),33);
    else before=withHddFile(before,'NOTE.TMP',Buffer.from('invalid BMP candidate'));
-   const v=await h.bootHdd(before);await run(0,'KGIMAGE.EXE work NOTE.BMP');await waitImage();await change(0,'i',inverse);
+   const v=await h.bootHdd(before);await start(0,'KGIMAGE.EXE work NOTE.BMP');await waitImage();await change(0,'i',inverse);
    if(mode==='protected')await name('LOCKED.BMP');
    if(mode==='invalid'){await h.key('CTRL+R');await until(s=>modal(s)===2,'invalid candidate inspection');await h.control(0,84);}
    else await h.key('CTRL+S');
