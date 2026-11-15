@@ -6,8 +6,8 @@ import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
 import {inspectProcess} from './process32-inspect.mjs';
 import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 export {sha,fnv};
-export async function practicalHarness(base,output,video){
- const h=await toolsHarness(base,output,video),proof=[],results=[];
+export async function practicalHarness(base,output,video,options={}){
+ const h=await toolsHarness(base,output,video,options),proof=[],results=[];
  const original=await readFile(new URL('../public/kgui32/'+h.manifest.standalone_hdd.image,import.meta.url));
  let last;
  async function inspect(){
@@ -55,6 +55,13 @@ export async function practicalHarness(base,output,video){
  async function cleanup(vector,keepContext=false){await stopAll();const s=await until(s=>s.native.broker.owners.every(o=>!o.handles),'all broker handles closed');assert.equal(s.native.broker.stackOk,1);const done=await h.exit(vector);assert.equal(done.gui.stackGuard,1);assert.equal(done.gui.cpu.freeBefore,done.gui.cpu.freeAfter);await h.unchangedFd();if(!keepContext)await h.closeContext();}
  function pass(label,data){results.push(label);if(data)proof.push({label,data});console.log('PASS',label);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:h.manifest.source_commit,results,proof},null,2)+'\n');}
- async function fail(e){await writeFile(join(output,'practical-failure.json'),JSON.stringify({error:String(e),last,results},null,2)+'\n');await h.fail(e);}
+ async function fail(e){
+  if(last?.gui?.cpu)last.guiTrace=await h.page().evaluate(({pd,frame})=>{
+   const n=window.np2debug.np2,heap=window.Module.HEAPU8,base=window.kguiTerminalXmsBacking;
+   const raw=atob(n.readMemoryBase64(pd+8192,4096).base64),d=o=>(raw.charCodeAt(o)|raw.charCodeAt(o+1)<<8|raw.charCodeAt(o+2)<<16|raw.charCodeAt(o+3)<<24)>>>0;
+   const read=(address,count)=>{const out=[];for(let i=0;i<count;i++){const v=address+i;if(v<0x800000||v>=0xc00000)return null;const p=d(((v-0x800000)>>>12)*4);if(!(p&1))return null;const at=base+(p&0xfffff000)+(v&4095);if(at<0||at>=heap.length)return null;out.push(heap[at]);}return out;};
+   return {frame,instructions:read(frame.eip,64),stack:read(frame.esp,Math.min(512,0xc00000-frame.esp))};
+  },{pd:last.gui.cpu.pd,frame:last.gui.cpu.frame}).catch(error=>({error:String(error)}));
+  await writeFile(join(output,'practical-failure.json'),JSON.stringify({error:String(e),last,results},null,2)+'\n');await h.fail(e);}
  return {h,original,inspect:()=>until(()=>true,'coherent snapshot'),until,samples,focus,launch,end,run,control,appKey,appType,cleanup,pass,finish,fail,last:()=>last};
 }

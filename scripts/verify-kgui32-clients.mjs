@@ -74,7 +74,7 @@ try{
  await click(330,height-16);await composed(2);
  await point(368,336);await button(1);await point(408,320);await button(0);await drain(20,height-48,2);
  s=await until(s=>live(s,0,0x3243474b)&&s.apps[0].width===384&&s.apps[0].height===184,'client resize event and redraw');assert.equal(s.apps[0].value,64);
- await point(70,52);await button(1);await point(101,63);await button(0);await drain(20,height-48,2);
+ await point(120,52);await button(1);await point(151,63);await button(0);await drain(20,height-48,2);
  await type('c6*7=');s=await until(s=>s.apps[0].value===42&&s.apps[0].error===0,'keys after graphical window move');
  await composed(2);
  assert.deepEqual(await glyphs(71,134),initial42,'resized and moved calculator must display the same 42 glyphs');

@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         video: [pegc, cirrus]
-        suite: [runtime, io, surfaces, images, ime, process2, process4, shell, dos-pages]
+        suite: [runtime, io, surfaces, images, ime, process2, process4, shell, dos-pages, menus]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

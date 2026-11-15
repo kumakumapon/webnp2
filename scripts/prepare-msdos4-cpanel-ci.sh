@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_commit=76320cb2a4ddbc570b538a5040424909678a5fc9
+source_commit=7e2ac1a3f016c17fcc7162619e073ca8fb32cf95
 source_dir="$(mktemp -d)"
 trap 'rm -rf "$source_dir"' EXIT
 
@@ -42,3 +42,6 @@ python3 scripts/update-kgui32.py "$source_dir"
 # Preserve exact symbol-matched SDK diagnostics before removing the source tree.
 mkdir -p test-results/practical32-sdk
 cp "$source_dir/tools/k38632/build/PRACT32.debug.json" "$source_dir/tools/k38632/build/practical.ext.elf" "$source_dir/tools/k38632/build/PRACT32.EXE" test-results/practical32-sdk/
+
+# Exact GUI code/symbols for CPU-frame diagnosis in Actions artifacts.
+cp "$source_dir/tools/kgui32/build/desktop.elf" "$source_dir/tools/kgui32/build/KGUI32.EXE" test-results/practical32-sdk/

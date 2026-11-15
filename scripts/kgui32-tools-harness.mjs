@@ -8,7 +8,7 @@ import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 export const sha=b=>createHash('sha256').update(b).digest('hex');
 export const fnv=b=>{let h=2166136261;for(const c of Buffer.from(b))h=Math.imul(h^c,16777619)>>>0;return h;};
-export async function toolsHarness(base,output,video){
+export async function toolsHarness(base,output,video,options={}){
  assert(['pegc','cirrus'].includes(video));await mkdir(output,{recursive:true});
  const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url))),distribution=manifest.application_distribution;assert(distribution);
  const root=new URL('../public/kgui32/',import.meta.url),fd=await readFile(new URL(distribution.image,root)),hdd=await readFile(new URL(distribution.hdd.image,root)),legacy=await readFile(new URL(manifest.image,root));
@@ -43,7 +43,7 @@ export async function toolsHarness(base,output,video){
   for(const c of value){text+=c;await type(c);await until(s=>shown(s)===text,'input character '+id+' '+text.length);}
  }
  async function boot(bytes=hdd,floppy=fd,memory=16){
-  ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=floppy;page.on('pageerror',e=>errors.push(e.message));
+  ctx=await browser.newContext({viewport:options.viewport??{width:1280,height:1000},hasTouch:!!options.touch});page=await ctx.newPage();errors=[];fdBefore=floppy;page.on('pageerror',e=>errors.push(e.message));
   if(bytes)await page.route('**/kgui32/'+distribution.hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
   if(!floppy.equals(fd))await page.route('**/kgui32/'+distribution.image,r=>r.fulfill({body:floppy,contentType:'application/octet-stream'}));
   await page.goto(new URL(`?fd1=./kgui32/${distribution.image}${bytes?'&hdd=./kgui32/'+distribution.hdd.image:''}&run=1&mem=${memory}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
@@ -53,7 +53,7 @@ export async function toolsHarness(base,output,video){
  async function bootHdd(bytes,ready=true,memory=16){
   const profile=manifest.standalone_hdd;assert(profile?.hdd_boot_supported);
   if(bytes===undefined)bytes=await readFile(new URL(profile.image,root));
-  ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];fdBefore=null;page.on('pageerror',e=>errors.push(e.message));
+  ctx=await browser.newContext({viewport:options.viewport??{width:1280,height:1000},hasTouch:!!options.touch});page=await ctx.newPage();errors=[];fdBefore=null;page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/kgui32/'+profile.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
   await page.goto(base);
   const choice=page.locator(memory===32?(video==='cirrus'?'.start-btn-kgui32-expanded-highcolor':'.start-btn-kgui32-expanded'):(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32'));

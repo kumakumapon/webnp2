@@ -56,6 +56,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
   expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:384,max_height:256,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:true,compact_elf_file_alignment:16});
+  expect(manifest.window_menu).toMatchObject({version:1,activation:'titlebar-left-tap',right_click_required:false,paged:true,modal_commands_disabled:true,item_height:36});expect(manifest.window_menu.apps).toHaveLength(6);expect(manifest.utility_apps.calculator_memory).toEqual(['add','subtract','recall','clear']);expect(manifest.utility_apps.clock_stopwatch.resolution_seconds).toBe(1);
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
