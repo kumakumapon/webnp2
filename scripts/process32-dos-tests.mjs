@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {inspectVideo} from './kgui32-video-inspect.mjs';
-import {sha} from './practical32-harness.mjs';
+import {sha,fnv} from './practical32-harness.mjs';
 export async function dosPageTests(p,video){
  const {h}=p;let last;
  async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectVideo(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+' '+JSON.stringify(last?.video));}
@@ -10,7 +10,7 @@ export async function dosPageTests(p,video){
  async function pixels(id,index){const s=await until(s=>ready(s,id),'display cache coherent'),v=slot(s,id),r=s.terminals.slots[id].window;await h.point(10,s.gui.height-48);await h.shot('dos-page-'+id+'-'+index+'.png');let width=Math.floor((r.w-16)/8)*8,height=Math.floor((r.h-104)/16)*16;if(width*400>height*640)width=Math.floor(height*640/400);else height=Math.floor(width*400/640);
  const actual=await h.page().evaluate(({x,y,width,height})=>{const src=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=src.width;c.height=src.height;const g=c.getContext('2d');g.drawImage(src,0,0);return Array.from(g.getImageData(x,y,width,height).data);},{x:r.x+8,y:r.y+70,width,height});const rgb=v.meta.palette[index].map(c=>c*17).map((c,k)=>{const q=video==='pegc'?(Math.floor((c+25)/51)*51)&252:c;return Math.floor(q/(k===1?4:8))*255/(k===1?63:31);});for(let i=0;i<actual.length;i++)assert(i%4===3?actual[i]===255:Math.abs(actual[i]-rgb[i%4])<=2,'every displayed pixel agrees with private page palette');}
  const vector=await h.bootHdd();let s=await start();assert.equal(s.video.helper.stackGuard,1);assert.equal(slot(s).meta.flags&3,2);assert.equal(slot(s).meta.flags&64,64);assert.equal(slot(s).meta.flags&128,0);assert.deepEqual(slot(s).sample.map(a=>a.slice(0,4)),[[255,255,255,255],[0,0,0,0],[0,0,0,0],[0,0,0,0]]);await pixels(0,1);
- s=await key('1',v=>!!(v.meta.flags&128));assert.deepEqual(slot(s).sample[2].slice(0,4),[255,255,255,255]);await pixels(0,4);const displayed=slot(s).planeHashes;
+ s=await key('1',v=>!!(v.meta.flags&128));assert.deepEqual(slot(s).sample[2].slice(0,4),[255,255,255,255]);assert.deepEqual(slot(s).sample[3].slice(0,4),[165,165,165,165]);assert.equal(slot(s).pages[1][3].hash,fnv(Buffer.concat([Buffer.alloc(32000,165),Buffer.alloc(768)])));await pixels(0,4);const displayed=slot(s).planeHashes;
  s=await key('a',v=>!(v.meta.flags&64)&&v.pages[0][0].sample[0]===0);assert.deepEqual(slot(s).planeHashes,displayed);assert.equal(slot(s).pages[0][0].sample[1],0);assert.equal(slot(s).pages[0][0].sample[2],255);assert(slot(s).privatePages.every(p=>(p.pte&7)===7));await pixels(0,4);
  await key('0',v=>!(v.meta.flags&128)&&v.sample[0][0]===0);s=await key('1',v=>!!(v.meta.flags&128));p.pass('Actual V86 IN/OUT AX, preserved EAX high word, BIOS graphics mode, two complete private VRAM pages, independent A6 access/A4 display, CPU cache hashes and every visible Canvas pixel agree');
  const first=slot(s).origin;await start(1);s=await until(s=>ready(s,0)&&ready(s,1),'two real V86 owners');assert.notEqual(first,slot(s,1).origin);assert.notEqual(slot(s).cr3,slot(s,1).cr3);assert.equal(slot(s).pages[0][0].sample[0],0);assert.equal(slot(s,1).pages[0][0].sample[0],255);

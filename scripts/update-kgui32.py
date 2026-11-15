@@ -234,7 +234,7 @@ def main():
         'fd_omitted_diagnostics':list(FD_OMITTED_DIAGNOSTICS),
         'process_api':{'version':1,'feature':512,'helper':'K32PROC.EXE','shell':'KSH32.EXE','tools':'KTOOL32.EXE','diagnostics':['PROCTEST.EXE','KPRUN.COM'],'gui_independent':True,'records':8,'root_records':4,'child_records':4,'parent_owns_children':True,'generation_checked':True,'orphan_cancellation':True,'message_bytes':64,'message_slots':4,'pipes':4,'pipe_bytes':512,'stream_chunk_bytes':256,'shell_pipeline_commands':2,'shell_line_bytes':126,'redirection_max_bytes':1048576,'retains_original_on_failure':True},
         'dos_terminal_modes':{'version':2,'helper':'KV98VID.EXE','diagnostic':'KVTERM.COM',
-            'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':262144,'graphics_pages':2,'independent_access_display_pages':True,'backing_bytes':1081344,'extended_diagnostic':'KVEXT.COM','bios18_functions':[10,11,12,13,14,17,18,19,22,64,65,66],'keyboard_functions':[0,1,2,3,5],'word_io_ports':[96,98,160,162,164,166],'denied_io_widths':[32],
+            'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':262144,'graphics_pages':2,'independent_access_display_pages':True,'backing_bytes':950272,'private_glyph_offset':675840,'extended_diagnostic':'KVEXT.COM','bios18_functions':[10,11,12,13,14,17,18,19,22,64,65,66],'keyboard_functions':[0,1,2,3,5],'word_io_ports':[96,98,160,162,164,166],'denied_io_widths':[32],
             'graphics_max_width':640,'graphics_max_height':400,'graphics_colors':16,
             'semigraphics':True,'snapshot_chunk_bytes':848,'read_only':True},
         'dos_terminal':{'version':2,'columns':80,'rows':25,'character_plane':'pc98-tvram-u16',
