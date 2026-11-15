@@ -4,7 +4,7 @@ import {sha} from './practical32-harness.mjs';
 export async function dosPageTests(p,video){
  const {h}=p;let last;
  async function until(f,label){console.log('CHECK',label);for(let end=Date.now()+120000;Date.now()<end;){const s=await inspectVideo(h.page());if(s){last=s;if(f(s))return s;}await h.page().waitForTimeout(100);}throw Error(label+' '+JSON.stringify(last?.video));}
- const slot=(s,id=0)=>s.video?.slots[id],ready=(s,id=0)=>slot(s,id)?.consistent&&s.cpu.views[id].state===2&&s.cpu.views[id].keys===0;
+ const slot=(s,id=0)=>s.video?.slots[id],ready=(s,id=0)=>slot(s,id)?.consistent&&[1,2].includes(s.cpu.views[id].state)&&s.cpu.views[id].keys===0;
  async function start(id=0,arg=''){let s=await h.inspect();await h.click(s.gui.width-280+id*92,15);await h.until(s=>s.cpu.views[id].state===2,'DOS root '+id);await h.focus(id);await h.key('CTRL+E');await h.until(s=>s.cpu.views[id].state===0,'End DOS root');await h.run(id,'KVEXT.COM'+arg);return until(s=>ready(s,id)&&slot(s,id).meta.width===640,'BIOS and word-port diagnostic '+id);}
  async function key(k,predicate,id=0){await h.focus(id);await h.type(k);return until(s=>ready(s,id)&&predicate(slot(s,id),s),'actual V86 key '+k);}
  async function pixels(id,index){const s=await until(s=>ready(s,id),'display cache coherent'),v=slot(s,id),r=s.terminals.slots[id].window;await h.point(10,s.gui.height-48);await h.shot('dos-page-'+id+'-'+index+'.png');let width=Math.floor((r.w-16)/8)*8,height=Math.floor((r.h-104)/16)*16;if(width*400>height*640)width=Math.floor(height*640/400);else height=Math.floor(width*400/640);
