@@ -1,6 +1,6 @@
 // Actions-only acceptance: real single-finger Canvas taps, never RAM writes.
 import assert from 'node:assert/strict';
-import {sha} from './practical32-harness.mjs';
+import {sha,fnv} from './practical32-harness.mjs';
 const ITEM=24576,BACK=24608,NEXT=24610;
 export async function menuTests(p,video){
  const {h,until,samples}=p;assert.equal(h.manifest.window_menu.right_click_required,false);
@@ -32,6 +32,7 @@ export async function menuTests(p,video){
  await control(0,99);await until(s=>samples(s)[6]===0,'clear calculation preserves memory');
  await choose(0,2);await until(s=>samples(s)[6]===42,'paged touch memory recall');
  await choose(0,3);await choose(0,4);await choose(0,2);await until(s=>samples(s)[6]===0,'touch memory clear');
+ await h.key('F1');await until(s=>draws(s,0).some(d=>d.handle===BACK),'keyboard F1 opens menu');await h.key('TAB');await until(s=>s.gui.app.active===2&&draws(s,0).some(d=>d.handle===BACK),'Tab belongs to the open menu');await h.key('ESC');await until(s=>!draws(s,0).some(d=>d.handle===BACK),'Esc closes keyboard menu');
  p.pass('390px browser: single-finger launcher/titlebar menu, paged memory add/recall/clear and normal calculator controls', {video});
  await welcome(292,192);await until(s=>samples(s,1)[0]===0x324b474b&&samples(s,1)[2]>0,'second real clock owner');
  await choose(1,1);await until(s=>samples(s,1)[14]===1,'touch stopwatch mode');await control(1,115);
@@ -43,7 +44,8 @@ export async function menuTests(p,video){
  p.pass('Independent clock/stopwatch starts, advances through a menu, stops and resets with only visible taps');
  await choose(0,5);await until(s=>s.expanded.slots[0].state===0,'calculator menu close');
  await welcome(130,266);await until(s=>samples(s)[0]===0x3345474b&&samples(s)[2]>0,'touch Editor launcher');
- await p.appType(0,'menu memo');let s=await p.inspect();const hash=samples(s)[5];assert.equal(samples(s)[8],1);
+ await p.appType(0,'menu memo');let s=await until(s=>samples(s)[4]===9&&samples(s)[5]===fnv('menu memo'),'all actual text bytes acknowledged');const hash=samples(s)[5];assert.equal(samples(s)[8],1);
+ const r=s.bitmaps[0].window;await tap(r.x+17,r.y+118);await until(s=>samples(s)[6]===0&&samples(s)[7]===0,'touch selection start');await choose(0,7);await tap(r.x+49,r.y+118);await until(s=>samples(s)[6]===4&&samples(s)[7]===0&&samples(s)[5]===hash,'selection mode uses a tapped endpoint');await choose(0,7);
  await choose(0,6);await until(s=>samples(s)[6]!==samples(s)[7],'touch select all');
  await choose(0,8);await until(s=>!draws(s,0).some(d=>d.handle===BACK),'touch copy');
  await choose(0,14);await until(s=>draws(s,0).some(d=>d.text?.includes('CRLF')),'touch CRLF');
