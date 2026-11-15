@@ -1,5 +1,7 @@
 # KGUI32 graphical client SDK
 
+現在のタップ操作とアプリ拡充は [ウインドウメニュー](kgui32-window-menu.md) を参照してください。
+
 KGUI32のWelcome画面から、独立した32bitアプリの電卓・時計・DOS Shellを起動できます。
 現在の共通文字描画は[日本語表示・Shift-JIS読書](kgui32-japanese.md)にも対応します。
 以下は初版クライアントSDK時点の構成・制限を記録しています。部品、クリップボード、

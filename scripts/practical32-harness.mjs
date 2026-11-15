@@ -6,8 +6,8 @@ import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
 import {inspectProcess} from './process32-inspect.mjs';
 import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 export {sha,fnv};
-export async function practicalHarness(base,output,video){
- const h=await toolsHarness(base,output,video),proof=[],results=[];
+export async function practicalHarness(base,output,video,options={}){
+ const h=await toolsHarness(base,output,video,options),proof=[],results=[];
  const original=await readFile(new URL('../public/kgui32/'+h.manifest.standalone_hdd.image,import.meta.url));
  let last;
  async function inspect(){
