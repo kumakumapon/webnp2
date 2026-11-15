@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {writeFile,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
+import {inspectProcess} from './process32-inspect.mjs';
 import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 export {sha,fnv};
 export async function practicalHarness(base,output,video){
@@ -39,7 +40,7 @@ export async function practicalHarness(base,output,video){
     return Array.from({length:30},(_,i)=>u(i*4));
    });
   },s.expanded.slots);
-  last=s;return s;
+  s.process=await inspectProcess(h.page());last=s;return s;
  }
  async function until(f,label,timeout=120000){console.log('CHECK',label);let error;for(let end=Date.now()+timeout;Date.now()<end;){const s=await inspect().catch(e=>{error=String(e);return null;});if(s&&f(s))return s;await h.page().waitForTimeout(100);}throw Error(label+' '+JSON.stringify({error,slots:last?.expanded.slots.map(s=>({id:s.id,state:s.state,pm:s.pm})),native:last?.native}));}
  const samples=(s,id=0)=>s.expanded.slots[id].pm?.samples??[];

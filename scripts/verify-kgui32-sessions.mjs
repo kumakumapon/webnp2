@@ -122,4 +122,9 @@ try{
  pass('mixed-session teardown reclaims conventional/XMS memory and preserves every FAT12 byte');
  assert.equal(hash(await disk()),manifest.sha256);assert.deepEqual(errors,[]);
  await writeFile(join(output,'verification.json'),JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,image:manifest.image,sha256:manifest.sha256,video,results,snapshots},null,2)+'\n');
-}catch(e){await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),gui:await inspectGUI(page).catch(()=>null),peers:await inspectK386(page).catch(()=>null),results,snapshots},null,2)+'\n');await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw e;}finally{await browser.close();}
+}catch(e){const native=await page.evaluate(()=>{
+ const b=atob(window.np2debug.np2.readMemoryBase64(0x10000,0x90000).base64),w=o=>b.charCodeAt(o)|b.charCodeAt(o+1)<<8,d=o=>(w(o)|w(o+2)<<16)>>>0;let host=null,manager=null;
+ for(let i=b.indexOf('K32HOST1');i>=0;i=b.indexOf('K32HOST1',i+1))if(w(i+8)===1&&w(i+10)===7584&&w(i+12)===1)host={address:i+0x10000,failure:Object.fromEntries([12,16,24,28,32,40,56,68,142,156,576,580,820].map(o=>[o,d(i+6560+o)]))};
+ for(let i=b.indexOf('K32MUX02');i>=0;i=b.indexOf('K32MUX02',i+1))if(w(i+8)===2&&w(i+10)===264&&w(i+12)===1)manager={address:i+0x10000,error:w(i+14),command:w(i+16),slot:w(i+18)};
+ return {host,manager};
+ }).catch(()=>null);await writeFile(join(output,'failure.json'),JSON.stringify({native,error:String(e),gui:await inspectGUI(page).catch(()=>null),peers:await inspectK386(page).catch(()=>null),results,snapshots},null,2)+'\n');await page.screenshot({path:join(output,'failure.png')}).catch(()=>{});throw e;}finally{await browser.close();}

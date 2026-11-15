@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {withHddFile,assertHddProtected,fullHdd} from './kgui32-hdd-fat.mjs';
+import {inspectTransfer} from './process32-inspect.mjs';
 import {bitmap,encode565} from './practical32-fixtures.mjs';
 import {fnv,sha} from './practical32-harness.mjs';
 const pixelHash=p=>{const b=Buffer.alloc(p.length*2);p.forEach((v,i)=>b.writeUInt16LE(v,i*2));return fnv(b);};
@@ -21,13 +22,20 @@ export async function imageTests(p,video,suite='images'){
   for(let row=t;row<bottom;row++)for(let col=l;col<r;col++){const sx=(d.color&65535)+Math.floor((col-x)*sourceWidth/d.w),sy=(d.color>>>16)+Math.floor((row-y)*sourceHeight/d.h);want.push(...rgba(image.pixels[sy*image.width+sx],video));}
   let actual;for(let deadline=Date.now()+30000;Date.now()<deadline;){actual=await h.page().evaluate(({x,y,w,h})=>{const src=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=src.width;c.height=src.height;const g=c.getContext('2d');g.drawImage(src,0,0);return Array.from(g.getImageData(x,y,w,h).data);},{x:l,y:t,w:width,h:height});if(actual.length===want.length&&actual.every((v,i)=>i%4===3?v===want[i]:Math.abs(v-want[i])<=1))return;await h.page().waitForTimeout(100);}assert.deepEqual(actual,want,'actual visible Canvas pixels');
  }
+ const transportBefore=await inspectTransfer(h.page(),s.gui.owner),started=Date.now();assert(transportBefore);
  for(let id=0;id<owners;id++){await p.launch('image',id);await p.end(id);await p.run(id,'KGIMAGE.EXE work LARGE.BMP');await accepted(id,large.pixels);}
  s=await p.inspect();assert.equal(s.bitmaps[0].surfacesVersion,2);assert.equal(s.bitmaps[0].surfaceBudget,1835008);assert.equal(new Set(s.expanded.slots.slice(0,owners).map(s=>s.physical)).size,owners);assert(s.bitmaps.slice(0,owners).every(b=>b.width===384&&b.height===256));assert.equal(s.gui.cpu.heapPages,0);
  for(let id=0;id<owners;id++){await rendered(id);assert.deepEqual((await p.inspect()).bitmaps[id].pixels,large.pixels);}
  p.pass(stress?'Four independent 384x256 CPU-decoded surfaces fit the unchanged 4 MiB desktop and 32 MiB profile; all cached pixels and focused Canvas rectangles match independent BMP decoding':'A maximum 384x256 surface has exact CPU-decoded bytes and visible Canvas pixels in the default 16 MiB profile',{surfaceBudget:s.bitmaps[0].surfaceBudget,owners:s.expanded.slots.slice(0,owners).map(s=>({physical:s.physical,pd:s.pd}))});
  if(stress){
-  const before=await p.inspect(),inverted=large.pixels.map(v=>v^65535);await p.appKey(3,'i',600000);await accepted(3,inverted);await rendered(3);s=await p.inspect();
+  const before=await p.inspect(),inverted=large.pixels.map(v=>v^65535);await p.focus(3);
+  // A small 64x48 image can now finish before one browser observation. Require
+  // actual partial-front preservation on the full 196608-byte replacement.
+  await h.page().evaluate(()=>window.np2debug.np2.sendKeys('i'));let partial=false;
+  await until(s=>{const b=s.bitmaps[3];assert.notEqual(s.expanded.slots[3].state,4);if(b?.valid&&b.native.uploaded>0&&b.native.uploaded<196608){assert.equal(b.hash,before.bitmaps[3].hash,'old complete front survives a real partial maximum-size transfer');partial=true;}return b?.consistent&&b.hash===pixelHash(inverted)&&samples(s,3)[8]===b.hash;},'atomic maximum-size fourth-owner replacement',600000);assert(partial,'observe a real partial maximum-size replacement');
+  await rendered(3);s=await p.inspect();
   for(let id=0;id<3;id++){assert.deepEqual(s.bitmaps[id].pixels,large.pixels);assert.equal(s.expanded.slots[id].generation,before.expanded.slots[id].generation);assert(s.expanded.slots[id].usage.runs>before.expanded.slots[id].usage.runs);}
+  const transportAfter=await inspectTransfer(h.page(),s.gui.owner),elapsedMs=Date.now()-started,delta=Object.fromEntries(Object.keys(transportAfter).map(k=>[k,(transportAfter[k]-transportBefore[k])>>>0]));assert(delta.statusRequests>0);assert(delta.uploads>0);assert(delta.statusBytes>=delta.statusRequests*72&&delta.statusBytes<=delta.statusRequests*144);assert(delta.uploadBytes>=delta.uploads*3144&&delta.uploadBytes<=delta.uploads*3216);p.pass('Real partial uploads preserve the previous complete front; measured live large-image traffic uses 72-byte status/control replies and at most 3216 bytes per upload; original 3144-byte ABI, pixels, peers and acknowledgements remain exact',{delta,elapsedMs,statusOldBytesPerRequest:6288,uploadOldBytesPerRequest:6288});
   assert.equal(sha(await h.disk('hdd')),sha(fixture));await p.cleanup(vector);p.pass('Editing the fourth maximum-size owner changes only its pixels while all three peers retain their complete private images and continue execution; all four owners reclaim XMS/DOS/guards with unchanged media');return;
  }
  const baseline=samples(await p.inspect(),0).slice(8,16);await p.appKey(0,'+');await until(s=>s.appRaw[0]?.[16]===200,'200 percent zoom');await rendered(0);await p.appKey(0,'+');await until(s=>s.appRaw[0]?.[16]===400,'400 percent zoom');await rendered(0);await p.appKey(0,'-');await p.appKey(0,'-');await p.appKey(0,'-');await until(s=>s.appRaw[0]?.[16]===50,'50 percent zoom');await rendered(0);await p.appKey(0,'0');await rendered(0);s=await p.inspect();assert.equal(samples(s)[8],baseline[0]);assert.equal(samples(s)[14],0);

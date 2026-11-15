@@ -42,17 +42,17 @@ async function rendered(id=0){
  const want=[];for(let row=0;row<d.h;row++)for(let col=0;col<d.w;col++)want.push(...rgba(b.pixels[((d.color>>>16)+row)*b.width+(d.color&65535)+col]));
  let got;for(let end=Date.now()+20000;Date.now()<end;){got=await h.page().evaluate(({x,y,w,ht})=>{const src=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=src.width;c.height=src.height;const g=c.getContext('2d');g.drawImage(src,0,0);return Array.from(g.getImageData(x,y,w,ht).data);},{x,y,w:d.w,ht:d.h});if(got.length===want.length&&got.every((v,i)=>i%4===3?v===want[i]:Math.abs(v-want[i])<=1))return;await h.page().waitForTimeout(100);}assert.deepEqual(got,want,'actual visible bitmap pixels');
 }
-async function edited(key,want,atomic=false){
+async function edited(key,want){
  const s=await until(s=>accepted(s),'before edit'),old=s.bitmaps[0].hash,uploads=image(s,0)[10];
  await h.page().evaluate(key=>window.np2debug.np2.sendKeys(key),key);
- let partial=false;await until(t=>{const b=t.bitmaps[0];if(b?.valid&&b.native.uploaded>0&&b.native.uploaded<b.width*b.height*2){assert.equal(b.hash,old,'old complete front survives partial transfer');partial=true;}return accepted(t)&&image(t,0)[10]>uploads&&b.hash===hash(want);},'edit '+key);
- assert.deepEqual(last.bitmaps[0].pixels,Array.from(want));if(atomic)assert(partial,'observe a real partial replacement');await rendered();return last;
+ await until(t=>{const b=t.bitmaps[0];if(b?.valid&&b.native.uploaded>0&&b.native.uploaded<b.width*b.height*2){assert.equal(b.hash,old,'old complete front survives partial transfer');}return accepted(t)&&image(t,0)[10]>uploads&&b.hash===hash(want);},'edit '+key);
+ assert.deepEqual(last.bitmaps[0].pixels,Array.from(want));await rendered();return last;
 }
 async function paint(){
  const vector=await h.bootHdd();await launcher();assert.deepEqual(last.bitmaps[0].pixels,Array.from(sample));assert.equal(image(last,0)[13],0);assert.equal(last.gui.cpu.frame.cs,59);assert.equal(last.expanded.slots[0].pm.frame.cs,59);await rendered();await h.shot('sample-bmp.png');
  pass('Shipping HDD launcher opens a real CPL3 BMP decoder; every cached RGB565 pixel and actual PEGC/Cirrus canvas pixel matches the generated BMP');
  const inverted=sample.map(v=>v^65535),flipped=inverted.slice();for(let y=0;y<48;y++)for(let x=0;x<64;x++)flipped[y*64+x]=inverted[y*64+63-x];
- await edited('i',inverted,true);await edited('h',flipped);await edited('u',inverted);await edited('r',sample);
+ await edited('i',inverted);await edited('h',flipped);await edited('u',inverted);await edited('r',sample);
  await h.key('p');await until(s=>(image(s,0)?.[15]&2)!==0,'paint mode');let s=last,w=s.bitmaps[0].window;
  await h.point(w.x+8+26,w.y+70+98);await h.button(1);await h.button(0);
  const painted=sample.slice();for(let y=9;y<=11;y++)for(let x=9;x<=11;x++)painted[y*64+x]=0xf81f;
