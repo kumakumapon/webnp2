@@ -36,9 +36,10 @@ export async function inspectVideo(page){
    const planePages=[...Array.from({length:24},(_,i)=>0xa8+i),...Array.from({length:8},(_,i)=>0xe0+i)];
    const privatePages=planePages.map(page=>({page,pte:pte(page)}));
    const fontEqual=!live||hash(font)===hash(raw(0xc0000,6016));
-   const graphEqual=!(meta.flags&2)||!live||planes.every((b,p)=>hash(b)===hash(raw(p===3?0xe0000:0xa8000+p*32768,32768)));
+   const graphEqual=!(meta.flags&2)||!live||planes.every((b,p)=>hash(b)===hash(raw((p===3?0xe0000:0xa8000+p*32768)+(meta.flags&128?0x20000:0),32768)));
    const textEqual=!live||hash(b.slice(137216,145408))===hash(raw(0xa0000,8192))&&hash(b.slice(145408,153600))===hash(raw(0xa2000,8192));
-   return {generation,revision,state,cr3,origin,meta,font:Array.from(font.slice(0,32)),fontHash:hash(font),rawFont:live?Array.from(raw(0xc0000,32)):null,planeHashes:planes.map(hash),sample:planes.map(p=>Array.from(p.slice(0,32))),codes:Array.from({length:160},(_,i)=>word(b,137216+i*2)),attributes:Array.from({length:160},(_,i)=>word(b,145408+i*2)),privatePages,fontPte:pte(0xc0),fontEqual,graphEqual,textEqual,consistent:generation===d(m,160+id*4)&&revision===w(view,6)&&fontEqual&&graphEqual&&textEqual};
+   const pages=[0,1].map(page=>Array.from({length:4},(_,p)=>({hash:hash(raw((p===3?0xe0000:0xa8000+p*32768)+page*0x20000,32768)),sample:Array.from(raw((p===3?0xe0000:0xa8000+p*32768)+page*0x20000,32))})));
+   return {generation,revision,state,cr3,origin,meta,pages,font:Array.from(font.slice(0,32)),fontHash:hash(font),rawFont:live?Array.from(raw(0xc0000,32)):null,planeHashes:planes.map(hash),sample:planes.map(p=>Array.from(p.slice(0,32))),codes:Array.from({length:160},(_,i)=>word(b,137216+i*2)),attributes:Array.from({length:160},(_,i)=>word(b,145408+i*2)),privatePages,fontPte:pte(0xc0),fontEqual,graphEqual,textEqual,consistent:generation===d(m,160+id*4)&&revision===w(view,6)&&fontEqual&&graphEqual&&textEqual};
   });
   return {helper:helper?{ready:w(helper,12),busy:w(helper,14),calls:d(helper,24),rejected:d(helper,28),stackGuard:d(helper,32),generations:[0,1,2,3].map(i=>d(helper,36+i*4))}:null,slots};
  },{runtime:s.gui?.runtime,mixed:s.cpu?.mixedAddress});

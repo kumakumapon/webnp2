@@ -63,7 +63,7 @@ async function lifecycle(){
  const vector=await h.bootHdd();let s=await start(0);const a=slot(s).fontHash;s=await start(1,2);
  assert.deepEqual(slot(s,1).font,Array(32).fill(0x42));assert.notEqual(slot(s,1).fontHash,a);assert.equal(slot(s).fontHash,a);assert.notEqual(slot(s).origin,slot(s,1).origin);assert.notEqual(slot(s).cr3,slot(s,1).cr3);
  await h.focus(0);await pixels(0);await h.focus(1);await pixels(1);await input('g',m=>!!(m.flags&2),1);s=await until(s=>ready(s,0)&&ready(s,1),'two isolated displays');assert.equal(slot(s).fontHash,a);assert(!(slot(s).meta.flags&2));
- const old=slot(s,1).generation;await h.type('f');s=await h.until(s=>s.cpu.views[1].state===4,'unsupported word I/O faults only owner');assert.equal(s.cpu.views[1].fault,13);assert.equal(s.cpu.views[0].state,2);
+ const old=slot(s,1).generation;await h.type('f');s=await h.until(s=>s.cpu.views[1].state===4,'unsupported dword I/O faults only owner');assert.equal(s.cpu.views[1].fault,13);assert.equal(s.cpu.views[0].state,2);
  await h.run(1,'KVTERM.COM 0');s=await until(s=>slot(s,1)?.generation!==old&&slot(s,1)?.meta.fontWrites===0&&s.cpu.views[1].state===2&&s.terminals?.slots[1]?.consistent,'recycled generation with unset gaiji');
  assert.deepEqual(slot(s,1).rawFont,Array(32).fill(0));
  await h.shot('unset-gaiji-after-generation.png');

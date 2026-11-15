@@ -60,7 +60,11 @@ def workspace_hdd(root, destination):
             'disposable_volume_marker':'KHDPROOF'}
 
 RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
-             'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE', 'KGWORDS.EXE', 'PRACT32.EXE')
+             'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE', 'KGWORDS.EXE', 'PRACT32.EXE', 'KSH32.EXE', 'KTOOL32.EXE', 'PROCTEST.EXE')
+
+# Large standalone SDK diagnostic stays on the original K386 disk and native HDD.
+# The complete GUI FD keeps every user application and its Work capacity.
+FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE',)
 
 def application_hdd(root, destination, files):
     # Build offline from a NEW marked volume. No mounted/user image is opened.
@@ -164,6 +168,10 @@ def main():
     for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE', 'KGWORDS.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['PRACT32.EXE'] = (source/'tools/k38632/build/PRACT32.EXE').read_bytes()
+    for name in ('KSH32.EXE','KTOOL32.EXE','PROCTEST.EXE','KPRUN.COM'):
+        files[name] = (source/'tools/k38632/build'/name).read_bytes()
+    files['K32PROC.EXE'] = (source/'tools/kproc/build/K32PROC.EXE').read_bytes()
+    files['KVEXT.COM'] = (source/'tools/kvideo/build/KVEXT.COM').read_bytes()
     files['K32IO.EXE'] = (source/'tools/k32io/build/K32IO.EXE').read_bytes()
     files['SAMPLE.BMP'] = (source/'tools/kgui32/build/SAMPLE.BMP').read_bytes()
     files['VDOS.EXE'] = (source/'tools/k386/build/VDOS.EXE').read_bytes()
@@ -182,11 +190,11 @@ def main():
     files['EDITTEST.TXT'] = b'EDITOR FIXTURE\r\nSecond line\r\n'
     files['JPDEMO.TXT'] = '日本語\u3000カタカナ\u3000ひらがな\r\n半角: ｶﾅ / Shift-JIS\r\n'.encode('shift_jis')
     files['BINARY.TXT'] = bytes(range(256))
-    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32IO.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
+    autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32IO.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nK32PROC.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
     helper = module('kgui32_image', source/'ports/pc98/image.py')
     excluded = {'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
-        [(name,data) for name,data in files.items() if name not in excluded],
+        [(name,data) for name,data in files.items() if name not in excluded and name not in FD_OMITTED_DIAGNOSTICS],
         kernel=files['MSDOS.SYS'],command=files['COMMAND.COM'],autoexec=autoexec)
     entries.append(add_workspace(image))
     sha = hashlib.sha256(image).hexdigest()
@@ -197,7 +205,7 @@ def main():
     (destination/name).write_bytes(image)
     app_hdd = application_hdd(root, destination, files)
     boot_hdd = standalone_hdd(source, destination, app_hdd, files, autoexec)
-    compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED]
+    compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED and n not in FD_OMITTED_DIAGNOSTICS]
     compact, compact_entries = helper.make_image(original[:1024], files['IO.SYS'],
         compact_files, kernel=files['MSDOS.SYS'], command=files['COMMAND.COM'], autoexec=autoexec)
     compact_entries.append(add_workspace(compact))
@@ -223,8 +231,10 @@ def main():
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
         'ui_language':{'version':1,'languages':['en','ja'],'default':'en','switch':'F8','live_apps':True,'preserves_document_and_composition':True},
-        'dos_terminal_modes':{'version':1,'helper':'KV98VID.EXE','diagnostic':'KVTERM.COM',
-            'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':131072,
+        'fd_omitted_diagnostics':list(FD_OMITTED_DIAGNOSTICS),
+        'process_api':{'version':1,'feature':512,'helper':'K32PROC.EXE','shell':'KSH32.EXE','tools':'KTOOL32.EXE','diagnostics':['PROCTEST.EXE','KPRUN.COM'],'gui_independent':True,'records':8,'root_records':4,'child_records':4,'parent_owns_children':True,'generation_checked':True,'orphan_cancellation':True,'message_bytes':64,'message_slots':4,'pipes':4,'pipe_bytes':512,'stream_chunk_bytes':256,'shell_pipeline_commands':2,'shell_line_bytes':126,'redirection_max_bytes':1048576,'retains_original_on_failure':True},
+        'dos_terminal_modes':{'version':2,'helper':'KV98VID.EXE','diagnostic':'KVTERM.COM',
+            'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':262144,'graphics_pages':2,'independent_access_display_pages':True,'backing_bytes':1081344,'extended_diagnostic':'KVEXT.COM','bios18_functions':[10,11,12,13,14,17,18,19,22,64,65,66],'keyboard_functions':[0,1,2,3,5],'word_io_ports':[96,98,160,162,164,166],'denied_io_widths':[32],
             'graphics_max_width':640,'graphics_max_height':400,'graphics_colors':16,
             'semigraphics':True,'snapshot_chunk_bytes':848,'read_only':True},
         'dos_terminal':{'version':2,'columns':80,'rows':25,'character_plane':'pc98-tvram-u16',
@@ -233,6 +243,7 @@ def main():
         'shortened_base_guides':['K386.TXT'],
         'practical_sdk':{'version':1,'abi':258,'resource_descriptor':'K32RES01','private_bytes':4194304,'stack_min_bytes':4096,'stack_max_bytes':262144,'guard_pages':1,'diagnostic':'PRACT32.EXE','diagnostic_stack_bytes':65536,'min_heap_bytes':1048576},
         'common_io':{'version':1,'feature':256,'helper':'K32IO.EXE','max_bytes':1048576,'chunk_bytes':4096,'gui_independent':True,'revision_checked':True,'explicit_recovery':True,'retains_original_on_failure':True},
+        'image_transport':{'version':1,'request_bytes':3144,'status_header_bytes':72,'control_reply_bytes':72,'successful_upload_roundtrip_bytes':3216,'metrics_record':'KGXFER01','copy_width_bytes':4,'owner_metadata_updates':1},
         'bitmap_sdk':{'version':2,'format':'rgb565','max_width':384,'max_height':256,
                       'surfaces_per_client':2,'secondary_max_width':128,'secondary_max_height':128,'desktop_buffer_bytes':1835008,'present_strip_rows':64,'upload_chunk_bytes':3040,'atomic_replace':True,
                       'owner_generation_checked':True,'source_crop':True,'canvas_clip':True,
