@@ -18,7 +18,8 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic boot menu**: <https://kumakumapon.github.io/webnp2/?lang=en>
+  (choose **Start with MS-DOS 4.0 + RetroBasic** to use the current generated image)
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 

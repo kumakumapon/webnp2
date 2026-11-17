@@ -17,7 +17,8 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 
 - **公開ページ**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&run=1>
+- **MS-DOS 4.0 + RetroBasic 起動メニュー**: <https://kumakumapon.github.io/webnp2/?lang=ja>
+  （**MS-DOS 4.0 + RetroBasic で起動**を選ぶと、現在の生成済みイメージを使います）
 - **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
