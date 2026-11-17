@@ -1,0 +1,39 @@
+name: Build and validate the paired distribution
+description: Reproducible media, static checks, unit tests and production build
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          mcp/package-lock.json
+    - run: npm ci && npm --prefix mcp ci
+      shell: bash
+    - run: npm run lint && npm run typecheck
+      shell: bash
+    - run: npm test && npm run test:tools && npm --prefix mcp test
+      shell: bash
+    - run: npm audit && npm --prefix mcp audit
+      shell: bash
+    - run: npm --prefix mcp run bundle && node scripts/smoke-test-mcp-bundle.mjs mcp/dist/webnp2-mcp.mjs
+      shell: bash
+    - name: Generate clean pinned native media once for the entire run
+      run: bash scripts/prepare-msdos4-cpanel-ci.sh && bash scripts/prepare-pc98-hdd-ci.sh
+      shell: bash
+    - name: Validate generated manifests, media and links
+      run: npm test && python3 scripts/msdos4_distribution.py
+      shell: bash
+    - run: npm run build
+      shell: bash
+      env:
+        VITE_DISK_PROXY: ${{ env.VITE_DISK_PROXY }}
+    - name: Record exact source and build provenance in the shipped artifact
+      shell: bash
+      run: |
+        node --input-type=module -e '
+          import {readFileSync,writeFileSync} from "node:fs";
+          const native=JSON.parse(readFileSync("public/kgui32/manifest.json"));
+          writeFileSync("dist/ci-build.json",JSON.stringify({webnp2:process.env.GITHUB_SHA,native:native.source_commit,run:process.env.GITHUB_RUN_ID},null,2)+"\n");'

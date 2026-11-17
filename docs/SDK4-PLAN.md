@@ -1,5 +1,9 @@
 # KGUI32 SDK4 integration
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Implementation: synchronize the native SDK4 source, provision an
 isolated `A:\WORK` directory for `.TXT` saves, expose the editor save workflows
 and validate actual FAT/file changes with Playwright on PEGC and Cirrus.

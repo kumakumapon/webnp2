@@ -1053,7 +1053,7 @@ describe('knownPadPresetFor(8BitDo M30/MicroのVendor/Product一致プリセッ�
 // 編集したプロファイルを勝手に上書きしてしまわないことを確認する(main.ts自体はDOM初期化を
 // 伴い直接importできないため、同じロジックをここで再現する)。
 describe('手編集済みプロファイルの保護(main.tsのmanagerForPad相当ロジック)', () => {
-  function resolveProfileLikeMain(store: GamepadStore, padId: string, mapping: string) {
+  function resolveProfileLikeMain(store: GamepadStore, padId: string, mapping: GamepadMappingType) {
     return store.pads[padId] ?? defaultProfileFor({ mapping, id: padId });
   }
 

@@ -1,5 +1,9 @@
 # DOS4 PC-98 HDD basic I/O proof
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Generate a separate opt-in FD + new disposable FAT16 data HDD, with a pinned
 native block driver and DOS probe. Keep bundled production images and existing
 user images intact. Validate actual guest DOS writes, exported FAT contents,

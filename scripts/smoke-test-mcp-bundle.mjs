@@ -15,7 +15,7 @@ if (!target || !existsSync(target)) {
 }
 
 // ブリッジの既定ポート(3098)は開発中の実サーバーと衝突しうるので別ポートを使う。
-const BRIDGE_PORT = '13098';
+const BRIDGE_PORT = '0';
 const TIMEOUT_MS = 20000;
 
 const child = spawn(process.execPath, [target], {
@@ -51,7 +51,7 @@ const fail = (message) => {
   if (done) return;
   done = true;
   console.error(`SMOKE TEST FAILED: ${message}`);
-  if (stderr.trim()) console.error(`--- server stderr ---\n${stderr.trim()}`);
+  if (stderr.trim()) console.error(stderr.replace(/bridge-token=[^\s]+/g, 'bridge-token=[redacted]'));
   child.kill('SIGKILL');
   process.exit(1);
 };

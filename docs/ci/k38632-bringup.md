@@ -1,5 +1,9 @@
 # K38632 第1段階：Ring 3・割り込み・DOS復帰
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 MS-DOS [Issue #31](https://github.com/kumakumapon/MS-DOS/issues/31) の最初のCPU技術検証です。
 同梱の `K32CPU.COM` は独立した診断プログラムで、実際の32ビットRing 3コード、
 ページング、PC-98のIRQ0と保護例外を実行してDOSへ戻ります。

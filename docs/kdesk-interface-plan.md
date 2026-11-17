@@ -1,5 +1,9 @@
 # KDESK interface integration
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Pair with the MS-DOS `codex/kdesk-interface-refresh` branch. Pin the completed
 native commit when importing the normal and experimental K386 images.
 

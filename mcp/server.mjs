@@ -8,126 +8,39 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { WebSocketServer } from 'ws';
 import { z } from 'zod';
+import { createBridge, parseOrigins } from './bridge.mjs';
 
-const BRIDGE_PORT = Number(process.env.WEBNP2_BRIDGE_PORT) || 3098;
-const REQUEST_TIMEOUT_MS = 15000;
-
-// --- WebSocket bridge -------------------------------------------------
-
-/** @type {import('ws').WebSocket | null} */
-let activeClient = null;
-let nextRequestId = 1;
-/** @type {Map<number, {resolve: Function, reject: Function, timer: NodeJS.Timeout}>} */
-const pending = new Map();
-
-const wss = new WebSocketServer({ port: BRIDGE_PORT });
-
-wss.on('listening', () => {
-  console.error(`WebSocket bridge listening on port ${BRIDGE_PORT}`);
+const bridge = createBridge({
+  port: process.env.WEBNP2_BRIDGE_PORT === undefined ? 3098 : Number(process.env.WEBNP2_BRIDGE_PORT),
+  host: process.env.WEBNP2_BRIDGE_HOST ?? '127.0.0.1',
+  origins: parseOrigins(process.env.WEBNP2_BRIDGE_ORIGINS),
+  token: process.env.WEBNP2_BRIDGE_TOKEN,
+  log: message => console.error(message),
 });
-
-wss.on('error', (err) => {
-  console.error('WebSocket server error:', err && err.stack ? err.stack : err);
-});
-
-wss.on('connection', (ws) => {
-  console.error('Browser client connected');
-
-  ws.on('message', (data) => {
-    let msg;
-    try {
-      msg = JSON.parse(data.toString());
-    } catch (err) {
-      console.error('Received non-JSON message from browser:', err.message);
-      return;
-    }
-
-    if (msg && msg.type === 'hello' && msg.role === 'webnp2') {
-      // A new browser tab has announced itself. It becomes the active client;
-      // any previously active client is closed.
-      if (activeClient && activeClient !== ws && activeClient.readyState === activeClient.OPEN) {
-        console.error('Replacing previous active client');
-        try {
-          activeClient.close();
-        } catch {
-          // ignore
-        }
-      }
-      activeClient = ws;
-      console.error('Active WebNP2 client registered');
-      return;
-    }
-
-    if (msg && typeof msg.id === 'number') {
-      const entry = pending.get(msg.id);
-      if (!entry) {
-        // Unknown or already-timed-out request id; ignore.
-        return;
-      }
-      pending.delete(msg.id);
-      clearTimeout(entry.timer);
-      if (msg.ok) {
-        entry.resolve(msg.result);
-      } else {
-        entry.reject(new Error(msg.error || 'Unknown error from browser'));
-      }
-      return;
-    }
-  });
-
-  ws.on('close', () => {
-    if (activeClient === ws) {
-      activeClient = null;
-      console.error('Active WebNP2 client disconnected');
-    }
-  });
-
-  ws.on('error', (err) => {
-    console.error('Browser socket error:', err && err.stack ? err.stack : err);
-  });
-});
-
-/**
- * Sends a command to the connected browser and waits for its response.
- * @param {string} cmd
- * @param {object} [args]
- * @returns {Promise<any>}
- */
-function sendCommand(cmd, args = {}) {
-  if (!activeClient || activeClient.readyState !== activeClient.OPEN) {
-    return Promise.reject(new Error('BRIDGE_DISCONNECTED'));
-  }
-
-  const id = nextRequestId++;
-  const payload = JSON.stringify({ id, cmd, args });
-
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      pending.delete(id);
-      reject(new Error(`Timed out waiting for browser response to '${cmd}'`));
-    }, REQUEST_TIMEOUT_MS);
-
-    pending.set(id, { resolve, reject, timer });
-
-    try {
-      activeClient.send(payload);
-    } catch (err) {
-      clearTimeout(timer);
-      pending.delete(id);
-      reject(err);
-    }
-  });
+await bridge.ready;
+const address = bridge.address();
+if (!address || typeof address === 'string') throw new Error('Bridge address unavailable');
+const page = new URL(process.env.WEBNP2_PAGE_URL ?? 'https://kumakumapon.github.io/webnp2/');
+if (!parseOrigins(process.env.WEBNP2_BRIDGE_ORIGINS).includes(page.origin)) {
+  await bridge.close();
+  throw new Error('WEBNP2_PAGE_URL origin must be in WEBNP2_BRIDGE_ORIGINS');
 }
+page.searchParams.set('bridge', `ws://${address.family === 'IPv6' ? '[::1]' : '127.0.0.1'}:${address.port}`);
+page.hash = new URLSearchParams({ 'bridge-token': bridge.token }).toString();
+console.error(`WebSocket bridge listening on port ${address.port} (loopback only)`);
+console.error(`Pair this browser using the private URL: ${page.href}`);
+const sendCommand = bridge.sendCommand;
+process.stdin.once('end', () => { void bridge.close(); });
 
 const NOT_CONNECTED_MESSAGE =
-  'ブラウザが未接続です。?bridge=1 付きでWebNP2を開いてください (例: http://localhost:5173/?freedos=1&run=1&bridge=1)';
+  'ブラウザが未接続です。MCP起動時のstderrに表示されたペアリングURLでWebNP2を開いてください。';
 
 /**
  * Wraps a tool handler so that a disconnected bridge produces a clean
  * isError tool result instead of throwing.
- * @param {() => Promise<{content: any[]}>} fn
+ * @param {() => Promise<import('@modelcontextprotocol/sdk/types.js').CallToolResult>} fn
+ * @returns {Promise<import('@modelcontextprotocol/sdk/types.js').CallToolResult>}
  */
 async function withBridge(fn) {
   try {
@@ -150,7 +63,7 @@ async function withBridge(fn) {
 
 const server = new McpServer({
   name: 'webnp2-mcp',
-  version: '0.1.0',
+  version: '0.2.0',
 });
 
 server.tool(

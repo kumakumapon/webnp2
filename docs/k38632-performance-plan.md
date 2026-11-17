@@ -1,5 +1,9 @@
 # KDESK描画負荷とXARRAY32の検証計画
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 対象はMS-DOSの `tools/k38632/PERFORMANCE-PLAN.md`。現行版の基準はMS-DOS
 f1589e072cf32d92821e4fdd9641a3b884559bf5、WebNP2
 ea764c78bf0e4f1d123d2b002892f1b2c6d11c18です。開発計画と検証手順を記録します。

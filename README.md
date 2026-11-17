@@ -1,5 +1,7 @@
 # WebNP2
 
+[Documentation / 文書一覧](docs/README.md) · [CI maintenance](docs/ci-maintenance.md)
+
 [日本語](README.ja.md)
 
 A web-based PC-98 emulator player, powered by [NP2kai](https://github.com/AZO234/NP2kai)
@@ -348,7 +350,7 @@ selection and double-click navigation. See [desktop controls](docs/window-deskto
 
 Run `CPANEL` to change XMS/EMS, FILES/BUFFERS, or FD98 auto-start. Press `S`
 to save; CONFIG.SYS changes take effect after reboot. See
-[CPANEL.TXT](public/msdos4/CPANEL.txt).
+[CPANEL.TXT](https://github.com/kumakumapon/MS-DOS/blob/main/tools/control/CPANEL.TXT).
 
 The DOS kernel and shell are built from the v4.0 sources in
 [MS-DOS commit 62181db](https://github.com/kumakumapon/MS-DOS/tree/62181dbfad74ba722cd0ef9af6ae347f3f541cdf);
@@ -371,18 +373,17 @@ WebNP2 can be driven by AI agents (Claude Code etc.) through a local MCP
 server: read the text screen, type keys, take screenshots, and reset the
 machine. The MCP server runs on your machine; the page (local or the
 public one above) connects back to `ws://127.0.0.1` when opened with the
-`?bridge=1` parameter, so nothing is sent to any external server.
+the private pairing URL printed by the MCP server. Its capability stays in the URL fragment and is sent only to the loopback bridge.
 
 Setup is a single self-contained file — no `git clone`, no `npm install`,
-just Node.js 18+:
+just Node.js 24 LTS:
 
 ```sh
 curl -fLO https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
 claude mcp add webnp2 -- node "$PWD/webnp2-mcp.mjs"
 ```
 
-Then open `https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
-in your browser. Full instructions and the tool list live in
+Then open the private pairing URL printed on startup (stderr) in your browser. Full instructions and the tool list live in
 [mcp/README.md](mcp/README.md). To have your AI agent set it up for you,
 just point it at that file and say "set up MCP access to WebNP2 as
 described here".
@@ -393,7 +394,7 @@ localhost.
 
 ## Run locally on Windows or Linux
 
-Install **Node.js 22.12 or later with npm** from <https://nodejs.org/> (Node.js 24
+Install **Node.js 24 LTS with npm** from <https://nodejs.org/> (Node.js 24
 LTS is recommended). Clone this repository or download and extract its ZIP.
 The emulator core and bundled boot disks are already included; no assembler or
 Chromium installation is required to launch the player.

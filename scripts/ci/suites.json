@@ -1,0 +1,302 @@
+{
+  "browser": {
+    "directories": ["test-results/dos2"],
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-msdos2.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/dos2/screen.png"]},
+      {"argv": ["scripts/verify-msdos4.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/dos4"]}
+    ]
+  },
+  "kgui32": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-{video}", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-sessions.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-{video}/sessions", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-clients.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-{video}/clients", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-browser.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-{video}/browser", "{video}"]}
+    ]
+  },
+  "k386-shell": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-shell.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-shell"]}
+    ]
+  },
+  "k386-processes": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-processes.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-processes"]}
+    ]
+  },
+  "k386": {
+    "matrix": {},
+    "timeout": 10,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386"]}
+    ]
+  },
+  "k386-resources": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-resources.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-resources"]}
+    ]
+  },
+  "kdesk-interface": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kdesk-interface.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kdesk-interface"]}
+    ]
+  },
+  "kdesk-polish": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kdesk-polish.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kdesk-polish"]}
+    ]
+  },
+  "k386-apps": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-apps"]}
+    ]
+  },
+  "kdesk-highcolor": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-display-probe.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/display-probe"]},
+      {"argv": ["scripts/verify-kdesk-highcolor.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kdesk-highcolor"]}
+    ]
+  },
+  "native-tools": {
+    "matrix": {},
+    "timeout": 20,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-native-tools.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/native-tools"], "env": {"K386_LATENCY_GATE": "1"}},
+      {"argv": ["scripts/verify-native-tools.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/native-tools-cirrus", "cirrus"], "env": {"K386_LATENCY_GATE": "1"}},
+      {"argv": ["scripts/measure-k386-shell.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/shell-latency"], "env": {"K386_LATENCY_GATE": "1"}}
+    ]
+  },
+  "k386-xms": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-xms.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-xms"]}
+    ]
+  },
+  "k386-xarray": {
+    "matrix": {},
+    "timeout": 20,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k386-xarray.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k386-xarray"]}
+    ]
+  },
+  "k38632-render-load": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 20,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/measure-k386-render-load.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/render-load", "changed", "{video}"]}
+    ]
+  },
+  "k38632-array": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 40,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632-array.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632-array", "{video}"]}
+    ]
+  },
+  "k38632": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632"]}
+    ]
+  },
+  "k38632-memory": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632-memory.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632-memory"]}
+    ]
+  },
+  "k38632-loader": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632-loader.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632-loader"]}
+    ]
+  },
+  "k38632-services": {
+    "matrix": {},
+    "timeout": 15,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632-services.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632-services"]}
+    ]
+  },
+  "k38632-windows": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 20,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-k38632-windows.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/k38632-windows-{video}", "{video}"]}
+    ]
+  },
+  "kgui32-editor": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 20,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-editor.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-editor-{video}/editor", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-editor.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-editor-{video}/emergency", "{video}", "emergency"]}
+    ]
+  },
+  "kgui32-save": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 25,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-save.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-save-{video}/editor", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-save.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-save-{video}/full", "{video}", "full"]},
+      {"argv": ["scripts/verify-kgui32-save.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-save-{video}/wide", "{video}", "wide"]}
+    ]
+  },
+  "hdd-boot": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["boot", "v86", "rejection"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-hdd-boot.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-boot", "{video}", "{suite}"]}
+    ]
+  },
+  "bitmaps": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["paint", "lifecycle", "save", "recovery"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-bitmaps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/bitmaps", "{video}", "{suite}"]}
+    ]
+  },
+  "expanded": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["runtime", "lifecycle"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-expanded.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/expanded", "{video}", "{suite}"]}
+    ]
+  },
+  "files-editor": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-files-editor.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/files-editor", "{video}"]}
+    ]
+  },
+  "hdd-applications": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps/standalone-repeat", "{video}", "standalone"], "env": {"KGUI32_STANDALONE_REPEATS": "5"}}
+    ]
+  },
+  "hdd-workspace": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-hdd-workspace.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-workspace", "{video}"]}
+    ]
+  },
+  "ime": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["input", "lifecycle", "interface"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-ime.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/ime", "{video}", "{suite}"]}
+    ]
+  },
+  "japanese": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["text", "save"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-japanese.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/japanese", "{video}", "{suite}"]}
+    ]
+  },
+  "recovery-editor": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["recovery", "editor-tools"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-{suite}.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/recovery-editor", "{video}"]}
+    ]
+  },
+  "terminal": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["paint", "lifecycle"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-terminal.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/terminal", "{video}", "{suite}"]}
+    ]
+  },
+  "video": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["paint", "lifecycle"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-video.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/video", "{video}", "{suite}"]}
+    ]
+  },
+  "hdd-proof": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 15,
+    "base": "/",
+    "commands": [
+      {"argv": ["scripts/verify-pc98-hdd.mjs", "http://127.0.0.1:4173/", "test-results/hdd-proof", "{video}"]}
+    ]
+  },
+  "practical32": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["runtime", "io", "surfaces", "images", "ime", "process2", "process4", "shell", "dos-pages", "menus"]},
+    "timeout": 60,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-practical32.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/practical32", "{video}", "{suite}"]}
+    ]
+  },
+  "v86-hdd": {
+    "matrix": {"video": ["pegc", "cirrus"], "suite": ["hdd", "isolation", "fallback"]},
+    "timeout": 45,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-v86-hdd.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/v86-hdd", "{video}", "{suite}"]}
+    ]
+  }
+}

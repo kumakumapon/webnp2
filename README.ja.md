@@ -1,5 +1,7 @@
 # WebNP2
 
+[Documentation / 文書一覧](docs/README.md) · [CI maintenance](docs/ci-maintenance.md)
+
 [English](README.md)
 
 このリポジトリは [uraraworks/WebNP2](https://github.com/uraraworks/WebNP2) の fork です。
@@ -304,7 +306,7 @@ Filesはアイコンの選択・ダブルクリックで操作できます。[�
 
 `CPANEL` で XMS/EMS、FILES/BUFFERS、FD98 の自動起動を設定できます。
 `S` で保存し、CONFIG.SYS の変更は再起動後に反映されます。
-[操作説明](public/msdos4/CPANEL.txt)を参照してください。
+[操作説明](https://github.com/kumakumapon/MS-DOS/blob/main/tools/control/CPANEL.TXT)を参照してください。
 
 DOS カーネルとシェルは
 [MS-DOS commit d371a1f](https://github.com/kumakumapon/MS-DOS/tree/d371a1f8f68a26b4e36b1b1b604d295972b7cba3)
@@ -325,20 +327,18 @@ BASIC は Python 版の機能の一部を移植しています。
 ローカルで動かすMCPサーバー経由で、Claude Code などのAIエージェントから
 WebNP2 を操作できます（テキスト画面の読み取り・キー入力・スクリーン
 ショット・リセット）。MCPサーバーはあなたのマシン上で動き、
-`?bridge=1` パラメータ付きで開いたページ（ローカル/公開ページどちらでも）が
+MCP起動時のプライベートなペアリングURLで開いたページが
 `ws://127.0.0.1` へ接続しに来る構成のため、外部サーバーには何も送信されません。
 
 セットアップは、依存を埋め込んだ単一ファイルを落として登録するだけです
-（git clone も npm install も不要。Node.js 18 以上があれば動きます）:
+（git clone も npm install も不要。Node.js 24 LTS 以上があれば動きます）:
 
 ```sh
 curl -fLO https://github.com/kumakumapon/webnp2/releases/latest/download/webnp2-mcp.mjs
 claude mcp add webnp2 -- node "$PWD/webnp2-mcp.mjs"
 ```
 
-あとはブラウザで
-`https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
-を開けば繋がります。詳しい手順と提供ツール一覧は
+あとはMCP起動時にstderrへ表示されるペアリングURLを開きます。詳しい手順と提供ツール一覧は
 [mcp/README.md](mcp/README.md) を参照してください。
 お使いのAIエージェントに このファイルを示して
 「ここに書いてある通りにWebNP2へMCP接続できるようにして」と指示すれば、
@@ -350,7 +350,7 @@ claude mcp add webnp2 -- node "$PWD/webnp2-mcp.mjs"
 
 ## Windows・Linux でローカル起動する
 
-<https://nodejs.org/> から **Node.js 22.12 以上（npm を含む）** をインストールし、
+<https://nodejs.org/> から **Node.js 24 LTS（npm を含む）** をインストールし、
 このリポジトリを clone、または ZIP をダウンロードして展開してください。
 Node.js 24 LTS を推奨します。エミュレータのコア・同梱起動ディスクは含まれているため、
 プレイヤーの起動にアセンブラや Chromium のインストールは不要です。
@@ -483,7 +483,7 @@ CHROMIUM=/usr/bin/chromium node scripts/verify-msdos4.mjs http://127.0.0.1:4173/
 
 ### コア (public/core/) の更新
 
-`public/core/` には [NP2kai-wasm](../NP2kai) のビルド成果物
+`public/core/` には [NP2kai-wasm](https://github.com/AZO234/NP2kai) のビルド成果物
 (`emnp21kai_sdl2.js` / `.wasm` / `font.bmp` / `LICENSE.NP2kai`) を配置します。
 このディレクトリは git 管理対象です（ビルド成果物をリポジトリにコミットする方針）。
 

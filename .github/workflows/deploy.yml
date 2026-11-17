@@ -1,55 +1,61 @@
 name: Deploy to GitHub Pages
-
 on:
-  push:
+  workflow_run:
+    workflows: ['WebNP2 CI']
+    types: [completed]
     branches: [master]
   workflow_dispatch:
-
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages
-  # Pages のデプロイは途中でキャンセルすると配信側に中途半端な状態が残り、後続が
-  # deployment_queued のまま返ってこなくなることがある(GitHub 公式のスターター
-  # ワークフローが Pages 向けに false を指定しているのはこのため)。連続プッシュ時は
-  # 打ち切らずに順番待ちさせる。
   cancel-in-progress: false
-
 jobs:
-  build:
+  prepare:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      current: ${{ steps.current.outputs.current }}
     steps:
       - uses: actions/checkout@v4
-      # 実行元リポジトリの Pages 設定を確認する。Settings → Pages の Source は
-      # GitHub Actions に設定する（上流リポジトリへのデプロイは行わない）。
-      - uses: actions/configure-pages@v5
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Generate the CPANEL and KDESK DOS 4 image
-        run: bash scripts/prepare-msdos4-cpanel-ci.sh
-      - name: Generate the opt-in DOS4 HDD proof images
-        run: bash scripts/prepare-pc98-hdd-ci.sh
-      - run: npm run build
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'master' }}
+      - id: current
+        uses: actions/github-script@v7
         env:
-          # CORS未対応の配布元(OneDrive除く)向けの中継サービスのURL。リポジトリ変数
-          # DISK_PROXY_URL が未設定でも空文字でビルドが通る(fork時の既定値)。
-          # ワークフロー内に直書きしない理由: 直書きするとforkしたリポジトリのビルドが
-          # そのままこちらのVPS宛の中継URLを埋め込んでしまい、他人の中継先に無関係な
-          # トラフィックを送りつけることになる。中継URLは各自のリポジトリ変数として
-          # 設定してもらう運用にし、未設定時は中継なし(直接fetchのみ)にフォールバックする。
+          ACCEPTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        with:
+          script: |
+            const {data} = await github.rest.repos.getBranch({...context.repo,branch:'master'});
+            core.setOutput('current',data.commit.sha === process.env.ACCEPTED_SHA);
+      - if: steps.current.outputs.current == 'true' && github.event_name == 'workflow_dispatch'
+        uses: ./.github/actions/build
+        env:
           VITE_DISK_PROXY: ${{ vars.DISK_PROXY_URL }}
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.current.outputs.current == 'true' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: webnp2-build
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - if: steps.current.outputs.current == 'true'
+        uses: actions/configure-pages@v5
+      - if: steps.current.outputs.current == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
   deploy:
+    if: needs.prepare.outputs.current == 'true'
     timeout-minutes: 15
-    needs: build
+    needs: prepare
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -58,7 +64,4 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
         with:
-          # deploy-pages v4 は入力を最大600000ms（10分）に制限する。
-          # ジョブ上限は準備処理を含め15分。失敗時はdocs/pages-deployment.mdに従い、
-          # 状態を確認して失敗ジョブだけを再実行する。公開中の処理を自動キャンセルしない。
           timeout: 600000

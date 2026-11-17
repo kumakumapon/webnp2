@@ -1,5 +1,9 @@
 # K38632: XMSメモリとPM32中断・再開
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 MS-DOS Issue #31のメモリ・実行継続段階です。実験版イメージの
 `K32MEM.EXE` は、実DOSから独立したRing 3実行層を起動します。
 XMSの4 MiB予算とアラインメント用4 KiBを確保・ロックし、組み込みの

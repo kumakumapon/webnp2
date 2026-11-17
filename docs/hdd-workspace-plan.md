@@ -1,5 +1,9 @@
 # KGUI32 HDD workspace integration
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Generate and ship a coordinated GUI FD + marked 40 MB data HDD using a pinned
 native commit. Launch the HDD-enabled GUI through the existing WebNP2 GUI entry
 point; preserve explicit FD-only operation and existing stored user disks.

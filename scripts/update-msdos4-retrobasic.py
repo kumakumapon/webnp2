@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Import DOS 4.0 + native BASIC and add the PC-98 filer/editor to the floppy."""
+from msdos4_distribution import sync_distribution
 import argparse
 import hashlib
 import importlib.util
@@ -163,7 +164,7 @@ def main():
     (destination / 'CPANEL.txt').write_bytes((control / 'build/CPANEL.TXT').read_bytes())
     (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Imported {name}: MS-DOS {sources["msdos"]["commit"]}, RetroBasic {sources["retrobasic"]["commit"]}')
-    print('Keep old image filenames available for saved disks and shared URLs.')
+    sync_distribution(Path(__file__).resolve().parents[1], prune=True)
 
 
 if __name__ == '__main__':

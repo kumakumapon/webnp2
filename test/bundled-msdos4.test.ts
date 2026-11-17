@@ -38,9 +38,9 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
     expect(notices.toString()).toContain('Copyright (c) 2026 kumakumapon');
     expect(notices.toString().split('Permission is hereby granted'))
       .toHaveLength(5 + Number(hasCpanel) + Number(hasWindow));
-    expect(notices.includes(fatReadFile(disk, 'DOSLIC.TXT'))).toBe(true);
-    expect(notices.includes(fatReadFile(disk, 'FILERLIC.TXT'))).toBe(true);
-    expect(notices.includes(fatReadFile(disk, 'EDITLIC.TXT'))).toBe(true);
+    expect(notices.includes(Buffer.from(fatReadFile(disk, 'DOSLIC.TXT')))).toBe(true);
+    expect(notices.includes(Buffer.from(fatReadFile(disk, 'FILERLIC.TXT')))).toBe(true);
+    expect(notices.includes(Buffer.from(fatReadFile(disk, 'EDITLIC.TXT')))).toBe(true);
     expect(fatReadFile(disk, tool('EDIT'))).toEqual(fatReadFile(disk, tool('EDIT98')));
     expect(new TextDecoder('shift_jis').decode(fatReadFile(disk, 'JPHELLO.TXT'))).toContain('日本語表示のテスト');
     expect(fatReadFile(disk, 'EDIT.TXT')).toEqual(
@@ -59,7 +59,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       .toBe(manifest.filer_verifier_sha256);
     expect(manifest.sources.filer.commit).toBe(nativeTools ? (manifest.sources as Record<string, { commit: string }>).control.commit : manifest.sources.msdos.commit);
     if (hasCpanel) {
-      expect(notices.includes(fatReadFile(disk, 'CPLIC.TXT'))).toBe(true);
+      expect(notices.includes(Buffer.from(fatReadFile(disk, 'CPLIC.TXT')))).toBe(true);
       expect(fatReadFile(disk, 'CPANEL.TXT')).toEqual(
         new Uint8Array(readFileSync(new URL('../public/msdos4/CPANEL.txt', import.meta.url))),
       );
@@ -84,7 +84,7 @@ describe('bundled MS-DOS 4.0 + RetroBasic PC-98 disk', () => {
       expect(word(6)).toBe(1);
       expect(word(14)).toBeGreaterThan(word(22));
       expect(word(10)).toBe(word(12));
-      expect(notices.includes(fatReadFile(disk, 'KDLIC.TXT'))).toBe(true);
+      expect(notices.includes(Buffer.from(fatReadFile(disk, 'KDLIC.TXT')))).toBe(true);
       expect(fatReadFile(disk, 'KDESK.TXT')).toEqual(
         new Uint8Array(readFileSync(new URL('../public/msdos4/KDESK.txt', import.meta.url))),
       );

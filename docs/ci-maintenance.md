@@ -1,0 +1,62 @@
+# CI, source pins and distribution maintenance
+
+Status: maintained. Node 24 LTS is recorded in `.nvmrc` and package engines.
+Root and MCP installs use committed lockfiles and `npm ci`. Vite/Vitest and the
+MCP runtime are audited in CI. Puppeteer remains for the existing native DOS
+verifier API; Playwright serves the protected-mode suites. Converting those
+verifiers is a separate migration, so both dependencies are updated and locked.
+
+## One build, all existing browser cases
+
+[WebNP2 CI](../.github/workflows/ci.yml) runs lint, application/test type checks,
+incremental checkJs on MCP and CI helpers, unit/tool tests, dependency audits and
+the bundled MCP stdio smoke test. A shared [build action](../.github/actions/build/action.yml)
+generates the native FD/HDD distribution and the HDD proof once per run, then
+builds production assets. The immutable `webnp2-build` artifact supplies every
+browser job. No media or production rebuild occurs in the 102 browser cases.
+
+[Suite definitions](../scripts/ci/suites.json) retain the original 102 matrix
+cases, verifier commands, modes, repetitions and timeouts. The planner expands
+them without shell evaluation. The process owner refuses to run outside Actions,
+bounds HTTP readiness and kills its preview/verifier process groups on exit.
+Artifacts include real guest diagnostics and use overwrite for failed-job reruns.
+There is no change to guest assertions or fault/retention checks.
+
+PR runs cancel superseded runs. Master, releases and Pages run to completion.
+Push validation targets master; other development branches are covered by PRs.
+Only the npm download cache is reused across runs; generated media and `dist/`
+are passed within the same run, avoiding stale native/source combinations.
+
+## Native pairing
+
+[MS-DOS pairing procedure](https://github.com/kumakumapon/MS-DOS/blob/main/docs/ci-pairing.md)
+defines staged updates using immutable commits reachable from the default branch.
+The `source_commit` in `scripts/prepare-msdos4-cpanel-ci.sh` identifies the normal,
+KDESK/386 and KGUI32 media source. The HDD proof has its separate explicit pin.
+Generated manifests preserve exact component commits, clean-source state and
+hashes; `dist/ci-build.json` records the web commit, native commit and Actions run.
+
+After native main CI passes, update the web pin, run all 102 E2E cases and merge.
+Then advance the native emulator pin to the new web master commit and verify
+native DOS 2/4 boot again. Do not use a development-only SHA as a release pin.
+
+## Links and managed images
+
+`python3 scripts/msdos4_distribution.py` derives both READMEs and help boot links
+from the DOS4 manifest and verifies the image checksum. Both import/update tools
+call it with pruning after writing the new manifest. Pruning only removes
+unreferenced `public/msdos4/msdos4-retrobasic-<12 hex>.xdf` files; referenced
+archives, other filenames, user files and symlinks are retained. Old managed
+snapshots remain in Git history. Current shared links should use the boot button.
+
+## Pages and MCP release
+
+A successful master **push** CI run triggers Pages using that exact run's
+production artifact. Fork/PR/manual CI artifacts cannot enter that automatic
+publish path. Obsolete commits are skipped after comparing against current
+master. Manual Pages dispatch on master uses the same shared build action.
+See [Pages retry procedure](pages-deployment.md).
+
+MCP releases use the independent locked `mcp/` dependency tree, connection tests,
+audit, single-file bundle and stdio smoke test before publishing `mcp-*` tags.
+Protocol v0.2 requires the private startup pairing URL; see [MCP setup](../mcp/README.md).

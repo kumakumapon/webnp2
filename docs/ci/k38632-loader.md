@@ -1,5 +1,9 @@
 # K38632: 外部EXEローダーとC SDK
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 実験版イメージに `K32RUN.EXE` と、別途ビルドしたMZスタブ＋静的ELF32の
 アプリを同梱します。16 MiB・FDXMS286・EMM386なしで起動し、文書を保存して
 F10で実DOSへ戻り、`K32RUN HELLO32.EXE` などを実行します。
