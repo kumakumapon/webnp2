@@ -1,5 +1,9 @@
 # High-color background progress validation
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Postmerge run 40722907504 failed only `kdesk-highcolor`, waiting for both DOS
 counters to exceed the pre-layout snapshot. RGB565 initialization, rendering,
 window operations and all ten other browser jobs passed.

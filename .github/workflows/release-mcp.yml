@@ -17,17 +17,23 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: mcp-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.nvmrc'
       - name: Install deps
         working-directory: mcp
-        run: npm install
+        run: npm ci
+      - run: npm test && npm audit --omit=dev
+        working-directory: mcp
       - name: Bundle single-file server
         working-directory: mcp
         run: npm run bundle

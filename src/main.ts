@@ -1,3 +1,4 @@
+import { resolveBridgeConnection } from './api/bridge-connection.ts';
 import './ui/styles.css';
 import { openKdeskMedia } from './ui/kdesk-media.ts';
 import '../packages/embed/src/debugger.css';
@@ -165,19 +166,7 @@ const alatParam = Number.isFinite(alatRaw) && params.get('alat') !== null ? alat
 // perf=1 で性能計測オーバーレイ(FPS/メインスレッド占有/音声供給)を表示する。
 const perfParam = params.get('perf') === '1';
 
-/**
- * `?bridge=...` の値から接続先WebSocket URLを決める。
- * 未指定ならundefined。'1'/空文字なら既定ポート、数値のみならそのポート、
- * それ以外は値をそのままURLとして使う。
- */
-function resolveBridgeUrl(): string | undefined {
-  const raw = params.get('bridge');
-  if (raw === null) return undefined;
-  if (raw === '1' || raw === '') return 'ws://127.0.0.1:3098';
-  if (/^\d+$/.test(raw)) return `ws://127.0.0.1:${raw}`;
-  return raw;
-}
-const bridgeUrl = resolveBridgeUrl();
+const bridgeConnection = resolveBridgeConnection(params, location.hash);
 
 const app = document.getElementById('app');
 if (!app) {
@@ -2120,10 +2109,12 @@ function init(): void {
   });
   np2.on('stateSaved', () => setStatusT('statusStateSaved'));
   np2.on('stateLoaded', () => setStatusT('statusStateLoaded'));
-  if (bridgeUrl) {
+  if (bridgeConnection) {
+    let remoteBridge: Bridge | undefined;
     np2.on('booted', () => {
-      const bridge = new Bridge(np2, ui.canvas, sharedKeyInput);
-      bridge.connect(bridgeUrl);
+      if (remoteBridge) return;
+      remoteBridge = new Bridge(np2, ui.canvas, sharedKeyInput);
+      remoteBridge.connect(bridgeConnection.url, bridgeConnection.token);
     });
   }
   // ページ内JSからの自動操作用デバッグAPI(WebPaint98等)。Bridgeのコマンド群を

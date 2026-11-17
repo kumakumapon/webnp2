@@ -1,6 +1,8 @@
 # GitHub Pagesの公開待機と再試行
 
-masterへのpushで既存のDeploy to GitHub Pagesがbuild → deployの順に実行します。
+masterのpushに対するWebNP2 CIが全件成功すると、Deploy to GitHub Pagesが
+同じrunの検証済みdistを取得してprepare → deployの順に公開します。
+古いcommitやfork/PR由来のrunは自動公開しません。手動実行はmasterのみに限定し、共通buildを使います。
 公開グループは `cancel-in-progress: false` を維持し、実行中の公開を新しいpushで
 打ち切りません。ユーザーのディスクを置き換える処理ではありません。
 

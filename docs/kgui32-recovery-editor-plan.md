@@ -1,5 +1,9 @@
 # Work復旧とEditor操作性の開発契約
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 MS-DOS #31 第4b段階の復旧UI・限定API・webnp2 E2Eと、検索・置換、Shift選択、
 LF/CRLF選択、表示領域拡大を連携して実装します。両リポジトリでドラフトPRを作り、
 受入とCIを確認してからレビュー可能にします。マージは自動実行しません。

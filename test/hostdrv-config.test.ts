@@ -114,6 +114,8 @@ describe('applyHostDrv - preRunと同一関数での結線検証', () => {
     const mkdirCalls: string[] = [];
     const writeFileCalls: Array<{ path: string; data: unknown }> = [];
     return {
+      readdir() { return []; },
+      unlink(path: string) { existing.delete(path); },
       mkdirCalls,
       writeFileCalls,
       writeFile(path: string, data: Uint8Array | string) {

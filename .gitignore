@@ -18,3 +18,5 @@ public/kgui32/*.thd
 public/kgui32/LICENSE.txt
 public/hdd-proof/*.xdf
 public/hdd-proof/*.thd
+
+__pycache__/

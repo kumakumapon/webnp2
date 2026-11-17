@@ -1,5 +1,9 @@
 # Native tools and responsive DOS windows
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Integrate the matching MS-DOS change: replace desktop utility COM entries with
 MZ EXEs, preserve the source DOS image/kernel/COMMAND, and synchronize the source
 commit used by CI. Validate startup and tool launch/return in standard and

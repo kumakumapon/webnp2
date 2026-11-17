@@ -12,7 +12,7 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
 
 ## セットアップ手順（Claude Code 等の AI エージェントはこの節をそのまま実行すればよい）
 
-前提: Node.js 18 以上がインストールされていること。git も npm も不要。
+前提: Node.js 24 LTSがインストールされていること。git も npm も不要。
 この手順の公開ページは GitHub Pages のデプロイ後、ダウンロードURLはこのリポジトリで
 `webnp2-mcp.mjs` を含む Release を作成した後に利用できます。Release がまだない場合は、
 後述の「リポジトリから直接動かす場合」を使ってください。
@@ -32,14 +32,12 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
    Claude Code 以外の MCP クライアントの場合は、stdio transport で
    `node <絶対パス>/webnp2-mcp.mjs` を起動する設定を追加する。
 
-3. ブラウザで WebNP2 を `bridge=1` パラメータ付きで開く（どちらでもよい）:
-
-   - 公開ページ: `https://kumakumapon.github.io/webnp2/?freedos=1&run=1&bridge=1`
-   - ローカル: `http://localhost:5173/?freedos=1&run=1&bridge=1`
-     （リポジトリ直下で `npm install && npm run dev`）
-
-   `freedos=1&run=1` は同梱 FreeDOS(98) での自動起動。自分のディスクイメージを使う場合は
-   ページの UI から挿入するか `?hdd=`/`?fd1=` パラメータを使う。
+3. MCP起動時のstderrに出る**プライベートなペアリングURL**をブラウザで開きます。
+   URLの`#bridge-token=...`は起動ごとに生成される認証情報です。クエリや
+   HTTPリファラーへ送らず、WebSocketのsubprotocolでlocalhostへ渡します。
+   URLを共有したりログへ転載したりしないでください。`?bridge=1`だけでは接続しません。
+   FreeDOS自動起動には`WEBNP2_PAGE_URL=https://kumakumapon.github.io/webnp2/?freedos=1&run=1`を設定します。
+   ローカルページを使う場合は`WEBNP2_PAGE_URL=http://localhost:5173/`を設定します。
 
 4. 動作確認: MCP クライアントから `screen_text` ツールを呼び、画面テキスト
    （FreeDOS なら `A:\>` プロンプト）が返れば接続完了。
@@ -55,7 +53,7 @@ MCP サーバー本体 (stdio transport) と、ブラウザと通信するため
 ```sh
 git clone https://github.com/kumakumapon/webnp2.git
 cd webnp2/mcp
-npm install
+npm ci
 claude mcp add webnp2 -- node "$PWD/server.mjs"
 ```
 
@@ -65,12 +63,18 @@ claude mcp add webnp2 -- node "$PWD/server.mjs"
   Chrome / Edge / Firefox ではローカルホスト例外で許可されるが、Safari はブロックする。
   公開ページ + MCP の組み合わせは Chrome 系ブラウザを使うこと。
   ローカル (http://localhost) で開く場合はどのブラウザでも動く。
-- ブリッジの WebSocket ポートは環境変数 `WEBNP2_BRIDGE_PORT` で変更できる（既定 `3098`）。
-  変更した場合はブラウザ側も `?bridge=<ポート番号>` で合わせる。
-  `?bridge=` には `1`（既定ポート）/ ポート番号 / `ws://` URL のいずれかを指定できる。
-- ブラウザが未接続の状態でツールを呼ぶと、`?bridge=1` を付けて WebNP2 を開くよう
-  案内するエラーが返る。
-- 複数タブが接続した場合、最後に接続したタブのみ有効（古い接続は閉じられる）。
+- `WEBNP2_BRIDGE_PORT`: 既定3098。1〜65535（テストの0は一時ポート）。
+- `WEBNP2_BRIDGE_HOST`: 既定127.0.0.1。localhost / ::1も指定可能。LAN公開は受け付けません。
+- `WEBNP2_BRIDGE_ORIGINS`: 許可する完全なHTTP(S) Originをカンマ区切りで指定。
+  既定はlocalhost/127.0.0.1の5173・4173、およびhttps://kumakumapon.github.io。
+  ワイルドカード、null Origin、Originなしの接続は拒否します。
+- `WEBNP2_PAGE_URL`: stderrに示すページURL。Originは上記allowlistと一致させます。
+- `WEBNP2_BRIDGE_TOKEN`: 省略時は32バイトの乱数から生成。
+  明示する場合は32〜128文字の英数字・`_`・`-`。固定値は秘密として管理します。
+
+同時にアクティブになれるタブは1個です。別のタブを使う場合は先のタブを閉じます。
+認証済みでも別ソケットの応答は受け付けず、切断時には待機中の要求を失敗させます。
+`window.np2debug`による同一ページ内の操作APIは従来どおり使えます。
 
 ## 提供する MCP ツール
 
@@ -152,7 +156,7 @@ semver で厳密に刻む必要はなく、更新順が分かれば十分とい�
 手元で確認する場合:
 
 ```sh
-npm install
+npm ci
 npm run bundle
 node ../scripts/smoke-test-mcp-bundle.mjs dist/webnp2-mcp.mjs
 ```

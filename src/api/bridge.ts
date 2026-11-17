@@ -22,6 +22,8 @@ export class Bridge {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private url = '';
+  private token = '';
+  private blocked = false;
 
   constructor(
     private np2: WebNP2,
@@ -29,7 +31,10 @@ export class Bridge {
     private sharedKeyInput: SharedKeyInput,
   ) {}
 
-  connect(url: string): void {
+  connect(url: string, token: string): void {
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) throw new Error('Pairing token required');
+    this.token = token;
+    this.blocked = false;
     this.url = url;
     this.clearReconnectTimer();
     if (this.ws) {
@@ -52,7 +57,7 @@ export class Bridge {
   }
 
   private scheduleReconnect(): void {
-    if (this.reconnectTimer !== null) return;
+    if (this.blocked || this.reconnectTimer !== null) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.open();
@@ -60,7 +65,7 @@ export class Bridge {
   }
 
   private open(): void {
-    const ws = new WebSocket(this.url);
+    const ws = new WebSocket(this.url, ['webnp2-bridge', `webnp2-token.${this.token}`]);
     this.ws = ws;
 
     ws.addEventListener('open', () => {
@@ -68,15 +73,15 @@ export class Bridge {
       ws.send(JSON.stringify({ type: 'hello', role: 'webnp2' }));
     });
 
-    ws.addEventListener('close', () => {
-      if (this.ws === ws) {
-        this.ws = null;
-      }
+    ws.addEventListener('close', (event) => {
+      if (this.ws !== ws) return;
+      this.ws = null;
+      if (event.code === 1008) this.blocked = true;
       this.scheduleReconnect();
     });
 
     ws.addEventListener('error', () => {
-      this.scheduleReconnect();
+      // close schedules retries; authentication refusal must not race a second timer.
     });
 
     ws.addEventListener('message', (ev: MessageEvent) => {
@@ -92,6 +97,7 @@ export class Bridge {
       console.error('[WebNP2 bridge] invalid message', err);
       return;
     }
+    if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string' || typeof msg.cmd !== 'string') return;
     const { id, cmd, args } = msg;
     try {
       const result = await this.dispatch(cmd, args ?? {});

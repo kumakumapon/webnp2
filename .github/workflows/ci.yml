@@ -1,0 +1,73 @@
+name: WebNP2 CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: webnp2-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build
+        env:
+          VITE_DISK_PROXY: ${{ vars.DISK_PROXY_URL }}
+      - id: plan
+        run: node scripts/ci/plan.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webnp2-build
+          overwrite: true
+          retention-days: 7
+          path: |
+            dist
+            public/msdos4
+            public/k386
+            public/kgui32
+            public/hdd-proof
+            test-results/practical32-sdk
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-diagnostics
+          overwrite: true
+          path: test-results
+  browser:
+    needs: build
+    name: E2E (${{ matrix.case }})
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.build.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: webnp2-build
+      - run: node scripts/ci/e2e.mjs "$E2E_CASE"
+        env:
+          E2E_CASE: ${{ matrix.case }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.case }}
+          overwrite: true
+          path: |
+            test-results
+            public/kgui32/manifest.json
+            public/msdos4/manifest.json
+            public/hdd-proof/manifest.json

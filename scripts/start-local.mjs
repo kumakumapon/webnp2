@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const usage = `WebNP2 local launcher (Node.js 22.12+ and npm)
+const usage = `WebNP2 local launcher (Node.js 24 LTS and npm)
 Usage: start-linux.sh | start-windows.cmd [options]
   --port NUMBER  Local port (default: 5173)
   --no-open      Do not open a browser
@@ -60,9 +60,9 @@ async function main() {
     return 0;
   }
   const config = options(args);
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major < 22 || (major === 22 && minor < 12)) {
-    throw new Error('Install Node.js 22.12 or later with npm: https://nodejs.org/');
+  const [major] = process.versions.node.split('.').map(Number);
+  if (major !== 24) {
+    throw new Error('Install Node.js 24 LTS with npm: https://nodejs.org/');
   }
   const stamp = join(root, 'node_modules', '.webnp2-local-deps');
   const vite = join(root, 'node_modules', 'vite', 'bin', 'vite.js');

@@ -153,7 +153,7 @@ describe('fetchDiskBytes', () => {
 
   it('中継設定時でもDropboxは中継をスキップし、置換後のURLへ直接fetchする', async () => {
     vi.stubEnv('VITE_DISK_PROXY', 'https://proxy.example.test');
-    const fetchMock = vi.fn(async () => mockResponse(BINARY_BYTES));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => mockResponse(BINARY_BYTES));
     vi.stubGlobal('fetch', fetchMock);
     const { fetchDiskBytes } = await import('../src/api/disk-fetch.ts');
 
@@ -166,7 +166,7 @@ describe('fetchDiskBytes', () => {
   });
 
   it('中継未設定でもDropboxは置換後のURLへ直接fetchして取得できる', async () => {
-    const fetchMock = vi.fn(async () => mockResponse(BINARY_BYTES));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => mockResponse(BINARY_BYTES));
     vi.stubGlobal('fetch', fetchMock);
     const { fetchDiskBytes } = await import('../src/api/disk-fetch.ts');
 
@@ -201,7 +201,7 @@ describe('fetchDiskBytes', () => {
 
   it('中継設定時でも共有ホスト以外(例: GitHub raw)は直接fetchを先に試みる', async () => {
     vi.stubEnv('VITE_DISK_PROXY', 'https://proxy.example.test');
-    const fetchMock = vi.fn(async () => mockResponse(BINARY_BYTES));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) => mockResponse(BINARY_BYTES));
     vi.stubGlobal('fetch', fetchMock);
     const { fetchDiskBytes } = await import('../src/api/disk-fetch.ts');
 

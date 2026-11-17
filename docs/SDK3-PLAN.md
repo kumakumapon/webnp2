@@ -1,5 +1,9 @@
 # SDK3 / protected graphical editor
 
+> Status: archived development/acceptance record. Preserved scope and baseline
+> references are historical; use [the documentation index](https://github.com/kumakumapon/webnp2/blob/master/docs/README.md)
+> for current supported behavior and the repository issues for active work.
+
 Status: implemented, validated and merged in both repositories #43.
 The following is the original SDK3 scope; SDK4 workspace saving follows it.
 

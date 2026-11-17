@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Add CPANEL and optionally KDESK to the bundled DOS 4 PC-98 image."""
+from msdos4_distribution import sync_distribution
 import argparse
 import hashlib
 import importlib.util
@@ -181,11 +182,7 @@ def main():
         (destination / 'KDESK.txt').write_bytes(apps['KDESK.TXT'])
         (destination / 'KIMAGE.txt').write_bytes(apps['KIMAGE.TXT'])
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
-    for readme in (webnp2 / 'README.md', webnp2 / 'README.ja.md'):
-        text = readme.read_text()
-        updated = re.sub(r'msdos4-retrobasic-[0-9a-f]{12}\.xdf', manifest['image'], text)
-        if updated != text:
-            readme.write_text(updated)
+    sync_distribution(webnp2, prune=True)
     print(f"Updated {destination / manifest['image']} ({sha256})")
 
 
