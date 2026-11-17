@@ -6,6 +6,7 @@ import { listCases } from './plan.mjs';
 test('preserves all 102 original E2E matrix cases and every verifier command', () => {
   const cases = listCases();
   assert.equal(cases.length, 102);
+  assert.deepEqual(cases.find(item => item.id === 'browser').directories, ['test-results/dos2']);
   assert.equal(new Set(cases.map(item => item.id)).size, 102);
   for (const item of cases) {
     assert.ok(item.timeout > 0 && item.timeout <= 60);

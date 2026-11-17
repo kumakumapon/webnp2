@@ -11,6 +11,7 @@ export function listCases() {
       const expand = word => word.replace(/\{(\w+)\}/g, (_, key) => values[key]);
       return {
         id: [name, ...Object.values(values)].join('-'), timeout: suite.timeout, base: suite.base,
+        directories: suite.directories ?? [],
         commands: suite.commands.map(command => ({ argv: command.argv.map(expand), env: command.env ?? {} })),
       };
     });

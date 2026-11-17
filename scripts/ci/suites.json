@@ -1,5 +1,6 @@
 {
   "browser": {
+    "directories": ["test-results/dos2"],
     "matrix": {},
     "timeout": 15,
     "base": "/webnp2/",

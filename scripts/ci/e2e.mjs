@@ -34,6 +34,7 @@ const onSignal = () => { void stopAll().then(() => { process.exitCode = 1; }); }
 process.once('SIGINT', onSignal);
 process.once('SIGTERM', onSignal);
 mkdirSync('test-results', {recursive:true});
+for (const directory of suite.directories) mkdirSync(directory, {recursive:true});
 const log = openSync('test-results/preview.log', 'w');
 try {
   const server = launch(['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort', '--base', suite.base], { stdio: ['ignore', log, log] });
