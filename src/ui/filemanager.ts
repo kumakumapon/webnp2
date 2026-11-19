@@ -167,8 +167,8 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   ]);
 
   // --- 中央の転送ボタン ---
-  const toDiskBtn = el('button', { type: 'button', class: 'fm-transfer-btn' }, ['→']);
-  const toHostBtn = el('button', { type: 'button', class: 'fm-transfer-btn' }, ['←']);
+  const toDiskBtn = el('button', { type: 'button', class: 'fm-transfer-btn' }, [t('fmCopyToPc98')]);
+  const toHostBtn = el('button', { type: 'button', class: 'fm-transfer-btn' }, [t('fmSaveToHost')]);
   const transferControls = el('div', { class: 'fm-transfer-controls' }, [toDiskBtn, toHostBtn]);
 
   // --- 右ペイン(ディスク) ---
@@ -633,6 +633,8 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
     applyStrings(): void {
       titleEl.textContent = t('fmDialogTitle');
       noteEl.textContent = t('fmDialogNote');
+      toDiskBtn.textContent = t('fmCopyToPc98');
+      toHostBtn.textContent = t('fmSaveToHost');
       hostTitle.textContent = t('fmHostPaneTitle');
       hostSelectBtn.textContent = t('fmSelectFilesBtn');
       hostDropHint.textContent = t('fmDropHint');

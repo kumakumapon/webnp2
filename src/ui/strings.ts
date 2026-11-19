@@ -38,11 +38,31 @@ interface Dict {
   toggleOn(): string;
   /** トグル項目の右端に出すOFF表示。 */
   toggleOff(): string;
+  driveInsertMenu(): string;
+  driveEjectAction(): string;
+  driveOtherActions(): string;
+  driveChooseFile(): string;
+  driveIdleLamp(args: { drive: string }): string;
+  driveActiveLamp(args: { drive: string }): string;
+  landscapeControls(): string;
+  landscapeHideControls(): string;
+  driveLibraryError(): string;
+  themeSystem(): string;
+  themeLight(): string;
+  themeDark(): string;
   overlayNote1(): string;
   overlayNote2(): string;
   startBtn(): string;
   startBtnPlain(): string;
   /** 起動前にディスクをセット済みのときの起動ボタン。 */
+  bootPlainDescription(): string;
+  bootFreeDosDescription(): string;
+  bootDos2Description(): string;
+  bootDos4Description(): string;
+  bootKguiDescription(): string;
+  bootSavedDescription(): string;
+  fmCopyToPc98(): string;
+  fmSaveToHost(): string;
   startBtnPending(): string;
   startBtnFreeDos(): string;
   startBtnMsDos2(): string;
@@ -496,6 +516,26 @@ const STRINGS: Record<Lang, Dict> = {
     toolbarToggleHddSlot: () => 'HDD欄を表示',
     toggleOn: () => 'ON',
     toggleOff: () => 'OFF',
+    driveInsertMenu: () => '挿入',
+    driveEjectAction: () => '取り出し',
+    driveOtherActions: () => 'ディスクの操作',
+    driveChooseFile: () => 'ファイルを選ぶ',
+    driveIdleLamp: ({ drive }) => `${drive} 待機中`,
+    driveActiveLamp: ({ drive }) => `${drive} アクセス中`,
+    landscapeControls: () => '操作',
+    landscapeHideControls: () => '操作を閉じる',
+    driveLibraryError: () => 'ディスクライブラリを読み込めませんでした',
+    bootPlainDescription: () => 'ROM BASIC またはディスク待ち',
+    bootFreeDosDescription: () => 'PC-98 向けの互換 DOS',
+    bootDos2Description: () => 'オリジナルの DOS コマンド環境',
+    bootDos4Description: () => 'RetroBasic を含む DOS 環境',
+    bootKguiDescription: () => '32bit デスクトップと標準アプリ',
+    bootSavedDescription: () => 'ライブラリからディスクを選択',
+    fmCopyToPc98: () => 'PC-98へコピー',
+    fmSaveToHost: () => 'この端末に保存',
+    themeSystem: () => '表示テーマ：端末に合わせる',
+    themeLight: () => '表示テーマ：ライト',
+    themeDark: () => '表示テーマ：ダーク',
     overlayNote1: () => '音声再生の制限上、クリック操作で起動します。',
     overlayNote2: () => 'ファイルをドラッグ&ドロップしてHDD/FDイメージを読み込むこともできます。',
     startBtn: () => 'クリックして起動',
@@ -875,6 +915,26 @@ const STRINGS: Record<Lang, Dict> = {
     toolbarToggleHddSlot: () => 'Show HDD slot',
     toggleOn: () => 'ON',
     toggleOff: () => 'OFF',
+    driveInsertMenu: () => 'Insert',
+    driveEjectAction: () => 'Eject',
+    driveOtherActions: () => 'Disk actions',
+    driveChooseFile: () => 'Choose a file',
+    driveIdleLamp: ({ drive }) => `${drive} idle`,
+    driveActiveLamp: ({ drive }) => `${drive} accessing disk`,
+    landscapeControls: () => 'Controls',
+    landscapeHideControls: () => 'Hide controls',
+    driveLibraryError: () => 'Could not load the disk library',
+    bootPlainDescription: () => 'ROM BASIC or wait for a disk',
+    bootFreeDosDescription: () => 'Compatible DOS for PC-98',
+    bootDos2Description: () => 'Original DOS command environment',
+    bootDos4Description: () => 'DOS with RetroBasic',
+    bootKguiDescription: () => '32-bit desktop and bundled apps',
+    bootSavedDescription: () => 'Choose a disk from your library',
+    fmCopyToPc98: () => 'Copy to PC-98',
+    fmSaveToHost: () => 'Save to this device',
+    themeSystem: () => 'Theme: System',
+    themeLight: () => 'Theme: Light',
+    themeDark: () => 'Theme: Dark',
     overlayNote1: () => 'Audio requires a user gesture, so click to start.',
     overlayNote2: () => 'You can also drag & drop HDD/FD disk images.',
     startBtn: () => 'Click to Start',

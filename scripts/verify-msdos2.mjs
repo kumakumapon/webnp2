@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { launchDosBrowser } from './legacy-browser.mjs';
+import { verifyPlayerLayout } from './verify-player-layout.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos2/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
@@ -82,6 +83,8 @@ try {
   assert.deepEqual(errors, []);
   if (process.argv[3]) await page.screenshot({ path: process.argv[3] });
   console.log('PASS: mobile boot link, MS-DOS 2.00, VER, file write/read/copy, persistence after reload, image checksum and MIT license');
+  boot.searchParams.set('lang', 'en');
+  await verifyPlayerLayout(base, boot.href, process.argv[3]);
 } finally {
   await browser.close();
 }

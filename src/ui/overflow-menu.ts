@@ -11,6 +11,7 @@
  */
 export type ToolbarActionId =
   | 'aspect'
+  | 'theme'
   | 'showHddSlot'
   | 'pause'
   | 'machineReset'
@@ -36,7 +37,7 @@ export type ToolbarActionId =
 
 /** UIに存在する全操作の独立した基準。分類から項目が脱落していないかテストするために使う。 */
 export const TOOLBAR_ACTIONS: readonly ToolbarActionId[] = [
-  'aspect', 'showHddSlot', 'pause', 'machineReset', 'saveState', 'loadState', 'screenshot', 'fullscreen', 'virtualKbd', 'gamepad',
+  'aspect', 'theme', 'showHddSlot', 'pause', 'machineReset', 'saveState', 'loadState', 'screenshot', 'fullscreen', 'virtualKbd', 'gamepad',
   'mouseCapture', 'mouseResync', 'resetOriginal', 'pasteText', 'romManager', 'diskLibrary',
   'kdeskMedia', 'fileManager', 'debuggerOpen', 'help', 'language', 'mute', 'fddSeekSound',
 ];
@@ -69,7 +70,7 @@ export const OVERFLOW_GROUP_ORDER: readonly OverflowGroupId[] = ['display', 'inp
 
 /** グループ→所属操作(第2階層に出す順序)。 */
 export const OVERFLOW_GROUPS: Record<OverflowGroupId, readonly ToolbarActionId[]> = {
-  display: ['aspect', 'showHddSlot'],
+  display: ['aspect', 'showHddSlot', 'theme'],
   input: ['mouseCapture', 'mouseResync', 'gamepad', 'pasteText'],
   sound: ['mute', 'fddSeekSound'],
   disk: ['diskLibrary', 'fileManager'],

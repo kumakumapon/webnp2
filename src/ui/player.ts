@@ -513,6 +513,11 @@ function rescale(
   aspectMode: AspectMode,
   sharpView: SharpView,
 ): void {
+  const compactLandscape = card.classList.contains('machine-running')
+    && window.matchMedia('(pointer: coarse) and (orientation: landscape) and (max-height: 520px)').matches
+    && !document.body.classList.contains('pseudo-fullscreen')
+    && !document.body.classList.contains('vpad-sides-active');
+  document.body.classList.toggle('compact-landscape', compactLandscape);
   const appStyle = getComputedStyle(chrome.appEl);
   const appPaddingH = parseFloat(appStyle.paddingLeft) + parseFloat(appStyle.paddingRight);
   const appPaddingV = parseFloat(appStyle.paddingTop) + parseFloat(appStyle.paddingBottom);
@@ -541,7 +546,7 @@ function rescale(
   const reservedHeight =
     (chrome.pageHeader?.getBoundingClientRect().height ?? 0) +
     (chrome.pageFooter?.getBoundingClientRect().height ?? 0) +
-    chrome.footerBar.getBoundingClientRect().height +
+    (compactLandscape ? 0 : chrome.footerBar.getBoundingClientRect().height) +
     chrome.statusPanel.getBoundingClientRect().height +
     (progressActive ? chrome.progressWrap.getBoundingClientRect().height : 0) +
     (kbdVisible ? chrome.kbdPanel.getBoundingClientRect().height : 0) +
@@ -551,7 +556,8 @@ function rescale(
 
   // reservedHeight の再計測誤差やスクロールバー分の余白として少し余裕を持たせる。
   // 960px のような固定上限は、整数倍吸着/端数倍表示(pickUpscale)導入後は不要。
-  const maxHeight = window.innerHeight - reservedHeight - 4;
+  const viewportHeight = compactLandscape ? window.visualViewport?.height ?? window.innerHeight : window.innerHeight;
+  const maxHeight = Math.max(1, viewportHeight - reservedHeight - 4);
   const native = nativeSize(canvas);
   // 4:3モードでは実解像度(native)そのものではなく、そこから拡大方向で導いた4:3の
   // 「目標サイズ」を基準にフィット計算する(src/ui/aspect.ts の getTargetSize 参照)。
@@ -574,16 +580,19 @@ function rescale(
   // (fitSubScale)。
   const up = pickUpscale(fit, target.width, target.height);
   const sub = fitSubScale(subScale, window.devicePixelRatio);
-  const scale = fit >= 1 ? up.scale : sub.scale;
-  const smooth = fit >= 1 ? up.smooth : sub.smooth;
+  const preferredScale = fit >= 1 ? up.scale : sub.scale;
+  const scale = compactLandscape ? Math.min(fit, preferredScale) : preferredScale;
+  const smooth = scale !== preferredScale || (fit >= 1 ? up.smooth : sub.smooth);
   canvas.classList.toggle('smooth-scaled', smooth);
   const w = Math.round(target.width * scale);
   const h = Math.round(target.height * scale);
   canvas.style.width = `${w}px`;
   canvas.style.height = `${h}px`;
   stage.style.width = `${w}px`;
-  stage.style.height = `${h}px`;
-  card.style.width = `${w}px`;
+  const expandedBootChoices = !card.classList.contains('machine-running')
+    && window.matchMedia('(pointer: coarse) and (orientation: portrait)').matches;
+  stage.style.height = `${expandedBootChoices ? Math.max(h, maxHeight) : h}px`;
+  card.style.width = `${compactLandscape ? maxWidth : w}px`;
   // #canvas-sharp(シャープ・バイリニア表示)は、#canvas側が補間ありになる場面
   // (4:3モード、またはドット等倍で端数倍のため補間へ落ちた場合)でだけ有効にする。
   // 最近傍のままでよいドット等倍時は無効化し、#canvasをそのまま見せる。
@@ -673,8 +682,32 @@ export function buildPlayerUI(
   if (kgui32ExpandedHighColorBtn) overlayButtonList.push(kgui32ExpandedHighColorBtn);
   if (kgui32FdBtn) overlayButtonList.push(kgui32FdBtn);
   overlayButtonList.push(libraryStartBtn);
+  const labelBootCards = (): void => {
+    const descriptions = [
+      [pendingBootMode ? undefined : startBtn, t('bootPlainDescription')],
+      [freeDosBtn, t('bootFreeDosDescription')],
+      [msDosBtn, t('bootDos2Description')],
+      [msDos4Btn, t('bootDos4Description')],
+      [kgui32Btn, t('bootKguiDescription')],
+      [libraryStartBtn, t('bootSavedDescription')],
+    ] as const;
+    for (const [button, description] of descriptions) button?.setAttribute('aria-description', description);
+    if (pendingBootMode) startBtn.removeAttribute('aria-description');
+  };
+  labelBootCards();
   const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
-  const overlay = el('div', { class: 'overlay' }, [overlayButtons, overlayNote]);
+  const bootFile = el('input', { type: 'file', class: 'fd-file-input', accept: `${FD_INPUT_ACCEPT},${HDD_INPUT_ACCEPT}` });
+  const bootFileButton = el('button', { class: 'boot-file-picker', type: 'button' }, [t('driveChooseFile')]);
+  bootFileButton.addEventListener('click', () => bootFile.click());
+  bootFile.addEventListener('change', () => {
+    const file = bootFile.files?.[0];
+    bootFile.value = '';
+    if (!file) return;
+    const kind = classifyDroppedInput(file.name);
+    if (kind) callbacks.onFilesDropped([{ file, kind }]);
+    else alert(t('dropUnsupported'));
+  });
+  const overlay = el('div', { class: 'overlay' }, [bootFileButton, bootFile, overlayButtons, overlayNote]);
 
   // ポーズ中オーバーレイ。起動前オーバーレイ(.overlay)とは別要素で、起動後にツールバーの
   // ポーズボタンから止めたときだけ出す(状態の扱いはbtnPauseの結線箇所のコメント参照)。
@@ -684,7 +717,7 @@ export function buildPlayerUI(
   const pauseOverlayText = el('div', { class: 'pause-overlay-label' }, [t('pauseOverlayLabel')]);
   const pauseOverlay = el('div', { class: 'pause-overlay hidden' }, [btnPauseOverlayResume, pauseOverlayText]);
 
-  const muteBanner = el('div', { class: 'mute-banner hidden' }, [t('audioMuted')]);
+  const muteBanner = el('div', { class: 'mute-banner hidden', role: 'status' }, [t('audioMuted')]);
 
   const vpadOverlay = el('div', { class: 'virtual-pad hidden' });
   const btnPanelKeyboard = iconButton(ICONS.keyboard, t('inputPanelSwitchKeyboard'), 'panel-switch-btn');
@@ -699,7 +732,7 @@ export function buildPlayerUI(
     btnPanelPad,
     btnPanelTrackpad,
   ]);
-  const stage = el('div', { class: 'stage' }, [canvas, overlay, pauseOverlay, muteBanner, vpadOverlay]);
+  const stage = el('div', { class: 'stage' }, [canvas, overlay, pauseOverlay, vpadOverlay]);
 
   // 表示縦横比モード(4:3/ドット等倍)。URLの?aspect=(main.tsでパース済み)があれば起動時のみ
   // それを優先し、無ければ保存値/既定(loadAspectMode、既定は'4:3')に従う(src/ui/aspect.ts参照)。
@@ -793,6 +826,27 @@ export function buildPlayerUI(
   // 使用頻度の低いものは overflow-menu.ts のグループ定義に従いこのボタン配下へ畳む
   // (移植元: WebX68k commit 694bd3f)。グループ分けとメニュー本体は下の
   // 「--- ツールバー「…」オーバーフローメニュー ---」ブロックにまとめて実装する。
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const themeModes = ['themeSystem', 'themeLight', 'themeDark'] as const;
+  let themeMode: typeof themeModes[number] = 'themeSystem';
+  try {
+    const stored = localStorage.getItem('webnp2.theme');
+    if (stored === 'themeLight' || stored === 'themeDark') themeMode = stored;
+  } catch { /* The current page can still change theme. */ }
+  const btnTheme = iconButton(ICONS.aspect, t(themeMode));
+  const applyTheme = (): void => {
+    document.documentElement.dataset.theme = themeMode === 'themeDark' ||
+      (themeMode === 'themeSystem' && systemTheme.matches) ? 'dark' : 'light';
+    btnTheme.title = t(themeMode);
+    btnTheme.setAttribute('aria-label', t(themeMode));
+  };
+  applyTheme();
+  systemTheme.addEventListener('change', applyTheme);
+  btnTheme.addEventListener('click', () => {
+    themeMode = themeModes[(themeModes.indexOf(themeMode) + 1) % themeModes.length];
+    try { localStorage.setItem('webnp2.theme', themeMode); } catch { /* Apply for this page. */ }
+    applyTheme();
+  });
   const btnToolbarOverflow = iconButton(ICONS.overflow, t('toolbarMore'));
   btnToolbarOverflow.setAttribute('aria-haspopup', 'menu');
 
@@ -801,6 +855,7 @@ export function buildPlayerUI(
   // 二重管理にならない。
   const actionButtons: Record<ToolbarActionId, HTMLButtonElement | HTMLAnchorElement> = {
     aspect: btnAspect,
+    theme: btnTheme,
     showHddSlot: btnShowHddSlot,
     pause: btnPause,
     machineReset: btnMachineReset,
@@ -855,14 +910,23 @@ export function buildPlayerUI(
 
   // FDスロットUI (FDD1/FDD2)
   // ドライブアクセスランプ。コア側のアクセスカウンタの変化で main.ts から点灯/消灯させる。
-  const diskLamp = (label: string): HTMLElement =>
-    el('span', { class: 'fd-lamp', role: 'img', 'aria-label': label });
-  const fdLamp1 = diskLamp(t('diskLampLabel', { drive: 'FDD1' }));
-  const fdLamp2 = diskLamp(t('diskLampLabel', { drive: 'FDD2' }));
-  const hddLamp = diskLamp(t('diskLampLabel', { drive: 'HDD' }));
+  const diskLamp = (drive: string): HTMLElement =>
+    el('span', { class: 'fd-lamp', role: 'img', 'aria-label': t('driveIdleLamp', { drive }) });
+  const fdLamp1 = diskLamp('FDD1');
+  const fdLamp2 = diskLamp('FDD2');
+  const hddLamp = diskLamp('HDD');
+  const lampStates = [
+    { key: 'fd1' as const, node: fdLamp1, label: 'FDD1' },
+    { key: 'fd2' as const, node: fdLamp2, label: 'FDD2' },
+    { key: 'hdd' as const, node: hddLamp, label: 'HDD' },
+  ];
+  function labelDiskLamps(): void {
+    for (const lamp of lampStates) lamp.node.setAttribute('aria-label',
+      t(lamp.node.classList.contains('active') ? 'driveActiveLamp' : 'driveIdleLamp', { drive: lamp.label }));
+  }
 
   const fdLabel1 = el('span', { class: 'fd-label' }, [t('fdSlotLabel', { drive: 1 })]);
-  const fdName1 = el('span', { class: 'fd-name' }, [t('fdEmpty')]);
+  const fdName1 = el('button', { class: 'fd-name drive-name-button', type: 'button' }, [t('fdEmpty')]);
   const fdInput1 = el('input', {
     type: 'file',
     class: 'fd-file-input',
@@ -888,7 +952,7 @@ export function buildPlayerUI(
   ]);
 
   const fdLabel2 = el('span', { class: 'fd-label' }, [t('fdSlotLabel', { drive: 2 })]);
-  const fdName2 = el('span', { class: 'fd-name' }, [t('fdEmpty')]);
+  const fdName2 = el('button', { class: 'fd-name drive-name-button', type: 'button' }, [t('fdEmpty')]);
   const fdInput2 = el('input', {
     type: 'file',
     class: 'fd-file-input',
@@ -915,7 +979,7 @@ export function buildPlayerUI(
   // 押すと「セット」だけ行い起動はしない(セット後にファイルマネージャで編集できるようにするため)。
   // 起動はオーバーレイの起動ボタンで明示的に行う。スマホ等D&D不可環境向けの入口も兼ねる。
   const hddLabel = el('span', { class: 'fd-label' }, [t('hddSlotLabel')]);
-  const hddName = el('span', { class: 'fd-name' }, [t('fdEmpty')]);
+  const hddName = el('button', { class: 'fd-name drive-name-button', type: 'button' }, [t('fdEmpty')]);
   const hddInput = el('input', {
     type: 'file',
     class: 'fd-file-input',
@@ -928,7 +992,7 @@ export function buildPlayerUI(
   const hddBlankBtn = iconButton(ICONS.blank, t('hddCreateBlank'));
   // セット済みHDDの取り外し。起動前かつセット中のみ表示する。
   const hddEjectBtn = iconButton(ICONS.eject, t('hddEject'));
-  hddEjectBtn.classList.add('hidden');
+  hddEjectBtn.disabled = true;
   const hddDlBtn = iconButton(ICONS.download, t('slotDownload'));
   const hddSlot = el('div', { class: 'fd-slot' }, [
     el('div', { class: 'fd-slot-info' }, [hddLamp, hddLabel, hddName]),
@@ -941,6 +1005,38 @@ export function buildPlayerUI(
       hddDlBtn,
     ]),
   ]);
+
+  const drives = [
+    { key: 'fd1' as const, slot: fdSlot1, name: fdName1, insert: [fdInsertBtn1, fdLibraryBtn1, fdFreeDosBtn1, fdBlankBtn1], eject: fdEjectBtn1, download: fdDlBtn1 },
+    { key: 'fd2' as const, slot: fdSlot2, name: fdName2, insert: [fdInsertBtn2, fdLibraryBtn2, fdBlankBtn2], eject: fdEjectBtn2, download: fdDlBtn2 },
+    { key: 'hdd' as const, slot: hddSlot, name: hddName, insert: [hddInsertBtn, hddLibraryBtn, hddBlankBtn], eject: hddEjectBtn, download: hddDlBtn },
+  ].map(drive => {
+    drive.slot.dataset.drive = drive.key;
+    drive.name.disabled = true;
+    const insertButton = el('button', { type: 'button', class: 'drive-control drive-insert' });
+    const moreButton = el('button', { type: 'button', class: 'drive-control drive-more' }, ['…']);
+    drive.eject.classList.add('drive-control');
+    for (const trigger of [insertButton, moreButton, drive.name]) {
+      trigger.setAttribute('aria-haspopup', 'menu');
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-controls', 'drive-actions-menu');
+    }
+    const actions = drive.slot.querySelector<HTMLElement>('.fd-slot-actions')!;
+    const sources = el('div', { hidden: '' }, Array.from(actions.children).filter(element => element !== drive.eject));
+    actions.replaceChildren(insertButton, drive.eject, moreButton, sources);
+    return { ...drive, insertButton, moreButton };
+  });
+  function labelDriveControls(): void {
+    for (const drive of drives) {
+      drive.slot.setAttribute('role', 'group');
+      drive.slot.setAttribute('aria-label', drive.key === 'hdd' ? t('hddSlotLabel') :
+        t('fdSlotLabel', { drive: drive.key === 'fd1' ? 1 : 2 }));
+      drive.insertButton.textContent = `${t('driveInsertMenu')} ▾`;
+      drive.moreButton.setAttribute('aria-label', t('driveOtherActions'));
+      drive.eject.textContent = t('driveEjectAction');
+    }
+  }
+  labelDriveControls();
 
   const fdSlots = el('div', { class: 'fd-slots' }, [fdSlot1, fdSlot2, hddSlot]);
 
@@ -1115,7 +1211,7 @@ export function buildPlayerUI(
     return false;
   };
 
-  const statusPanel = el('div', { class: 'status-panel' }, ['']);
+  const statusPanel = el('div', { class: 'status-panel', role: 'status' });
 
   const progressLabel = el('div', { class: 'progress-label' }, ['']);
   const progressFill = el('div', { class: 'progress-bar-fill' });
@@ -1227,9 +1323,26 @@ export function buildPlayerUI(
 
   // WebMSX風: カードは実行画面(キャンバス) + グレーのコンソールバー(ツールバー/FDスロット)のみ。
   // 黒いページヘッダー/グレーのページフッターは index.html 側の全幅要素として別に存在する。
-  const footerBar = el('div', { class: 'console-footer' }, [toolbar, fdSlots, overflowSources]);
+  const footerBar = el('div', { class: 'console-footer', id: 'player-controls' }, [muteBanner, toolbar, fdSlots, overflowSources]);
   const card = el('div', { class: 'console-card' });
-  card.append(stage, kbdPanel, trackpadPanel, footerBar);
+  const landscapeToggle = el('button', { type: 'button', class: 'landscape-toggle',
+    'aria-expanded': 'false', 'aria-controls': 'player-controls' }, [t('landscapeControls')]);
+  function setLandscapeControls(open: boolean): void {
+    card.classList.toggle('controls-visible', open);
+    landscapeToggle.setAttribute('aria-expanded', String(open));
+    landscapeToggle.textContent = t(open ? 'landscapeHideControls' : 'landscapeControls');
+  }
+  landscapeToggle.addEventListener('click', () => setLandscapeControls(!card.classList.contains('controls-visible')));
+  canvas.addEventListener('pointerdown', () => setLandscapeControls(false));
+  card.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && card.classList.contains('controls-visible') &&
+        (event.target === landscapeToggle || footerBar.contains(event.target as Node))) {
+      event.stopPropagation();
+      setLandscapeControls(false);
+      landscapeToggle.focus();
+    }
+  });
+  card.append(stage, kbdPanel, trackpadPanel, landscapeToggle, footerBar);
 
   // ROM登録ダイアログ (起動前後どちらでも操作可能なグローバルモーダル)。
   const romDescription = el('p', { class: 'rom-modal-description' }, [t('romDialogDescription')]);
@@ -1601,13 +1714,42 @@ export function buildPlayerUI(
   // アーカイブ由来のグループはフォルダ1行にまとめ、クリックで中身(サブメニュー)へ潜る。
   // ディスク入れ替えのたびにライブラリダイアログを開かずに済むようにするための導線。
   const fdLibraryMenu = el('div', { class: 'library-menu hidden', role: 'menu' });
+  const driveActionsMenu = el('div', { id: 'drive-actions-menu', class: 'library-menu drive-actions-menu hidden', role: 'menu' });
+  let activeDriveTrigger: HTMLButtonElement | undefined;
+  function closeDriveActions(restoreFocus = false): void {
+    const trigger = activeDriveTrigger;
+    activeDriveTrigger = undefined;
+    if (!trigger) return;
+    trigger.setAttribute('aria-expanded', 'false');
+    driveActionsMenu.classList.add('hidden');
+    driveActionsMenu.replaceChildren();
+    if (restoreFocus && !trigger.disabled) trigger.focus();
+  }
+
+  function positionDriveMenu(menu: HTMLElement, anchor: HTMLElement): void {
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+    menu.classList.remove('hidden');
+    const rect = anchor.getBoundingClientRect();
+    const bounds = menu.getBoundingClientRect();
+    const left = Math.max(4, Math.min(rect.left, window.innerWidth - bounds.width - 4));
+    const above = rect.top - bounds.height - 4;
+    const top = above >= 4 ? above : Math.max(4, Math.min(rect.bottom + 4, window.innerHeight - bounds.height - 4));
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+  }
   const inputPanelMenu = el('div', {
     class: 'library-menu input-panel-menu hidden',
     role: 'menu',
     tabindex: '-1',
   });
 
-  function closeFdLibraryMenu(): void {
+  let libraryMenuRequest = 0;
+  let libraryMenuAnchor: HTMLElement | null = null;
+  function closeFdLibraryMenu(restoreFocus = false): void {
+    libraryMenuRequest++;
+    if (restoreFocus) libraryMenuAnchor?.focus();
+    libraryMenuAnchor = null;
     fdLibraryMenu.classList.add('hidden');
     fdLibraryMenu.textContent = '';
   }
@@ -1724,46 +1866,86 @@ export function buildPlayerUI(
   }
 
   async function openFdLibraryMenu(target: SlotMenuTarget, anchorEl: HTMLElement): Promise<void> {
-    const nodes = await callbacks.onListLibrary();
-    renderFdLibraryMenu(target, nodes);
-    // 位置を左上に固定してから採寸する。未指定(static位置)のままだと折り返し幅が
-    // 表示位置に引きずられ、正しいサイズが得られない。
-    fdLibraryMenu.style.left = '0px';
-    fdLibraryMenu.style.top = '0px';
-    fdLibraryMenu.classList.remove('hidden');
-    // ボタン直上に出す(スロット行はカード下端にあるため、下方向だと画面外に出やすい)。
-    const rect = anchorEl.getBoundingClientRect();
-    const menuRect = fdLibraryMenu.getBoundingClientRect();
-    const left = Math.max(4, Math.min(rect.left, window.innerWidth - menuRect.width - 4));
-    const top = Math.max(4, rect.top - menuRect.height - 4);
-    fdLibraryMenu.style.left = `${Math.round(left)}px`;
-    fdLibraryMenu.style.top = `${Math.round(top)}px`;
+    const request = ++libraryMenuRequest;
+    libraryMenuAnchor = anchorEl;
+    try {
+      const nodes = await callbacks.onListLibrary();
+      if (request !== libraryMenuRequest) return;
+      renderFdLibraryMenu(target, nodes);
+    } catch {
+      if (request !== libraryMenuRequest) return;
+      fdLibraryMenu.replaceChildren(el('div', { class: 'library-menu-empty', role: 'alert' }, [t('driveLibraryError')]));
+    }
+    positionDriveMenu(fdLibraryMenu, anchorEl);
+    fdLibraryMenu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
   }
 
-  for (const [btn, target] of [
-    [fdLibraryBtn1, { kind: 'fd', drive: 1 }],
-    [fdLibraryBtn2, { kind: 'fd', drive: 2 }],
-    [hddLibraryBtn, { kind: 'hdd' }],
-  ] as Array<[HTMLElement, SlotMenuTarget]>) {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!fdLibraryMenu.classList.contains('hidden')) {
-        closeFdLibraryMenu();
+  for (const drive of drives) {
+    const target: SlotMenuTarget = drive.key === 'hdd' ? { kind: 'hdd' } : { kind: 'fd', drive: drive.key === 'fd1' ? 1 : 2 };
+    const showActions = (trigger: HTMLButtonElement, sources: readonly HTMLButtonElement[], inserting: boolean): void => {
+      const wasOpen = activeDriveTrigger === trigger;
+      closeDriveActions();
+      closeFdLibraryMenu();
+      if (wasOpen) return;
+      activeDriveTrigger = trigger;
+      trigger.setAttribute('aria-expanded', 'true');
+      for (const source of sources) {
+        const label = inserting && source === drive.insert[0] ? t('driveChooseFile') : source.title;
+        const row = menuRow(label, undefined, '', { disabled: source.disabled });
+        driveActionsMenu.append(row);
+        if (source.disabled) continue;
+        onActivate(row, () => {
+          closeDriveActions(true);
+          if (source === drive.insert[1]) void openFdLibraryMenu(target, trigger);
+          else source.click();
+        });
+      }
+      positionDriveMenu(driveActionsMenu, trigger);
+      driveActionsMenu.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+    };
+    for (const [trigger, sources, inserting] of [
+      [drive.insertButton, drive.insert, true],
+      [drive.moreButton, [drive.download], false],
+      [drive.name, [drive.eject, drive.download], false],
+    ] as const) {
+      trigger.addEventListener('click', event => {
+        event.stopPropagation();
+        showActions(trigger, sources, inserting);
+      });
+    }
+  }
+  for (const [menu, close] of [[driveActionsMenu, closeDriveActions], [fdLibraryMenu, closeFdLibraryMenu]] as const) {
+    menu.addEventListener('click', event => event.stopPropagation());
+    for (const eventName of ['keydown', 'keyup', 'keypress'] as const) {
+      menu.addEventListener(eventName, event => event.stopPropagation());
+    }
+    menu.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
         return;
       }
-      void openFdLibraryMenu(target, btn);
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const rows = Array.from(menu.querySelectorAll<HTMLElement>('[tabindex="0"]'));
+      if (!rows.length) return;
+      event.preventDefault();
+      const index = rows.indexOf(document.activeElement as HTMLElement);
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      rows[index < 0 ? (step > 0 ? 0 : rows.length - 1) : (index + step + rows.length) % rows.length].focus();
     });
   }
-  // メニュー内のクリックはここで止める。サブメニューへ潜る際に行を作り直すため、
-  // document まで伝播すると「クリック対象が既にメニュー配下に無い」と判定されて閉じてしまう。
-  fdLibraryMenu.addEventListener('click', (e) => e.stopPropagation());
-  // メニュー外クリック/Escで閉じる。
-  document.addEventListener('click', () => {
-    if (fdLibraryMenu.classList.contains('hidden')) return;
-    closeFdLibraryMenu();
+  document.addEventListener('click', () => closeDriveActions());
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && activeDriveTrigger) {
+      event.stopPropagation();
+      closeDriveActions(true);
+    }
   });
+
+  // メニュー外へ移動したときも閉じる。
+  document.addEventListener('click', () => closeFdLibraryMenu());
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeFdLibraryMenu();
+    if (e.key === 'Escape') closeFdLibraryMenu(true);
   });
 
   // ファイルマネージャ(FTPクライアント風2ペイン)ダイアログ。詳細な構築・状態管理はfilemanager.tsに委譲する。
@@ -1914,13 +2096,16 @@ export function buildPlayerUI(
   // actionButtons(元のツールバーボタン。現在はtoolbar-overflow-sourcesで非表示)をそのまま
   // ミラーする: ラベルはボタンのtitle、状態はdisabledを読み、クリック時はそのボタンの
   // click()を呼ぶだけでハンドラを二重化しない(WebX68k実装のoverflowActionRow()と同じ方式)。
-  const overflowMenu = el('div', { class: 'library-menu hidden', role: 'menu' });
+  const overflowMenu = el('div', { class: 'library-menu toolbar-overflow-menu hidden', role: 'menu' });
   // 広い画面用のカスケードサブメニュー(第2階層)。overflowMenu(親)は開いたまま、
   // グループ行の右側に別要素として重ねる。狭い画面では使わず、overflowMenuを差し替える。
   const overflowSubmenu = el('div', { class: 'library-menu hidden', role: 'menu' });
   overflowMenu.tabIndex = -1;
   overflowSubmenu.tabIndex = -1;
 
+  const overflowGroupIcons: Record<OverflowGroupId, string> = {
+    display: ICONS.aspect, input: ICONS.keyboard, sound: ICONS.speaker, disk: ICONS.library, state: ICONS.saveState,
+  };
   const OVERFLOW_GROUP_LABEL: Record<OverflowGroupId, () => string> = {
     display: () => t('toolbarGroupDisplay'),
     input: () => t('toolbarGroupInput'),
@@ -1978,6 +2163,11 @@ export function buildPlayerUI(
     overflowMenu.style.left = '0px';
     overflowMenu.style.top = '0px';
     overflowMenu.classList.remove('hidden');
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      overflowMenu.style.left = '';
+      overflowMenu.style.top = '';
+      return;
+    }
     const rect = anchorEl.getBoundingClientRect();
     const menuRect = overflowMenu.getBoundingClientRect();
     const left = Math.max(4, Math.min(rect.left, window.innerWidth - menuRect.width - 4));
@@ -2043,11 +2233,11 @@ export function buildPlayerUI(
     if (overflowMenuHasHeading('root')) {
       overflowMenu.append(el('div', { class: 'library-menu-title' }, [t('toolbarMore')]));
     }
-    const wide = isWideOverflowMenu(window.innerWidth);
+    const wide = !window.matchMedia('(pointer: coarse)').matches && isWideOverflowMenu(window.innerWidth);
     for (const groupId of OVERFLOW_GROUP_ORDER) {
       // 既存のlibrary-menu-extra（プロファイルのチェック表示と共用）へ記号を渡し、
       // 長いラベルは省略しつつ記号を行の右端へ固定する。
-      const row = menuRow(OVERFLOW_GROUP_LABEL[groupId](), '▸', 'group', { iconSlot: true });
+      const row = menuRow(OVERFLOW_GROUP_LABEL[groupId](), '▸', 'group', { icon: svgIcon(overflowGroupIcons[groupId]) });
       onActivate(row, () => {
         overflowMenuState = selectOverflowGroup(groupId, wide);
         if (wide) renderOverflowCascade(row, groupId);
@@ -2100,6 +2290,7 @@ export function buildPlayerUI(
     romBackdrop,
     libraryBackdrop,
     fdLibraryMenu,
+    driveActionsMenu,
     inputPanelMenu,
     overflowMenu,
     overflowSubmenu,
@@ -2508,7 +2699,9 @@ export function buildPlayerUI(
     kbdPanel,
     trackpadPanel,
   };
-  window.addEventListener('resize', () => rescale(canvas, stage, card, rescaleChrome, aspectMode, sharpView));
+  const resizePlayer = (): void => rescale(canvas, stage, card, rescaleChrome, aspectMode, sharpView);
+  window.addEventListener('resize', resizePlayer);
+  window.visualViewport?.addEventListener('resize', resizePlayer);
   rescale(canvas, stage, card, rescaleChrome, aspectMode, sharpView);
 
   // 即時+次フレーム+レイアウト沈静後の3回再計算する。スクロールバーの出没や
@@ -2550,6 +2743,7 @@ export function buildPlayerUI(
   if (rescaleChrome.pageHeader) chromeObserver.observe(rescaleChrome.pageHeader);
   if (rescaleChrome.pageFooter) chromeObserver.observe(rescaleChrome.pageFooter);
 
+  let statusTimer: ReturnType<typeof setTimeout> | undefined;
   let toolbarEnabled = false;
   let slotMounted: { fd1?: string; fd2?: string; hdd?: string } = {};
   let muteBannerVisible = false;
@@ -2564,8 +2758,12 @@ export function buildPlayerUI(
     },
     refreshLayout: scheduleRescale,
     setStatus(message: string, isError = false) {
+      clearTimeout(statusTimer);
       statusPanel.textContent = message;
       statusPanel.classList.toggle('error', isError);
+      if (!isError && (message === t('statusBootSuccess') || message === t('statusScreenshotSaved'))) {
+        statusTimer = setTimeout(() => { statusPanel.textContent = ''; }, 3500);
+      }
     },
     setProgress(label: string, ratio: number | null) {
       const wasActive = progressWrap.classList.contains('active');
@@ -2593,9 +2791,12 @@ export function buildPlayerUI(
       openLibraryModal(focusGroupId);
     },
     setDiskLamps(state: { fd1: boolean; fd2: boolean; hdd: boolean }) {
-      fdLamp1.classList.toggle('active', state.fd1);
-      fdLamp2.classList.toggle('active', state.fd2);
-      hddLamp.classList.toggle('active', state.hdd);
+      for (const lamp of lampStates) {
+        const active = state[lamp.key];
+        if (lamp.node.classList.contains('active') === active) continue;
+        lamp.node.classList.toggle('active', active);
+        lamp.node.setAttribute('aria-label', t(active ? 'driveActiveLamp' : 'driveIdleLamp', { drive: lamp.label }));
+      }
     },
     showOverlay() {
       overlay.classList.remove('hidden');
@@ -2630,6 +2831,9 @@ export function buildPlayerUI(
     },
     setToolbarEnabled(enabled: boolean) {
       toolbarEnabled = enabled;
+      card.classList.toggle('machine-running', enabled);
+      if (!enabled) setLandscapeControls(false);
+      scheduleRescale();
       btnMachineReset.disabled = !enabled;
       btnPause.disabled = !enabled;
       if (!enabled) pausedByUser = false;
@@ -2669,7 +2873,9 @@ export function buildPlayerUI(
       hddLibraryBtn.disabled = enabled;
       hddBlankBtn.disabled = enabled;
       // 起動したらセット状態は消えるので、取り外しボタンも隠す。
-      if (enabled) hddEjectBtn.classList.add('hidden');
+      if (enabled) hddEjectBtn.disabled = true;
+      drives[2].insertButton.disabled = enabled;
+      closeDriveActions();
       // 起動状態が変わるとライブラリ行のアクション(起動 vs 挿入)が変わるため、開いていれば更新する。
       if (!libraryBackdrop.classList.contains('hidden')) void refreshLibraryList();
       // オーバーフローメニューの各行はdisabled状態をボタンからその場で読むだけなので、
@@ -2678,6 +2884,8 @@ export function buildPlayerUI(
     },
     updateSlots(slots: { fd1?: string; fd2?: string; hdd?: string; hddPending?: boolean }) {
       slotMounted = slots;
+      for (const drive of drives) drive.name.disabled = !slots[drive.key];
+      closeDriveActions();
       fdName1.textContent = slots.fd1 ?? t('fdEmpty');
       fdName2.textContent = slots.fd2 ?? t('fdEmpty');
       hddName.textContent = slots.hdd ?? t('fdEmpty');
@@ -2689,7 +2897,7 @@ export function buildPlayerUI(
       fdDlBtn2.disabled = !toolbarEnabled || !slots.fd2;
       // 起動前にセットしたHDDはコア未マウントでもダウンロード/取り外しできる。
       hddDlBtn.disabled = !slots.hdd || (!toolbarEnabled && !slots.hddPending);
-      hddEjectBtn.classList.toggle('hidden', !slots.hddPending);
+      hddEjectBtn.disabled = !slots.hddPending;
       // HDDがセットされた(D&D/ライブラリ/起動前ペンディング/URLパラメータ経由の起動時
       // マウントいずれも、ここでslotMounted.hddが真になる)ら、トグルOFFのままでもHDD欄を表示する。
       updateHddSlotVisibility();
@@ -2697,11 +2905,14 @@ export function buildPlayerUI(
     setPendingBootMode(hasPending: boolean) {
       pendingBootMode = hasPending;
       startBtn.textContent = startBtnLabel();
+      labelBootCards();
     },
     applyStrings() {
       overlayNoteLine1.textContent = t('overlayNote1');
       overlayNoteLine2.textContent = t('overlayNote2');
+      bootFileButton.textContent = t('driveChooseFile');
       startBtn.textContent = startBtnLabel();
+      labelBootCards();
       if (freeDosBtn) freeDosBtn.textContent = t('startBtnFreeDos');
       if (msDosBtn) {
         msDosBtn.textContent = t('startBtnMsDos2');
@@ -2762,6 +2973,7 @@ export function buildPlayerUI(
       btnLang.setAttribute('aria-label', t('toolbarLanguage'));
       btnToolbarOverflow.title = t('toolbarMore');
       btnToolbarOverflow.setAttribute('aria-label', t('toolbarMore'));
+      applyTheme();
       btnAspect.title = t('toolbarAspect');
       btnAspect.setAttribute('aria-label', t('toolbarAspect'));
       btnShowHddSlot.title = t('toolbarToggleHddSlot');
@@ -2783,14 +2995,15 @@ export function buildPlayerUI(
       fdFreeDosBtn1.setAttribute('aria-label', t('fdInsertFreeDos'));
       fdInsertBtn2.title = t('fdInsert');
       fdInsertBtn2.setAttribute('aria-label', t('fdInsert'));
-      fdLamp1.setAttribute('aria-label', t('diskLampLabel', { drive: 'FDD1' }));
-      fdLamp2.setAttribute('aria-label', t('diskLampLabel', { drive: 'FDD2' }));
-      hddLamp.setAttribute('aria-label', t('diskLampLabel', { drive: 'HDD' }));
+      labelDiskLamps();
+      setLandscapeControls(card.classList.contains('controls-visible'));
       for (const btn of [fdLibraryBtn1, fdLibraryBtn2]) {
         btn.title = t('fdInsertFromLibrary');
         btn.setAttribute('aria-label', t('fdInsertFromLibrary'));
       }
       closeFdLibraryMenu();
+      closeDriveActions();
+      labelDriveControls();
       fdEjectBtn1.title = t('fdEject');
       fdEjectBtn1.setAttribute('aria-label', t('fdEject'));
       fdEjectBtn2.title = t('fdEject');
@@ -2863,19 +3076,12 @@ export function buildPlayerUI(
       muteBannerVisible = true;
       muteBanner.textContent = t('audioMuted');
       muteBanner.classList.remove('hidden');
-      // 'hidden' 解除直後に 'show' を付けないと display:none → opacity 遷移が発火しないため1フレーム待つ。
-      void muteBanner.offsetWidth;
-      muteBanner.classList.add('show');
+
     },
     hideMuteBanner() {
       if (!muteBannerVisible) return;
       muteBannerVisible = false;
-      muteBanner.classList.remove('show');
-      const onEnd = (): void => {
-        muteBanner.classList.add('hidden');
-        muteBanner.removeEventListener('transitionend', onEnd);
-      };
-      muteBanner.addEventListener('transitionend', onEnd);
+      muteBanner.classList.add('hidden');
     },
   };
 
