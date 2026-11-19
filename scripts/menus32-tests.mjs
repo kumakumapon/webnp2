@@ -27,6 +27,16 @@ export async function menuTests(p,video){
   throw Error('Menu index not reached '+index);
  }
  async function welcome(x,y){const s=await p.inspect();await tap(60,s.gui.height-16);await until(s=>s.gui.app.active===0,'touch Welcome');await tap(x,y);}
+ async function endByTap(id){
+  let s=await p.inspect();
+  if(s.gui.app.active!==id+2){
+   await tap(330+146*id,s.gui.height-16);
+   s=await until(s=>s.gui.app.active===id+2,'touch taskbar slot '+id);
+  }
+  const frame=s.bitmaps[id].window;
+  await tap(frame.x+230,frame.y+48);
+  await until(s=>s.expanded.slots[id].state===0,'touch End '+id);
+ }
  await welcome(130,192);await until(s=>samples(s)[0]===0x3243474b&&samples(s)[2]>0,'real calculator from mobile launcher');
  for(const key of [52,50]){await control(0,key);await until(s=>samples(s)[6]===(key===52?4:42),'touch calculator digit');}
  await choose(0,0);await until(s=>!draws(s,0).some(d=>d.handle===BACK),'memory add exits menu');
@@ -102,9 +112,9 @@ export async function menuTests(p,video){
  await until(s=>s.expanded.slots[0].state===0,'close mobile calendar');
  p.pass('Calendar uses the DOS date. Touch month selection, Today, maximize, tile and restore use the real CPL3 window');
 
- await p.end(1); // The 16 MiB profile needs its second slot for a shell child.
+ await endByTap(1); // The 16 MiB profile needs its second slot for a shell child.
  await welcome(130,302);
- await until(s=>samples(s)[0]===0x3248534b,'mobile shell launcher');
+ await until(s=>s.gui.app.active===2&&samples(s)[0]===0x3248534b,'mobile shell launcher');
  await shellInput(p,'KTOOL32.EXE cat\r');
  await until(s=>samples(s)[1]===2,'foreground cat waits for input');
  frame=(await p.inspect()).bitmaps[0].window;
@@ -114,7 +124,7 @@ export async function menuTests(p,video){
  await until(s=>samples(s)[1]===2&&s.process?.tasks.some(t=>t.parent&&t.state===2),'foreground wait');
  await tap(frame.x+236,frame.y+frame.h-16);
  await until(s=>samples(s)[8]===2&&samples(s)[7]===0xffffff7e,'visible Cancel reaps foreground child');
- await p.end(0);
+ await endByTap(0);
  p.pass('Single-finger EOF and Cancel reach the active protected shell through its terminal');
  const touch=await h.page().evaluate(()=>window.menuTouchProof);assert(touch.starts>40&&touch.ends>40);assert.equal(touch.right,0);assert.equal(sha(await h.disk('hdd')),sha(p.original));
  await p.cleanup(vector);p.pass('Actual browser touch events, zero right clicks, unchanged HDD/FD and complete CPU/XMS/handle reclamation',touch);
