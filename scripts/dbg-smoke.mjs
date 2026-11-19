@@ -3,11 +3,10 @@
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE_URL = process.env.WEBNP2_URL ?? 'http://127.0.0.1:5173';
@@ -19,7 +18,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let server;
 let serverOutput = '';
-let profile;
 let browser;
 let page;
 let staticFallback = false;
@@ -80,7 +78,7 @@ async function ensureServer() {
   throw new Error(`Viteの起動に失敗しました: ${serverOutput.trim()}`);
 }
 
-/** dist以下をPuppeteerのrequest interceptionで返す。HTTP listenを許可しない環境専用。 */
+/** dist以下をPlaywrightのrouteで返す。HTTP listenを許可しない環境専用。 */
 async function enableStaticFallback(targetPage) {
   const contentTypes = {
     '.html': 'text/html; charset=utf-8',
@@ -90,28 +88,28 @@ async function enableStaticFallback(targetPage) {
     '.bmp': 'image/bmp',
     '.xdf': 'application/octet-stream',
   };
-  await targetPage.setRequestInterception(true);
-  targetPage.on('request', async (request) => {
+  await targetPage.route('**/*', async route => {
+    const request = route.request();
     const url = new URL(request.url());
     if (url.origin !== STATIC_URL) {
-      await request.abort();
+      await route.abort();
       return;
     }
     const relative = decodeURIComponent(url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
     if (relative.split('/').includes('..')) {
-      await request.respond({ status: 403, body: 'forbidden' });
+      await route.fulfill({ status: 403, body: 'forbidden' });
       return;
     }
     try {
       const body = await readFile(join(ROOT, 'dist', relative));
       const extension = relative.slice(relative.lastIndexOf('.'));
-      await request.respond({
+      await route.fulfill({
         status: 200,
         contentType: contentTypes[extension] ?? 'application/octet-stream',
         body,
       });
     } catch {
-      await request.respond({ status: 404, body: 'not found' });
+      await route.fulfill({ status: 404, body: 'not found' });
     }
   });
 }
@@ -154,12 +152,11 @@ async function run() {
 
   await check(1, 'Vite・Chrome・エミュレータ起動', async () => {
     await ensureServer();
-    profile = await mkdtemp(join(tmpdir(), 'webnp2-dbg-'));
-    browser = await puppeteer.launch({
+    browser = await launchDosBrowser({
       executablePath: CHROME,
-      userDataDir: profile,
-      headless: 'new',
+        headless: true,
       args: ['--hide-scrollbars', '--force-device-scale-factor=2'],
+    deviceScaleFactor: 2,
     });
     page = await browser.newPage();
     await page.setViewport({ width: 900, height: 700, deviceScaleFactor: 2 });
@@ -321,7 +318,6 @@ try {
   await run();
 } finally {
   if (browser) await browser.close();
-  if (profile) await rm(profile, { recursive: true, force: true });
   if (server && server.exitCode === null) {
     server.kill('SIGTERM');
   }

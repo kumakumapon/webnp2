@@ -4,15 +4,16 @@ import {writeFile,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
 import {inspectProcess} from './process32-inspect.mjs';
+import {inspectExpanded} from './kgui32-expanded-inspect.mjs';
+import {sampleGuiSurface} from './kgui32-live-surface.mjs';
 import {inspectBitmaps} from './kgui32-bitmap-inspect.mjs';
 export {sha,fnv};
 export async function practicalHarness(base,output,video,options={}){
  const h=await toolsHarness(base,output,video,options),proof=[],results=[];
  const original=await readFile(new URL('../public/kgui32/'+h.manifest.standalone_hdd.image,import.meta.url));
  let last;
- async function inspect(){
-  const s=await inspectBitmaps(h.page());if(!s?.expanded)return null;
-  const native=await h.page().evaluate(()=>{
+ async function inspectBroker(){
+  return h.page().evaluate(()=>{
    const read=(p,n)=>atob(window.np2debug.np2.readMemoryBase64(p,n).base64),w=(b,o)=>b.charCodeAt(o)|b.charCodeAt(o+1)<<8,d=(b,o)=>(w(b,o)|w(b,o+2)<<16)>>>0;
    if(!window.practicalNativeRecords){
     const bytes=read(0x10000,0x90000);let broker=-1,host=-1;
@@ -24,6 +25,10 @@ export async function practicalHarness(base,output,video,options={}){
    const failure=r.slice(6560,7584);
    return {broker:{address:broker,ready:w(b,12),stackOk:d(b,28),calls:d(b,20),rejected:d(b,24),owners:Array.from({length:8},(_,i)=>{const p=32+i*20;return {owner:d(b,p),epoch:d(b,p+4),handles:d(b,p+8),phase:d(b,p+12),bytes:d(b,p+16)};})},failure:{state:d(failure,12),error:d(failure,16),loaderError:d(failure,576),handle:w(failure,40),openFiles:d(failure,820)}};
   });
+ }
+ async function inspect(){
+  const s=await inspectBitmaps(h.page());if(!s?.expanded)return null;
+  const native=await inspectBroker();
   if(!native)return null;s.native=native;
   s.appRaw=await h.page().evaluate(slots=>{
    const n=window.np2debug.np2,heap=window.Module.HEAPU8,base=window.kguiTerminalXmsBacking;
@@ -42,17 +47,61 @@ export async function practicalHarness(base,output,video,options={}){
   },s.expanded.slots);
   s.process=await inspectProcess(h.page());last=s;return s;
  }
- async function until(f,label,timeout=120000){console.log('CHECK',label);let error;for(let end=Date.now()+timeout;Date.now()<end;){const s=await inspect().catch(e=>{error=String(e);return null;});if(s&&f(s))return s;await h.page().waitForTimeout(100);}throw Error(label+' '+JSON.stringify({error,slots:last?.expanded.slots.map(s=>({id:s.id,state:s.state,pm:s.pm})),native:last?.native}));}
+ async function poll(probe,predicate,label,timeout){
+  console.log('CHECK',label);
+  let error,observed;
+  for(let end=Date.now()+timeout;Date.now()<end;){
+   const s=await probe().catch(e=>{error=String(e);return null;});
+   if(s){observed=s;if(predicate(s))return s;}
+   await h.page().waitForTimeout(40);
+  }
+  const snapshot=observed??last;
+  throw Error(label+' '+JSON.stringify({error,slots:snapshot?.expanded.slots.map(s=>({id:s.id,state:s.state,pm:s.pm})),native:snapshot?.native}));
+ }
+ const until=(f,label,timeout=120000)=>poll(inspect,f,label,timeout);
+ async function observeControl(broker=false){
+  const expanded=await inspectExpanded(h.page(),{compact:true});
+  if(!expanded)return null;
+  const native=broker?await inspectBroker():null;
+  return broker&&!native?null:{expanded,gui:expanded.gui,native};
+ }
+ const untilSlot=(f,label,timeout=120000)=>poll(()=>observeControl(),f,label,timeout);
+ const untilIo=(f,label,timeout=120000)=>poll(()=>observeControl(true),f,label,timeout);
  const samples=(s,id=0)=>s.expanded.slots[id].pm?.samples??[];
- async function focus(id){const s=await until(s=>s.gui.app?.frames,'focus ready');if(s.gui.app.active===id+2)return s;const step=s.expanded.capacity===2?146:(s.gui.width-300)/4;await h.click(s.expanded.capacity===2?330+146*id:Math.round(300+step*(id+.5)),s.gui.height-16);return until(s=>s.gui.app.active===id+2,'focus '+id);}
- async function launch(kind,id=0){const s=await until(s=>s.gui.app?.frames,'launcher ready'),generation=s.expanded.slots[id].generation;await h.key('F2');await h.click(kind==='image'?292:kind==='words'?292:130,kind==='words'?164:266);return until(s=>s.expanded.slots[id].generation!==generation&&samples(s,id)[0]===(kind==='image'?0x3149474b:kind==='words'?0x32574b47:0x3345474b)&&samples(s,id)[2]>0,'launch '+kind+' '+id);}
- async function end(id){const s=await focus(id),r=s.bitmaps[id].window;await h.click(r.x+230,r.y+48);return until(s=>s.expanded.slots[id].state===0,'End '+id);}
- async function run(id,command){const s=await focus(id),generation=s.expanded.slots[id].generation;await h.enterCommand(command);return until(s=>s.expanded.slots[id].generation!==generation,'Run '+command);}
+ async function focus(id){
+  const gui=await h.guiUntil(app=>app.frames,'focus ready');
+  if(gui.app.active!==id+2){
+   const {expanded}=await untilSlot(()=>true,'taskbar slot layout');
+   const step=(gui.width-300)/4;
+   await h.click(expanded.capacity===2?330+146*id:Math.round(300+step*(id+.5)),gui.height-16);
+   await h.guiUntil(app=>app.active===id+2,'focus '+id);
+  }
+ }
+ async function launch(kind,id=0){
+  const s=await untilSlot(s=>s.gui.app?.frames,'launcher ready'),generation=s.expanded.slots[id].generation;
+  await h.key('F2');await h.click(kind==='image'?292:kind==='words'?292:130,kind==='words'?164:266);
+  return untilSlot(s=>s.expanded.slots[id].generation!==generation&&samples(s,id)[0]===(kind==='image'?0x3149474b:kind==='words'?0x32574b47:0x3345474b)&&samples(s,id)[2]>0,'launch '+kind+' '+id);
+ }
+ async function end(id){
+  await focus(id);
+  const s=await untilSlot(()=>true,'End slot ready');
+  const input={address:s.gui.address,cookie:s.gui.cookie,manager:s.expanded.address,capacity:s.expanded.capacity,id};
+  const hit=await h.page().waitForFunction(sampleGuiSurface,input,{timeout:120000});
+  const {window:r}=await hit.jsonValue();await hit.dispose();
+  await h.click(r.x+230,r.y+48);
+  return untilSlot(s=>s.expanded.slots[id].state===0,'End '+id);
+ }
+ async function run(id,command){
+  await focus(id);
+  const s=await untilSlot(()=>true,'Run slot ready'),generation=s.expanded.slots[id].generation;
+  await h.enterCommand(command);
+  return untilSlot(s=>s.expanded.slots[id].generation!==generation,'Run '+command);
+ }
  async function control(id,code){await focus(id);const s=await until(s=>s.bitmaps[id].draws.some(d=>d.op===3&&d.handle===code),'retained control '+code),events=samples(s,id)[3];const b=s.bitmaps[id].draws.find(d=>d.op===3&&d.handle===code);const r=s.bitmaps[id].window;await h.click(r.x+8+b.x+Math.floor(b.w/2),r.y+70+b.y+Math.floor(b.h/2));return until(s=>samples(s,id)[3]>events||s.expanded.slots[id].state===0,'control '+code);}
- async function appKey(id,key,timeout=120000){await focus(id);const s=last,before=samples(s,id);if(key.length===1&&key.charCodeAt(0)>=32)await h.type(key);else await h.key(key);return until(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2]||s.expanded.slots[id].state===0,'app key '+key,timeout);}
- async function appType(id,text){for(const c of text){await focus(id);const before=samples(last,id);await h.type(c);await until(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2],'app character '+c);}}
- async function stopAll(){const s=await until(s=>s.gui.app?.frames,'before cleanup');for(let id=s.expanded.capacity-1;id>=0;id--)if((await until(()=>true,'cleanup slot '+id)).expanded.slots[id].state!==0)await end(id);}
- async function cleanup(vector,keepContext=false){await stopAll();const s=await until(s=>s.native.broker.owners.every(o=>!o.handles),'all broker handles closed');assert.equal(s.native.broker.stackOk,1);const done=await h.exit(vector);assert.equal(done.gui.stackGuard,1);assert.equal(done.gui.cpu.freeBefore,done.gui.cpu.freeAfter);await h.unchangedFd();if(!keepContext)await h.closeContext();}
+ async function appKey(id,key,timeout=120000){await focus(id);const before=samples(await untilSlot(()=>true,'app input ready'),id);if(key.length===1&&key.charCodeAt(0)>=32)await h.type(key);else await h.key(key);return untilSlot(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2]||s.expanded.slots[id].state===0,'app key '+key,timeout);}
+ async function appType(id,text){for(const c of text){await focus(id);const before=samples(await untilSlot(()=>true,'app input ready'),id);await h.type(c);await untilSlot(s=>samples(s,id)[3]>before[3]&&samples(s,id)[2]>before[2],'app character '+c);}}
+ async function stopAll(){const s=await untilSlot(s=>s.gui.app?.frames,'before cleanup');for(let id=s.expanded.capacity-1;id>=0;id--)if((await untilSlot(()=>true,'cleanup slot '+id)).expanded.slots[id].state!==0)await end(id);}
+ async function cleanup(vector,keepContext=false){await stopAll();const s=await untilIo(s=>s.native.broker.owners.every(o=>!o.handles),'all broker handles closed');assert.equal(s.native.broker.stackOk,1);const done=await h.exit(vector);assert.equal(done.gui.stackGuard,1);assert.equal(done.gui.cpu.freeBefore,done.gui.cpu.freeAfter);await h.unchangedFd();if(!keepContext)await h.closeContext();}
  function pass(label,data){results.push(label);if(data)proof.push({label,data});console.log('PASS',label);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:h.manifest.source_commit,results,proof},null,2)+'\n');}
  async function fail(e){
@@ -63,5 +112,5 @@ export async function practicalHarness(base,output,video,options={}){
    return {frame,instructions:read(frame.eip,64),stack:read(frame.esp,Math.min(512,0xc00000-frame.esp))};
   },{pd:last.gui.cpu.pd,frame:last.gui.cpu.frame}).catch(error=>({error:String(error)}));
   await writeFile(join(output,'practical-failure.json'),JSON.stringify({error:String(e),last,results},null,2)+'\n');await h.fail(e);}
- return {h,original,inspect:()=>until(()=>true,'coherent snapshot'),until,samples,focus,launch,end,run,control,appKey,appType,cleanup,pass,finish,fail,last:()=>last};
+ return {h,original,inspect:()=>until(()=>true,'coherent snapshot'),until,untilIo,samples,focus,launch,end,run,control,appKey,appType,cleanup,pass,finish,fail,last:()=>last};
 }

@@ -7,10 +7,8 @@
 // すべてこのスクリプト内で生成したダミーを IndexedDB へ直接書き込む。
 // 撮影用プロファイルは毎回捨てるので、手元のブラウザ環境には影響しない。
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 
 const BASE_URL = process.env.WEBNP2_URL ?? 'http://localhost:5173';
 const CHROME =
@@ -269,12 +267,11 @@ async function clickToolbarButton(page, titlePart) {
 }
 
 async function run() {
-  const profile = await mkdtemp(join(tmpdir(), 'webnp2-shots-'));
-  const browser = await puppeteer.launch({
+  const browser = await launchDosBrowser({
     executablePath: CHROME,
-    userDataDir: profile,
-    headless: 'new',
+    headless: true,
     args: ['--hide-scrollbars', '--force-device-scale-factor=2'],
+    deviceScaleFactor: 2,
   });
 
   try {
@@ -397,7 +394,6 @@ async function run() {
     }
   } finally {
     await browser.close();
-    await rm(profile, { recursive: true, force: true });
   }
 }
 

@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 import { verifyFiler } from './verify-filer.mjs';
 import { verifyEditor } from './verify-editor.mjs';
 import { verifyJapaneseInput } from './verify-japanese-input.mjs';
@@ -17,7 +17,7 @@ const manifest = JSON.parse(await readFile(new URL('../public/msdos4/manifest.js
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
 const output = process.argv[3];
 assert.ok(base.endsWith('/'), 'BASE_URL must end with /');
-const browser = await puppeteer.launch({
+const browser = await launchDosBrowser({
   executablePath: process.env.CHROMIUM ?? '/usr/bin/chromium',
   headless: true,
   args: process.env.WEBNP2_NO_SANDBOX === '1' ? ['--no-sandbox'] : [],

@@ -4,6 +4,6 @@
     "allowJs": true, "checkJs": true, "noEmit": true, "skipLibCheck": true,
     "strict": false, "types": ["node"]
   },
-  "include": ["mcp/server.mjs", "mcp/bridge.mjs", "scripts/ci/*.mjs"],
+  "include": ["mcp/server.mjs", "mcp/bridge.mjs", "scripts/ci/*.mjs", "scripts/legacy-browser.mjs", "scripts/kgui32-live-surface.mjs", "scripts/observer-browser.d.ts", "scripts/gui-cleanup-state.mjs", "scripts/k386-counter-progress.mjs", "scripts/kgui32-hdd-fat.mjs", "scripts/kgui32-workspace-fat.mjs", "scripts/k386-array-workloads.mjs"],
   "exclude": ["**/*.test.mjs"]
 }

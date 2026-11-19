@@ -29,3 +29,12 @@ test('E2E runner refuses to start a local preview outside Actions', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /only in GitHub Actions/);
 });
+
+import { documentationOnly } from './changed-docs.mjs';
+test('only known documentation paths can skip browser CI', () => {
+  assert.equal(documentationOnly(['README.ja.md', 'docs/ci/one.md']), true);
+  for (const path of ['scripts/verify.mjs', 'package-lock.json', '.github/workflows/ci.yml', 'public/help.html', 'src/main.ts']) {
+    assert.equal(documentationOnly(['README.md', path]), false);
+  }
+  assert.equal(documentationOnly([]), false);
+});

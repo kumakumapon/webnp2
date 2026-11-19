@@ -3,12 +3,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos2/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
 assert.ok(base.endsWith('/'), 'BASE_URL must end with /');
-const browser = await puppeteer.launch({
+const browser = await launchDosBrowser({
   executablePath: process.env.CHROMIUM ?? '/usr/bin/chromium',
   headless: true,
   args: process.env.WEBNP2_NO_SANDBOX === '1' ? ['--no-sandbox'] : [],

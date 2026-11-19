@@ -30,6 +30,8 @@ runs:
       shell: bash
       env:
         VITE_DISK_PROXY: ${{ env.VITE_DISK_PROXY }}
+    - run: node scripts/ci/check-distribution-links.mjs
+      shell: bash
     - name: Record exact source and build provenance in the shipped artifact
       shell: bash
       run: |

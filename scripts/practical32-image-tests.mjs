@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {withHddFile,assertHddProtected,fullHdd} from './kgui32-hdd-fat.mjs';
+import {sampleGuiSurface} from './kgui32-live-surface.mjs';
 import {inspectTransfer} from './process32-inspect.mjs';
 import {bitmap,encode565} from './practical32-fixtures.mjs';
 import {fnv,sha} from './practical32-harness.mjs';
@@ -29,10 +30,23 @@ export async function imageTests(p,video,suite='images'){
  p.pass(stress?'Four independent 384x256 CPU-decoded surfaces fit the unchanged 4 MiB desktop and 32 MiB profile; all cached pixels and focused Canvas rectangles match independent BMP decoding':'A maximum 384x256 surface has exact CPU-decoded bytes and visible Canvas pixels in the default 16 MiB profile',{surfaceBudget:s.bitmaps[0].surfaceBudget,owners:s.expanded.slots.slice(0,owners).map(s=>({physical:s.physical,pd:s.pd}))});
  if(stress){
   const before=await p.inspect(),inverted=large.pixels.map(v=>v^65535);await p.focus(3);
-  // A small 64x48 image can now finish before one browser observation. Require
-  // actual partial-front preservation on the full 196608-byte replacement.
-  await h.page().evaluate(()=>window.np2debug.np2.sendKeys('i'));let partial=false;
-  await until(s=>{const b=s.bitmaps[3];assert.notEqual(s.expanded.slots[3].state,4);if(b?.valid&&b.native.uploaded>0&&b.native.uploaded<196608){assert.equal(b.hash,before.bitmaps[3].hash,'old complete front survives a real partial maximum-size transfer');partial=true;}return b?.consistent&&b.hash===pixelHash(inverted)&&samples(s,3)[8]===b.hash;},'atomic maximum-size fourth-owner replacement',600000);assert(partial,'observe a real partial maximum-size replacement');
+  // Watch before the input arrives. Playwright polls inside the page, so a
+  // large snapshot or CDP response cannot hide an intermediate chunk.
+  const old=before.bitmaps[3];
+  const partialPromise=h.page().waitForFunction(sampleGuiSurface,{
+   address:before.gui.address,cookie:before.gui.cookie,manager:before.expanded.address,
+   capacity:before.expanded.capacity,id:3,
+   previous:{generation:old.generation,token:old.token,handle:old.handle,revision:old.revision,front:old.front,bytes:196608},
+  },{timeout:120000});
+  void partialPromise.catch(()=>{});
+  await h.page().evaluate(()=>window.np2debug.np2.sendKeys('i'));
+  const partial=await partialPromise,observation=await partial.jsonValue();await partial.dispose();
+  assert.equal(observation.hash,old.hash,'old complete front survives a real partial maximum-size transfer');
+  const invertedHash=pixelHash(inverted);
+  await until(s=>{
+   const b=s.bitmaps[3];assert.notEqual(s.expanded.slots[3].state,4);
+   return b?.consistent&&b.hash===invertedHash&&samples(s,3)[8]===b.hash;
+  },'atomic maximum-size fourth-owner replacement',600000);
   await rendered(3);s=await p.inspect();
   for(let id=0;id<3;id++){assert.deepEqual(s.bitmaps[id].pixels,large.pixels);assert.equal(s.expanded.slots[id].generation,before.expanded.slots[id].generation);assert(s.expanded.slots[id].usage.runs>before.expanded.slots[id].usage.runs);}
   const transportAfter=await inspectTransfer(h.page(),s.gui.owner),elapsedMs=Date.now()-started,delta=Object.fromEntries(Object.keys(transportAfter).map(k=>[k,(transportAfter[k]-transportBefore[k])>>>0]));assert(delta.statusRequests>0);assert(delta.uploads>0);assert(delta.statusBytes>=delta.statusRequests*72&&delta.statusBytes<=delta.statusRequests*144);assert(delta.uploadBytes>=delta.uploads*3144&&delta.uploadBytes<=delta.uploads*3216);p.pass('Real partial uploads preserve the previous complete front; measured live large-image traffic uses 72-byte status/control replies and at most 3216 bytes per upload; original 3144-byte ABI, pixels, peers and acknowledgements remain exact',{delta,elapsedMs,statusOldBytesPerRequest:6288,uploadOldBytesPerRequest:6288});
