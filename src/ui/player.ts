@@ -589,7 +589,9 @@ function rescale(
   canvas.style.width = `${w}px`;
   canvas.style.height = `${h}px`;
   stage.style.width = `${w}px`;
-  stage.style.height = `${h}px`;
+  const expandedBootChoices = !card.classList.contains('machine-running')
+    && window.matchMedia('(pointer: coarse) and (orientation: portrait)').matches;
+  stage.style.height = `${expandedBootChoices ? Math.max(h, maxHeight) : h}px`;
   card.style.width = `${compactLandscape ? maxWidth : w}px`;
   // #canvas-sharp(シャープ・バイリニア表示)は、#canvas側が補間ありになる場面
   // (4:3モード、またはドット等倍で端数倍のため補間へ落ちた場合)でだけ有効にする。

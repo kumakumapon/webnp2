@@ -51,10 +51,14 @@ export async function verifyPlayerLayout(base, boot, screenshot) {
     assert.equal(await phone.locator('.start-btn-msdos2').getAttribute('aria-description'),
       'Original DOS command environment');
     assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await phone.waitForFunction(() => document.querySelector('.stage').clientHeight >
+      document.querySelector('#canvas').clientHeight);
     if (screenshot) await phone.screenshot({ path: join(dirname(screenshot), 'boot-portrait.png') });
     await phone.setViewportSize({ width: 844, height: 390 });
     await phone.goto(boot);
     await phone.locator('body.compact-landscape').waitFor({ timeout: 60_000 });
+    await phone.waitForFunction(() => window.np2debug?.np2?.getScreenText().lines.some(line => line.trim() === 'A>'),
+      null, { timeout: 60_000 });
     const toggle = phone.getByRole('button', { name: 'Controls', exact: true });
     const footer = phone.locator('.console-footer');
     assert.equal(await footer.isVisible(), false);
@@ -75,10 +79,11 @@ export async function verifyPlayerLayout(base, boot, screenshot) {
     await disk.tap();
     await phone.getByRole('menuitem', { name: 'Download' }).waitFor();
     await phone.keyboard.press('Escape');
+    if (screenshot) await phone.screenshot({ path: join(dirname(screenshot), 'controls-landscape.png') });
     await footer.getByRole('button', { name: 'More', exact: true }).tap();
     await phone.locator('.toolbar-overflow-menu').getByRole('menuitem', { name: /Display/ }).tap();
     await phone.locator('.toolbar-overflow-menu').getByRole('menuitem', { name: 'Theme: System' }).waitFor();
-    if (screenshot) await phone.screenshot({ path: join(dirname(screenshot), 'controls-landscape.png') });
+    if (screenshot) await phone.screenshot({ path: join(dirname(screenshot), 'menu-landscape.png') });
     await phone.keyboard.press('Escape');
     await phone.getByRole('button', { name: 'Hide controls' }).tap();
     assert.equal(await footer.isVisible(), false);
