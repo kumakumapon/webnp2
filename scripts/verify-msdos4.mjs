@@ -157,6 +157,25 @@ try {
       screenshot: output ? join(output, 'desktop.png') : undefined,
     }));
     results.push(...await verifyKdeskMedia(page, { output: output ? join(output,'media') : undefined }));
+    await line('A>');
+    await command('ECHO JA>KUMAUI.CFG');
+    await line('A>');
+    await command('KDESK');
+    await page.waitForFunction(() => {
+      const pair = atob(window.np2debug.np2.readMemoryBase64(0xa000c, 4).base64);
+      return pair.charCodeAt(0) === 5 && pair.charCodeAt(1) === 0xc7 &&
+        pair.charCodeAt(2) === 0 && pair.charCodeAt(3) === 0;
+    });
+    if (output) {
+      // The text mirror is filled before the rendered frame is presented.
+      await new Promise(resolve => setTimeout(resolve, 250));
+      await page.screenshot({ path: join(output, 'desktop-ja.png') });
+    }
+    await page.evaluate(() => window.np2debug.np2.sendKeys('F10'));
+    await line('A>');
+    await command('DEL KUMAUI.CFG');
+    await line('A>');
+    results.push('KDESK boots in Japanese from KUMAUI.CFG on the distributed DOS 4.0 media');
   }
 
   await command('RBASIC');
