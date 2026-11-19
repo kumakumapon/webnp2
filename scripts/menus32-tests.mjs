@@ -74,22 +74,28 @@ export async function menuTests(p,video){
  s=await until(s=>samples(s)[0]===0x314c4143&&samples(s)[2]>0&&monthDrawn(s,samples(s)[6]),'mobile DOS calendar publishes its month');
  const today=samples(s)[6],day=samples(s)[7],calendarFrame=s.bitmaps[0].window;
  assert(today>=198001&&today<=209912&&day>=1&&day<=31);
+ function calendarLayout(s){
+  const frame=s.bitmaps[0].window,width=frame.w-16,height=frame.h-104;
+  return samples(s)[8]===width&&samples(s)[9]===height&&
+   draws(s,0).some(d=>d.handle===113&&d.y===height-26);
+ }
  await control(0,'n'.charCodeAt(0));
  const next=today%100===12?today+89:today+1;
  await until(s=>samples(s)[6]===next&&samples(s)[7]===0&&monthDrawn(s,next),'calendar next month');
  await control(0,'t'.charCodeAt(0));
  await until(s=>samples(s)[6]===today&&samples(s)[7]===day&&monthDrawn(s,today),'Today uses the DOS date');
  await tap(calendarFrame.x+calendarFrame.w-72,calendarFrame.y+14);
- s=await until(s=>s.bitmaps[0].window.w===s.gui.width-16&&samples(s)[8]===s.gui.width-32,'touch maximize and client resize');
+ s=await until(s=>s.bitmaps[0].window.w===s.gui.width-16&&calendarLayout(s),'touch maximize and client resize');
  let frame=s.bitmaps[0].window;
  await tap(frame.x+frame.w-72,frame.y+14);
- await until(s=>Object.keys(calendarFrame).every(k=>s.bitmaps[0].window[k]===calendarFrame[k]),'restore exact original rectangle');
+ await until(s=>Object.keys(calendarFrame).every(k=>s.bitmaps[0].window[k]===calendarFrame[k])&&calendarLayout(s),'restore exact original rectangle and controls');
  for(const placement of ['left','right','restore']){
   frame=(await p.inspect()).bitmaps[0].window;
   await tap(frame.x+frame.w-106,frame.y+14);
   await until(s=>{
    const w=s.bitmaps[0].window;
-   return placement==='left'?w.x===8:placement==='right'?w.x+w.w===s.gui.width-8:w.x===calendarFrame.x&&w.w===calendarFrame.w;
+   return calendarLayout(s)&&(placement==='left'?w.x===8:placement==='right'?w.x+w.w===s.gui.width-8:
+    Object.keys(calendarFrame).every(k=>w[k]===calendarFrame[k]));
   },'touch tile '+placement);
  }
  await control(0,'q'.charCodeAt(0));
