@@ -23,16 +23,52 @@ export async function processTests(p,video,suite){
  assert.equal(sha(await h.disk('hdd')),sha(p.original));p.pass('Parent End and actual parent #PF cancel descendants; repeated generations reclaim every endpoint, queued message, pipe and XMS handle');await p.cleanup(vector,true);
  // Observe a real DOS client after the GUI's cleanup. No GUI pump is active.
  await h.type('KPRUN\r');let headless;for(let deadline=Date.now()+180000;Date.now()<deadline;){headless=await inspectHeadless(h.page());if(headless?.phase===3)break;await h.page().waitForTimeout(100);}assert.equal(headless?.phase,3);assert.equal(headless.error,0);assert.equal(headless.exitCode,0);assert(headless.steps>0);assert.equal(headless.largestBefore,headless.largestAfter);const broker=await inspectProcess(h.page());assert.equal(broker.stackOk,1);assert(broker.tasks.every(t=>!t.token));assert(broker.pipes.every(x=>!x.used));p.pass('The same protected shell and inherited streams run through a real DOS scheduler without the GUI, restoring the DOS allocation maximum',headless);await h.closeContext();
+ if(capacity===2){
+  const pair=await h.bootHdd();
+  await p.launch('editor',0);await p.launch('editor',1);await p.end(0);await p.end(1);
+  await p.run(0,'PROCTEST.EXE send');
+  s=await until(s=>raw(s)[1]===40&&raw(s)[2],'independent sender publishes its token');
+  const sender=raw(s)[2];
+  await p.run(1,'PROCTEST.EXE receive '+sender);
+  s=await until(s=>raw(s,1)[1]===41&&raw(s,1)[2],'independent receiver opts in');
+  const receiver=raw(s,1)[2];
+  const roots=active(s).filter(t=>t.token===sender||t.token===receiver);
+  assert.equal(roots.length,2);
+  assert(roots.every(t=>t.parent===0));
+  await p.focus(0);await h.type(String(receiver)+'\r');
+  await until(s=>raw(s)[1]===43&&raw(s,1)[1]===42,'receiver reads exact six bytes and revokes admission');
+  await h.type('r');
+  await until(s=>raw(s)[1]===44&&!raw(s)[15]&&!raw(s,1)[15],'send after revocation is rejected');
+  await p.cleanup(pair);
+  p.pass('Independent CPL3 roots exchange one authorized message, reject sends after revoke, and reclaim both owners');
+ }
  if(capacity===2){const source=Buffer.from(inspectHdd(p.original).files.get('APPS/PROCTEST.EXE'));source.writeUInt32LE(271,92);const fixture=withHddFile(p.original,'NOPROC.EXE',source),v=await h.bootHdd(fixture);await prime(p);await p.run(0,'A:\\WORK\\NOPROC.EXE noapi');s=await until(s=>raw(s)[0]===0x3250434b&&raw(s)[1]===30,'real process capability refusal');assert.equal(s.expanded.slots[0].pm.frame.cs,59);assert.equal(active(s).length,0);assert.equal(sha(await h.disk('hdd')),sha(fixture));await p.cleanup(v);p.pass('A preboot capability-disabled executable receives ENOSYS from actual CPL3 without registering a process');
  const f=await h.boot(null,h.legacy);await prime(p);await p.run(0,'PROCTEST.EXE 2');s=await until(s=>{assert(!raw(s)[15]);return raw(s)[1]===6;},'complete FD same process/pipe diagnostics',600000);assert.equal(raw(s)[6],70001);assert.equal(sha(await h.disk('fd1')),sha(h.legacy));await p.cleanup(f);p.pass('Complete FD fallback runs the same process and binary-pipe diagnostics without media changes');}
 }
-async function shellInput(p,text){const {h,until}=p;for(const c of text){await p.focus(0);const n=raw(await p.inspect())[9];if(c==='\r')await h.key('ENTER');else await h.type(c);await until(s=>raw(s)[9]>n&&raw(s)[11]===(c==='\r'?13:c.charCodeAt(0)),'shell acknowledges key '+c.charCodeAt(0));}}
+export async function shellInput(p,text){const {h,until}=p;for(const c of text){await p.focus(0);const n=raw(await p.inspect())[9];if(c==='\r')await h.key('ENTER');else await h.type(c);await until(s=>raw(s)[9]>n&&raw(s)[11]===(c==='\r'?13:c.charCodeAt(0)),'shell acknowledges key '+c.charCodeAt(0));}}
 async function command(p,line,expected=0){const before=raw(await p.inspect())[8];await shellInput(p,line+'\r');const s=await p.until(s=>raw(s)[8]>before&&raw(s)[1]===1,'foreground completes '+line,600000);assert.equal(raw(s)[7]|0,expected);assert.equal(active(s).length,1);reclaimed(s);return s;}
 async function shell(p){await p.h.key('F2');await p.h.click(130,302);return p.until(s=>raw(s)[0]===0x3248534b&&raw(s)[10]===0,'F2 protected shell tile');}
 export async function shellTests(p){
  const {h,until}=p,input=Buffer.from(Array.from({length:70001},(_,i)=>(i*11+3)&255)),original=Buffer.from('ORIGINAL\r\n');let fixture=withHddFile(p.original,'IN.BIN',input);fixture=withHddFile(fixture,'OUT.TXT',original);fixture=withHddFile(fixture,'LOCK.TXT',original,33);fixture=withHddFile(fixture,'STALE.TXT',original);
  let vector=await h.bootHdd(fixture,true,32);await shell(p);let s=await command(p,'KTOOL32.EXE echo mixed | KTOOL32.EXE upper >OUT.TXT');assert.equal(raw(s)[4],7);await command(p,'KTOOL32.EXE cat <IN.BIN >COPY.BIN');let exported=await h.disk('hdd'),disk=assertHddProtected(fixture,exported);assert.deepEqual(disk.files.get('WORK/OUT.TXT'),Buffer.from('MIXED\r\n'));assert.deepEqual(disk.files.get('WORK/COPY.BIN'),input);
- for(const [line,error] of [['KTOOL32.EXE exit 7 >OUT.TXT',-7],['ARGS32.EXE >OUT.TXT',-38],['KTOOL32.EXE echo changed >LOCK.TXT',-13]]){const before=await h.disk('hdd');await command(p,line,error);const after=assertHddProtected(before,await h.disk('hdd'));assert.deepEqual(after.files.get('WORK/OUT.TXT'),Buffer.from('MIXED\r\n'));assert.deepEqual(after.files.get('WORK/LOCK.TXT'),original);assert(![...after.files.keys()].some(n=>/\.(TMP|BAK)$/.test(n)));}
+ await command(p,'KTOOL32.EXE echo one two | KTOOL32.EXE upper | KTOOL32.EXE wc >COUNT.TXT');
+ disk=assertHddProtected(fixture,await h.disk('hdd'));
+ assert.deepEqual(disk.files.get('WORK/COUNT.TXT'),Buffer.from('1 lines 2 words 9 bytes\r\n'));
+ await command(p,'KTOOL32.EXE error >ERR.TXT');
+ disk=assertHddProtected(fixture,await h.disk('hdd'));
+ assert.equal(disk.files.get('WORK/ERR.TXT')?.length,0,'console diagnostic is separate from redirected stdout');
+ await shellInput(p,'bg KTOOL32.EXE wait\r');
+ s=await until(s=>raw(s)[12]&&active(s).some(t=>t.token===raw(s)[12]&&t.state===2),'owned shell background job');
+ const job=raw(s)[12];
+ await shellInput(p,'jobs\r');
+ await until(s=>s.expanded.slots[0].screen.includes('Job '+job+' running'),'jobs shows the child token');
+ await shellInput(p,'cancel\r');
+ await until(s=>active(s).some(t=>t.token===job&&t.state===3)||(!raw(s)[12]&&raw(s)[13]===130),'background job cancel arrives at broker');
+ await shellInput(p,'jobs\r');
+ s=await until(s=>!raw(s)[12]&&raw(s)[13]===130&&active(s).length===1,'background cancellation reaps child');
+ reclaimed(s);
+ p.pass('Three-stage pipeline, byte/word/line counts, separate diagnostic output and one owned background job');
+ for(const [line,error] of [['KTOOL32.EXE exit 7 | KTOOL32.EXE cat | KTOOL32.EXE wc >OUT.TXT',-7],['ARGS32.EXE >OUT.TXT',-38],['KTOOL32.EXE echo changed >LOCK.TXT',-13]]){const before=await h.disk('hdd');await command(p,line,error);const after=assertHddProtected(before,await h.disk('hdd'));assert.deepEqual(after.files.get('WORK/OUT.TXT'),Buffer.from('MIXED\r\n'));assert.deepEqual(after.files.get('WORK/LOCK.TXT'),original);assert(![...after.files.keys()].some(n=>/\.(TMP|BAK)$/.test(n)));}
  const staleCommand=raw(await p.inspect())[8];await shellInput(p,'KTOOL32.EXE cat >STALE.TXT\r');await until(s=>raw(s)[1]===2&&active(s).some(t=>t.parent&&t.state===2),'redirect captures original revision');
  await p.launch('editor',2);await p.end(2);await p.run(2,'KGEDIT.EXE work STALE.TXT');await until(s=>p.samples(s,2)[0]===0x3345474b&&p.samples(s,2)[4]===original.toString().replaceAll('\r','').length,'peer editor opens captured destination');await p.appKey(2,'Z');await p.appKey(2,'CTRL+S');await until(s=>p.samples(s,2)[8]===0&&!p.samples(s,2)[12],'peer publishes newer revision');await p.end(2);const newer=Buffer.from(inspectHdd(await h.disk('hdd')).files.get('WORK/STALE.TXT'));assert.notDeepEqual(newer,original);
  await p.focus(0);await h.key('CTRL+D');s=await until(s=>raw(s)[8]>staleCommand&&raw(s)[1]===1,'stale redirection refuses commit',600000);assert.equal(raw(s)[7]|0,-116);assert.deepEqual(assertHddProtected(fixture,await h.disk('hdd')).files.get('WORK/STALE.TXT'),newer);reclaimed(s);p.pass('A peer edits the captured destination while cat waits; stale shell commit retains the newer original and closes all stream/file handles');

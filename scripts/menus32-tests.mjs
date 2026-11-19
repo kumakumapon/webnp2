@@ -1,6 +1,7 @@
 // Actions-only acceptance: real single-finger Canvas taps, never RAM writes.
 import assert from 'node:assert/strict';
 import {sha,fnv} from './practical32-harness.mjs';
+import {shellInput} from './process32-tests.mjs';
 const ITEM=24576,BACK=24608,NEXT=24610;
 export async function menuTests(p,video){
  const {h,until,samples}=p;assert.equal(h.manifest.window_menu.right_click_required,false);
@@ -26,6 +27,16 @@ export async function menuTests(p,video){
   throw Error('Menu index not reached '+index);
  }
  async function welcome(x,y){const s=await p.inspect();await tap(60,s.gui.height-16);await until(s=>s.gui.app.active===0,'touch Welcome');await tap(x,y);}
+ async function endByTap(id){
+  let s=await p.inspect();
+  if(s.gui.app.active!==id+2){
+   await tap(330+146*id,s.gui.height-16);
+   s=await until(s=>s.gui.app.active===id+2,'touch taskbar slot '+id);
+  }
+  const frame=s.bitmaps[id].window;
+  await tap(frame.x+230,frame.y+48);
+  await until(s=>s.expanded.slots[id].state===0,'touch End '+id);
+ }
  await welcome(130,192);await until(s=>samples(s)[0]===0x3243474b&&samples(s)[2]>0,'real calculator from mobile launcher');
  for(const key of [52,50]){await control(0,key);await until(s=>samples(s)[6]===(key===52?4:42),'touch calculator digit');}
  await choose(0,0);await until(s=>!draws(s,0).some(d=>d.handle===BACK),'memory add exits menu');
@@ -35,9 +46,16 @@ export async function menuTests(p,video){
  await h.key('F1');await until(s=>draws(s,0).some(d=>d.handle===BACK),'keyboard F1 opens menu');await h.key('TAB');await until(s=>s.gui.app.active===2&&draws(s,0).some(d=>d.handle===BACK),'Tab belongs to the open menu');await h.key('ESC');await until(s=>!draws(s,0).some(d=>d.handle===BACK),'Esc closes keyboard menu');
  p.pass('390px browser: single-finger launcher/titlebar menu, paged memory add/recall/clear and normal calculator controls', {video});
  await welcome(292,192);await until(s=>samples(s,1)[0]===0x324b474b&&samples(s,1)[2]>0,'second real clock owner');
+ await open(1);
+ // The minimum clock client shows two menu entries per page.
+ await control(1,NEXT);
+ await until(s=>draws(s,1).some(d=>d.text==='Start / stop')&&
+  !draws(s,1).some(d=>d.handle===ITEM+2),'clock mode renders Start / stop without a hit target');
+ await control(1,BACK);
+ await until(s=>!draws(s,1).some(d=>d.handle===BACK)&&draws(s,1).some(d=>d.handle===119),'clock returns from the disabled menu page');
  await choose(1,1);await until(s=>samples(s,1)[14]===1,'touch stopwatch mode');await control(1,115);
  await until(s=>samples(s,1)[6]>=1&&samples(s,1)[15]===1,'stopwatch advances');
- await open(1);const before=samples(await p.inspect(),1)[6];await until(s=>samples(s,1)[6]>before&&draws(s,1).some(d=>d.handle===BACK),'stopwatch continues under its menu');
+ await open(1);const before=samples(await p.inspect(),1)[6];await until(s=>samples(s,1)[6]>before&&draws(s,1).some(d=>d.handle===BACK)&&draws(s,1).some(d=>d.text==='[x] Stopwatch'),'checked Stopwatch and timer continue under the menu');
  await control(1,BACK);await until(s=>draws(s,1).some(d=>d.handle===115),'return from menu to stopwatch');await control(1,115);
  const stopped=await until(s=>samples(s,1)[15]===0,'stop stopwatch'),seconds=samples(stopped,1)[6];await h.page().waitForTimeout(1300);assert.equal(samples(await p.inspect(),1)[6],seconds);
  await control(1,114);await until(s=>samples(s,1)[6]===0,'touch stopwatch reset');
@@ -61,6 +79,53 @@ export async function menuTests(p,video){
  await choose(0,13);await until(s=>s.expanded.slots[0].state===0,'Images menu closes clean original');
  await welcome(292,164);await until(s=>samples(s)[0]===0x32574b47&&samples(s)[2]>0,'touch dictionary launcher');await choose(0,7);await until(s=>samples(s)[19]!==0,'dictionary IME menu');await choose(0,8);await until(s=>s.expanded.slots[0].state===0,'dictionary menu close');
  p.pass('Files, Images and dictionary menus execute owned commands; invert/Undo restores every image pixel without saving');
+ const monthDrawn=(s,month)=>draws(s,0).some(d=>d.text===String(month).replace(/(\d{4})(\d{2})/,'$1-$2'));
+ await welcome(292,302);
+ s=await until(s=>samples(s)[0]===0x314c4143&&samples(s)[2]>0&&monthDrawn(s,samples(s)[6]),'mobile DOS calendar publishes its month');
+ const today=samples(s)[6],day=samples(s)[7],calendarFrame=s.bitmaps[0].window;
+ assert(today>=198001&&today<=209912&&day>=1&&day<=31);
+ function calendarLayout(s){
+  const frame=s.bitmaps[0].window,width=frame.w-16,height=frame.h-104;
+  return samples(s)[8]===width&&samples(s)[9]===height&&
+   draws(s,0).some(d=>d.handle===113&&d.y===height-26);
+ }
+ await control(0,'n'.charCodeAt(0));
+ const next=today%100===12?today+89:today+1;
+ await until(s=>samples(s)[6]===next&&samples(s)[7]===0&&monthDrawn(s,next),'calendar next month');
+ await control(0,'t'.charCodeAt(0));
+ await until(s=>samples(s)[6]===today&&samples(s)[7]===day&&monthDrawn(s,today),'Today uses the DOS date');
+ await tap(calendarFrame.x+calendarFrame.w-72,calendarFrame.y+14);
+ s=await until(s=>s.bitmaps[0].window.w===s.gui.width-16&&calendarLayout(s),'touch maximize and client resize');
+ let frame=s.bitmaps[0].window;
+ await tap(frame.x+frame.w-72,frame.y+14);
+ await until(s=>Object.keys(calendarFrame).every(k=>s.bitmaps[0].window[k]===calendarFrame[k])&&calendarLayout(s),'restore exact original rectangle and controls');
+ for(const placement of ['left','right','restore']){
+  frame=(await p.inspect()).bitmaps[0].window;
+  await tap(frame.x+frame.w-106,frame.y+14);
+  await until(s=>{
+   const w=s.bitmaps[0].window;
+   return calendarLayout(s)&&(placement==='left'?w.x===8:placement==='right'?w.x+w.w===s.gui.width-8:
+    Object.keys(calendarFrame).every(k=>w[k]===calendarFrame[k]));
+  },'touch tile '+placement);
+ }
+ await control(0,'q'.charCodeAt(0));
+ await until(s=>s.expanded.slots[0].state===0,'close mobile calendar');
+ p.pass('Calendar uses the DOS date. Touch month selection, Today, maximize, tile and restore use the real CPL3 window');
+
+ await endByTap(1); // The 16 MiB profile needs its second slot for a shell child.
+ await welcome(130,302);
+ await until(s=>s.gui.app.active===2&&samples(s)[0]===0x3248534b,'mobile shell launcher');
+ await shellInput(p,'KTOOL32.EXE cat\r');
+ await until(s=>samples(s)[1]===2,'foreground cat waits for input');
+ frame=(await p.inspect()).bitmaps[0].window;
+ await tap(frame.x+300,frame.y+frame.h-16);
+ await until(s=>samples(s)[8]===1&&samples(s)[1]===1&&samples(s)[7]===0,'visible EOF closes stdin');
+ await shellInput(p,'KTOOL32.EXE wait\r');
+ await until(s=>samples(s)[1]===2&&s.process?.tasks.some(t=>t.parent&&t.state===2),'foreground wait');
+ await tap(frame.x+236,frame.y+frame.h-16);
+ await until(s=>samples(s)[8]===2&&samples(s)[7]===0xffffff7e,'visible Cancel reaps foreground child');
+ await endByTap(0);
+ p.pass('Single-finger EOF and Cancel reach the active protected shell through its terminal');
  const touch=await h.page().evaluate(()=>window.menuTouchProof);assert(touch.starts>40&&touch.ends>40);assert.equal(touch.right,0);assert.equal(sha(await h.disk('hdd')),sha(p.original));
  await p.cleanup(vector);p.pass('Actual browser touch events, zero right clicks, unchanged HDD/FD and complete CPU/XMS/handle reclamation',touch);
 }
