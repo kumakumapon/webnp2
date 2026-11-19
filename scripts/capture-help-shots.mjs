@@ -306,12 +306,12 @@ async function run() {
       // --- library-menu: FDD1の「ライブラリから挿入」メニュー ---
       await page.keyboard.press('Escape');
       await sleep(400);
-      await page.evaluate((needle) => {
-        const btn = Array.from(document.querySelectorAll('.fd-slot button')).find(
-          (b) => (b.title ?? '').includes(needle),
-        );
-        if (!btn) throw new Error(`library slot button not found: ${needle}`);
-        btn.click();
+      await page.click('[data-drive="fd1"] .drive-insert');
+      await page.evaluate(needle => {
+        const row = Array.from(document.querySelectorAll('#drive-actions-menu [role="menuitem"]'))
+          .find(item => item.textContent === needle);
+        if (!row) throw new Error(`library slot action not found: ${needle}`);
+        row.click();
       }, lang === 'ja' ? 'ライブラリから挿入' : 'Insert from library');
       await sleep(800);
       await shoot(page, '.library-menu:not(.hidden)', `library-menu${suffix}.png`);
