@@ -4,13 +4,13 @@ import { openKdeskMedia } from './ui/kdesk-media.ts';
 import '../packages/embed/src/debugger.css';
 import {
   buildPlayerUI,
-  classifyDroppedFile,
   loadSeekSoundPreference,
   type DroppedFile,
   type LibraryNode,
   type PlayerUI,
 } from './ui/player.ts';
 import { baseNameOf, extractArchive, isArchive, resolveArchiveFileName } from './api/archive.ts';
+import { classifyDiskKind } from './api/disk-kind.ts';
 import { fetchDiskBytes, looksLikeHtml } from './api/disk-fetch.ts';
 import { buildLibraryNodes, classifyLibUrlResult, isLibraryDiskRecord, type LibUrlOutcome } from './api/library.ts';
 import type { WebNP2, DiskSlot } from './api/webnp2.ts';
@@ -305,7 +305,7 @@ async function resolveImage(
     const groupImages: RegisteredImage[] = [];
     // 展開順(groupIndex)を保つ。1枚だけのときにどれが選ばれるかを再訪時も安定させる。
     for (const item of [...storedGroupItems].sort((a, b) => (a.groupIndex ?? 0) - (b.groupIndex ?? 0))) {
-      const kind = classifyDroppedFile(item.name);
+      const kind = classifyDiskKind(item.name);
       if (!kind) continue;
       groupImages.push({ name: item.name, sourceKey: item.sourceKey, bytes: new Uint8Array(item.bytes), kind });
     }
@@ -867,7 +867,7 @@ async function doBoot(useFreeDos = false): Promise<void> {
 /** ディスクライブラリのレコードを取得する。rom:/state: プレフィックスとディスク以外は除外する。 */
 async function listStoredDiskImages(): Promise<db.StoredImage[]> {
   const all = await db.getAllStored();
-  return all.filter((item) => isLibraryDiskRecord(item, classifyDroppedFile));
+  return all.filter((item) => isLibraryDiskRecord(item, classifyDiskKind));
 }
 
 /**
@@ -875,7 +875,7 @@ async function listStoredDiskImages(): Promise<db.StoredImage[]> {
  * アーカイブ由来で複数ディスクを含むものはフォルダ(group)1件、それ以外は単体(item)1件になる。
  */
 async function listDiskLibrary(): Promise<LibraryNode[]> {
-  return buildLibraryNodes(await listStoredDiskImages(), classifyDroppedFile);
+  return buildLibraryNodes(await listStoredDiskImages(), classifyDiskKind);
 }
 
 /** ディスクライブラリのエントリから起動する(起動前オーバーレイ用)。HDDはHDDとして、FDはFD1として起動する。 */
@@ -883,7 +883,7 @@ async function bootFromLibrary(sourceKey: string): Promise<void> {
   if (bootStarted) return;
   const stored = await db.get(sourceKey);
   if (!stored) return;
-  const kind = classifyDroppedFile(stored.name);
+  const kind = classifyDiskKind(stored.name);
   if (!kind) return;
 
   const pending: PendingImage = {
@@ -911,7 +911,7 @@ async function setHddFromLibrary(sourceKey: string): Promise<void> {
   if (bootStarted) return;
   const stored = await db.get(sourceKey);
   if (!stored) return;
-  if (classifyDroppedFile(stored.name) !== 'hdd') return;
+  if (classifyDiskKind(stored.name) !== 'hdd') return;
 
   pendingBoot.hdd = {
     slot: 'hdd',
@@ -1045,7 +1045,7 @@ interface RegisteredImage {
  */
 async function expandFileToImages(file: File): Promise<RegisteredImage[]> {
   if (!isArchive(file.name)) {
-    const kind = classifyDroppedFile(file.name);
+    const kind = classifyDiskKind(file.name);
     if (!kind) return [];
     const bytes = new Uint8Array(await file.arrayBuffer());
     return [{ name: file.name, sourceKey: fileKeyFor(file.name, file.size), bytes, kind }];
@@ -1070,7 +1070,7 @@ async function expandArchiveBytesToImages(
   const images: RegisteredImage[] = [];
   for (const entry of entries) {
     const name = baseNameOf(entry.name);
-    const kind = classifyDroppedFile(name);
+    const kind = classifyDiskKind(name);
     if (!kind) continue;
     images.push({ name, sourceKey: `${groupId}/${entry.name}`, bytes: entry.data, kind });
   }

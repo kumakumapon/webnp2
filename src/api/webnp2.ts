@@ -1,3 +1,4 @@
+import { classifyDiskKind } from './disk-kind.ts';
 // API層: CommandBus + WebNP2 クラス。
 // UI はこの層を経由してのみコアを操作する（制御プレーン方針。docs/DESIGN.md 参照）。
 
@@ -1926,45 +1927,6 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
       this.emit('log', { level: 'error', message: `restoreStateIfPresent failed: ${String(err)}` });
     }
   }
-}
-
-const HDD_EXTENSIONS = ['.thd', '.hdi', '.nhd', '.hdd'];
-// src/ui/player.ts の FD_EXTENSIONS と同じ一覧(NP2kai本体の np2_isfdimage() 準拠、
-// .bin は誤検出防止のため意図的に除外)。二重管理だが、この判定はMCPブリッジの
-// listDiskLibrary()とHDD書き込みスロットリングにのみ使うため player.ts には依存させない。
-const FD_EXTENSIONS = [
-  '.d88',
-  '.d98',
-  '.fdi',
-  '.hdm',
-  '.xdf',
-  '.dup',
-  '.2hd',
-  '.nfd',
-  '.fdd',
-  '.hd4',
-  '.hd5',
-  '.hd9',
-  '.h01',
-  '.hdb',
-  '.ddb',
-  '.dd6',
-  '.dd9',
-  '.dcp',
-  '.dcu',
-  '.flp',
-  '.tfd',
-  '.fim',
-  '.img',
-  '.ima',
-];
-
-/** ファイル名の拡張子からディスク種別(hdd/fd)を判定する。判定不能ならnull。 */
-function classifyDiskKind(name: string): 'hdd' | 'fd' | null {
-  const lower = name.toLowerCase();
-  if (HDD_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'hdd';
-  if (FD_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'fd';
-  return null;
 }
 
 /** URLからクエリ/フラグメントを除いたbasenameを取り出す。空なら'disk.xdf'。 */

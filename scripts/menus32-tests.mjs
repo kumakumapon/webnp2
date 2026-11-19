@@ -1,6 +1,7 @@
 // Actions-only acceptance: real single-finger Canvas taps, never RAM writes.
 import assert from 'node:assert/strict';
 import {sha,fnv} from './practical32-harness.mjs';
+import {shellInput} from './process32-tests.mjs';
 const ITEM=24576,BACK=24608,NEXT=24610;
 export async function menuTests(p,video){
  const {h,until,samples}=p;assert.equal(h.manifest.window_menu.right_click_required,false);
@@ -61,6 +62,47 @@ export async function menuTests(p,video){
  await choose(0,13);await until(s=>s.expanded.slots[0].state===0,'Images menu closes clean original');
  await welcome(292,164);await until(s=>samples(s)[0]===0x32574b47&&samples(s)[2]>0,'touch dictionary launcher');await choose(0,7);await until(s=>samples(s)[19]!==0,'dictionary IME menu');await choose(0,8);await until(s=>s.expanded.slots[0].state===0,'dictionary menu close');
  p.pass('Files, Images and dictionary menus execute owned commands; invert/Undo restores every image pixel without saving');
+ await welcome(292,302);
+ s=await until(s=>samples(s)[0]===0x314c4143&&samples(s)[2]>0,'mobile DOS calendar');
+ const today=samples(s)[6],day=samples(s)[7],calendarFrame=s.bitmaps[0].window;
+ assert(today>=198001&&today<=209912&&day>=1&&day<=31);
+ assert(draws(s,0).some(d=>d.text===String(today).replace(/(\d{4})(\d{2})/,'$1-$2')));
+ await control(0,'n'.charCodeAt(0));
+ const next=today%100===12?today+89:today+1;
+ await until(s=>samples(s)[6]===next&&samples(s)[7]===0,'calendar next month');
+ await control(0,'t'.charCodeAt(0));
+ await until(s=>samples(s)[6]===today&&samples(s)[7]===day,'Today uses the DOS date');
+ await tap(calendarFrame.x+calendarFrame.w-72,calendarFrame.y+14);
+ s=await until(s=>s.bitmaps[0].window.w===s.gui.width-16&&samples(s)[8]===s.gui.width-32,'touch maximize and client resize');
+ let frame=s.bitmaps[0].window;
+ await tap(frame.x+frame.w-72,frame.y+14);
+ await until(s=>Object.keys(calendarFrame).every(k=>s.bitmaps[0].window[k]===calendarFrame[k]),'restore exact original rectangle');
+ for(const placement of ['left','right','restore']){
+  frame=(await p.inspect()).bitmaps[0].window;
+  await tap(frame.x+frame.w-106,frame.y+14);
+  await until(s=>{
+   const w=s.bitmaps[0].window;
+   return placement==='left'?w.x===8:placement==='right'?w.x+w.w===s.gui.width-8:w.x===calendarFrame.x&&w.w===calendarFrame.w;
+  },'touch tile '+placement);
+ }
+ await control(0,'q'.charCodeAt(0));
+ await until(s=>s.expanded.slots[0].state===0,'close mobile calendar');
+ p.pass('Calendar uses the DOS date. Touch month selection, Today, maximize, tile and restore use the real CPL3 window');
+
+ await p.end(1); // The 16 MiB profile needs its second slot for a shell child.
+ await welcome(130,302);
+ await until(s=>samples(s)[0]===0x3248534b,'mobile shell launcher');
+ await shellInput(p,'KTOOL32.EXE cat\r');
+ await until(s=>samples(s)[1]===2,'foreground cat waits for input');
+ frame=(await p.inspect()).bitmaps[0].window;
+ await tap(frame.x+300,frame.y+frame.h-16);
+ await until(s=>samples(s)[8]===1&&samples(s)[1]===1&&samples(s)[7]===0,'visible EOF closes stdin');
+ await shellInput(p,'KTOOL32.EXE wait\r');
+ await until(s=>samples(s)[1]===2&&s.process?.tasks.some(t=>t.parent&&t.state===2),'foreground wait');
+ await tap(frame.x+236,frame.y+frame.h-16);
+ await until(s=>samples(s)[8]===2&&samples(s)[7]===0xffffff7e,'visible Cancel reaps foreground child');
+ await p.end(0);
+ p.pass('Single-finger EOF and Cancel reach the active protected shell through its terminal');
  const touch=await h.page().evaluate(()=>window.menuTouchProof);assert(touch.starts>40&&touch.ends>40);assert.equal(touch.right,0);assert.equal(sha(await h.disk('hdd')),sha(p.original));
  await p.cleanup(vector);p.pass('Actual browser touch events, zero right clicks, unchanged HDD/FD and complete CPU/XMS/handle reclamation',touch);
 }

@@ -56,7 +56,9 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.v86_hdd_read_only).toBe(1);expect(manifest.v86_private_drives).toBe(1);
   const vdos=fatReadFile(openDiskImage(image,manifest.image),'VDOS.EXE');expect(new TextDecoder().decode(vdos.slice(28,36))).toBe('K386APP1');
   expect(manifest.bitmap_sdk).toMatchObject({format:'rgb565',max_width:384,max_height:256,upload_chunk_bytes:3040,atomic_replace:true,owner_generation_checked:true,source_crop:true,canvas_clip:true,viewer:'KGIMAGE.EXE',disk_save:true,compact_elf_file_alignment:16});
-  expect(manifest.window_menu).toMatchObject({version:1,activation:'titlebar-left-tap',right_click_required:false,paged:true,modal_commands_disabled:true,item_height:36});expect(manifest.window_menu.apps).toHaveLength(6);expect(manifest.utility_apps.calculator_memory).toEqual(['add','subtract','recall','clear']);expect(manifest.utility_apps.clock_stopwatch.resolution_seconds).toBe(1);
+  expect(manifest.window_menu).toMatchObject({version:1,activation:'titlebar-left-tap',right_click_required:false,paged:true,modal_commands_disabled:true,item_height:36});expect(manifest.window_menu.apps).toHaveLength(7);expect(manifest.window_menu.apps).toContain('KGCAL.EXE');
+  expect(manifest.window_menu.placement).toEqual(['maximize','restore','left','right']);
+  expect(manifest.utility_apps.calendar).toEqual({executable:'KGCAL.EXE',date_source:'DOS',years:[1980,2099]});expect(manifest.utility_apps.calculator_memory).toEqual(['add','subtract','recall','clear']);expect(manifest.utility_apps.clock_stopwatch.resolution_seconds).toBe(1);
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
@@ -122,10 +124,13 @@ describe('independent native PM32 GUI image',()=>{
   if(!manifest.enabled)return;
   expect(manifest.process_api).toMatchObject({version:1,feature:512,helper:'K32PROC.EXE',gui_independent:true,parent_owns_children:true,generation_checked:true,message_bytes:64,pipe_bytes:512,stream_chunk_bytes:256,retains_original_on_failure:true});
   expect(manifest.image_transport).toMatchObject({request_bytes:3144,status_header_bytes:72,control_reply_bytes:72,successful_upload_roundtrip_bytes:3216,metrics_record:'KGXFER01'});
+  expect(manifest.process_api).toMatchObject({shell_pipeline_commands:3,background_jobs:1,separate_console_stderr:true,independent_ipc:'receiver-admits-live-peer'});
   expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE']);
   for(const [image,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
    const d=openDiskImage(readFileSync('public/kgui32/'+image),image);
    for(const app of ['KSH32.EXE','KTOOL32.EXE','PROCTEST.EXE']){const b=Buffer.from(fatReadFile(d,prefix+app));expect(b.readUInt16LE(80)).toBe(258);expect(b.readUInt32LE(92)).toBe(783);expect(b.toString('ascii',b.readUInt32LE(84)-24,b.readUInt32LE(84)-16)).toBe('K32RES01');}
+   const calendar=Buffer.from(fatReadFile(d,prefix+'KGCAL.EXE'));
+   expect(calendar.toString('ascii',72,80)).toBe('K32EXE01');
    for(const helper of ['K32PROC.EXE','KPRUN.COM','KVEXT.COM'])expect(fatReadFile(d,helper).length).toBeGreaterThan(100);
   }
   const fd=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image),hd=openDiskImage(readFileSync('public/kgui32/'+manifest.standalone_hdd.image),manifest.standalone_hdd.image);
