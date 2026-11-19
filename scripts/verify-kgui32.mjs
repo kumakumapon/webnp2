@@ -58,7 +58,7 @@ try{
  assert.ok(s.app.x0+332+6<=systemX&&systemX+244+6<=s.width);
  const guestText=await page.evaluate(()=>window.np2debug.np2.getScreenText().text);assert.ok(!guestText.includes('Ready'));assert.equal((await inspectK386(page)).views.filter(v=>v.state!==0).length,0);
  await page.screenshot({path:join(output,'desktop.png')});pass('KDESK-free desktop, actual CPL3/PE/PG, supervisor low memory, RO code/argv and unmapped guard; two application slots remain free');
- const helpSample=[[s.app.x0+20,s.app.y0+118]];
+ const helpSample=[[s.app.x0+20,s.app.y0+120]];
  const launcherPixel=await pixels(helpSample);
  await key('F1');
  assert.notDeepEqual(await pixels(helpSample),launcherPixel);
