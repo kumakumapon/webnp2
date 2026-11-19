@@ -44,7 +44,7 @@ export async function menuTests(p,video){
  await control(1,BACK);
  await choose(1,1);await until(s=>samples(s,1)[14]===1,'touch stopwatch mode');await control(1,115);
  await until(s=>samples(s,1)[6]>=1&&samples(s,1)[15]===1,'stopwatch advances');
- await open(1);const before=samples(await p.inspect(),1)[6];await until(s=>samples(s,1)[6]>before&&draws(s,1).some(d=>d.handle===BACK),'stopwatch continues under its menu');
+ await open(1);const before=samples(await p.inspect(),1)[6];await until(s=>samples(s,1)[6]>before&&draws(s,1).some(d=>d.handle===BACK)&&draws(s,1).some(d=>d.text==='[x] Stopwatch'),'checked Stopwatch and timer continue under the menu');
  await control(1,BACK);await until(s=>draws(s,1).some(d=>d.handle===115),'return from menu to stopwatch');await control(1,115);
  const stopped=await until(s=>samples(s,1)[15]===0,'stop stopwatch'),seconds=samples(stopped,1)[6];await h.page().waitForTimeout(1300);assert.equal(samples(await p.inspect(),1)[6],seconds);
  await control(1,114);await until(s=>samples(s,1)[6]===0,'touch stopwatch reset');
