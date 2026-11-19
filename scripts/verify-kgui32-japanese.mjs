@@ -51,7 +51,13 @@ async function textSuite(){
  protectedTask(s,0);assert(texts(s).some(t=>Buffer.from(t,'latin1').includes(jp)));
  await h.shot('files-japanese.png');await pixels(0,12,52,[0x93fa,0x967b,0x8cea]);await pixels(0,12+6*8,52+16,[0xb6,0xc5]);
  await h.control(0,100);await h.key('CTRL+O');s=await h.until(s=>s.editors[1]?.frames&&s.editors[1].hash===fnv(plain),'Files launches Japanese Editor');
- protectedTask(s,1);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);await h.focus(1);await h.key('HELP');
+ protectedTask(s,1);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);await h.focus(1);
+ const lineEnd=plain.indexOf(10),previousFrames=s.editors[1].frames;
+ assert(lineEnd>=jp.length);
+ await h.key('HELP');
+ // The text caret covers the bottom two glyph rows until End is handled.
+ await h.until(t=>t.editors[1]?.cursor===lineEnd&&t.editors[1].anchor===lineEnd&&
+  t.editors[1].frames>previousFrames,'Editor presents line end before glyph inspection');
  await h.shot('editor-japanese.png');await pixels(1,8,40,[0x93fa,0x967b,0x8cea]);await pixels(1,8+6*8,40+16,[0xb6,0xc5]);
  h.pass('Shipping HDD-only link, actual CPL3 Files/Editor, and exact CG-ROM kanji/half-width kana pixels on '+video);
  await h.key('HOME');await h.chord('SHIFT','RIGHT');await h.until(s=>s.editors[1]?.anchor===0&&s.editors[1].cursor===2,'Whole Japanese character selection');
