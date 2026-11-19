@@ -1,5 +1,33 @@
 // Shared Playwright launcher for the DOS verifiers in both repositories.
+import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
+
+/**
+ * Playwright's injected wait treats a returned Promise as truthy before
+ * awaiting its value. Disk reads must finish before deciding to stop polling.
+ * @template T
+ * @param {{evaluate: (fn: (arg: T) => Promise<unknown>, arg: T) => Promise<unknown>}} page
+ * @param {(arg: T) => Promise<unknown>} predicate
+ * @param {T} argument
+ * @param {{timeout?: number, polling?: number | 'raf'}} options
+ */
+export async function waitForAsyncPredicate(page, predicate, argument, options = {}) {
+  const { timeout = 30_000, polling = 50 } = options;
+  const interval = typeof polling === 'number' ? polling : 50;
+  const deadline = Date.now() + timeout;
+  const timeoutError = new Error(`Asynchronous guest condition was not met within ${timeout} ms`);
+  let timer;
+  const expired = new Promise((_, reject) => { timer = setTimeout(() => reject(timeoutError), timeout); });
+  try {
+    while (Date.now() < deadline) {
+      if (await Promise.race([page.evaluate(predicate, argument), expired])) return;
+      await Promise.race([delay(interval), expired]);
+    }
+    throw timeoutError;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * The shared DOS assertions use a small interface inherited from the original
@@ -46,6 +74,9 @@ export async function launchDosBrowser(options = {}) {
         waitForNavigation: opts => page.waitForNavigation(navigation(opts)),
         waitForSelector: (selector, opts) => page.waitForSelector(selector, { state: 'attached', ...opts }),
         async waitForFunction(predicate, opts, argument) {
+          if (predicate.constructor.name === 'AsyncFunction') {
+            return waitForAsyncPredicate(page, predicate, argument, opts);
+          }
           const result = await page.waitForFunction(predicate, argument, opts);
           await result.dispose();
         },

@@ -1,5 +1,6 @@
 // Exercise the actual guest MZ loaders, native tools and incremental text paint.
 import assert from 'node:assert/strict';
+import { waitForAsyncPredicate } from './legacy-browser.mjs';
 import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -69,7 +70,7 @@ try {
  assert.deepEqual(resumed.resources.usage.map(u=>u.generation),generations);
  pass('EDIT98 saves real file contents and returns directly; both V86 sessions retain their identity and continue');
  await find('file manager');await wait('Parent');await key('f');await wait('R Rename');await type('n');await wait('Destination:');await type('NATIVE\r');await wait('File operation completed');
- await page.waitForFunction(async()=>{try{await window.np2debug.np2.diskListFiles('fd1','NATIVE');return true;}catch{return false;}},null,{timeout:60000});
+ await waitForAsyncPredicate(page,async()=>{try{await window.np2debug.np2.diskListFiles('fd1','NATIVE');return true;}catch{return false;}},null,{timeout:60000});
  await key('ESC');
  await find('system settings');await wait('PC-98 SYSTEM SETTINGS');await type('+s');await wait('Saved. Reboot');
  assert.match((await file('CONFIG.SYS')).toString(),/FILES=50/);

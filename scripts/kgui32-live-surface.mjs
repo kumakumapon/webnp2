@@ -48,7 +48,8 @@ export function sampleGuiSurface({ address, cookie, manager, capacity, id, previ
   if (mux.slice(0, 8) !== 'K32MUX02' || word(mux, 258) !== capacity ||
       dword(mux, 168 + id * 4) !== previous.generation) return null;
   const uploaded = dword(driver, 200 + id * 4);
-  if (!uploaded || uploaded >= previous.bytes || !dword(driver, 216 + id * 4) ||
+  // Acknowledging one chunk can clear pending while the replacement is still partial.
+  if (!uploaded || uploaded >= previous.bytes ||
       dword(driver, 232 + id * 4) !== previous.generation ||
       dword(driver, 184 + id * 4) !== previous.handle) return null;
 

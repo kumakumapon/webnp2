@@ -5,6 +5,7 @@ import { inspectK386 } from './k386-inspect.mjs';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { waitForAsyncPredicate } from './legacy-browser.mjs';
 import { chromium } from 'playwright';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-shell']=process.argv.slice(2);
@@ -58,9 +59,9 @@ try{
   // The distributed image itself remains immutable; VM operations are compared
   // against the prepared image, including all FAT/directory/file bytes.
   await key('F10');await wait('KDESK exited.');await type('MD K386DIR\r');
-  await page.waitForFunction(async()=>{try{await window.np2debug.np2.diskListFiles('fd1','K386DIR');return true;}catch{return false;}},null,{timeout:60000});
+  await waitForAsyncPredicate(page,async()=>{try{await window.np2debug.np2.diskListFiles('fd1','K386DIR');return true;}catch{return false;}},null,{timeout:60000});
   await type('ECHO PRIVATE DIRECTORY > K386DIR\\INFO.TXT\r');
-  await page.waitForFunction(async()=>{try{return new TextDecoder().decode(await window.np2debug.np2.diskReadFile('fd1','K386DIR/INFO.TXT')).trim()==='PRIVATE DIRECTORY';}catch{return false;}},null,{timeout:60000});
+  await waitForAsyncPredicate(page,async()=>{try{return new TextDecoder().decode(await window.np2debug.np2.diskReadFile('fd1','K386DIR/INFO.TXT')).trim()==='PRIVATE DIRECTORY';}catch{return false;}},null,{timeout:60000});
   // File data can be visible before redirected ECHO closes its handle and
   // updates the directory timestamp. A subsequent DOS command acknowledges
   // the completed writer before we take the immutable-disk baseline.
