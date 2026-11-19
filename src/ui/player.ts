@@ -1028,6 +1028,9 @@ export function buildPlayerUI(
   });
   function labelDriveControls(): void {
     for (const drive of drives) {
+      drive.slot.setAttribute('role', 'group');
+      drive.slot.setAttribute('aria-label', drive.key === 'hdd' ? t('hddSlotLabel') :
+        t('fdSlotLabel', { drive: drive.key === 'fd1' ? 1 : 2 }));
       drive.insertButton.textContent = `${t('driveInsertMenu')} ▾`;
       drive.moreButton.setAttribute('aria-label', t('driveOtherActions'));
       drive.eject.textContent = t('driveEjectAction');
@@ -1911,15 +1914,26 @@ export function buildPlayerUI(
       });
     }
   }
-  driveActionsMenu.addEventListener('click', event => event.stopPropagation());
-  driveActionsMenu.addEventListener('keydown', event => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    const rows = Array.from(driveActionsMenu.querySelectorAll<HTMLElement>('[tabindex="0"]'));
-    if (!rows.length) return;
-    event.preventDefault();
-    const index = rows.indexOf(document.activeElement as HTMLElement);
-    rows[(index + (event.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length].focus();
-  });
+  for (const [menu, close] of [[driveActionsMenu, closeDriveActions], [fdLibraryMenu, closeFdLibraryMenu]] as const) {
+    menu.addEventListener('click', event => event.stopPropagation());
+    for (const eventName of ['keydown', 'keyup', 'keypress'] as const) {
+      menu.addEventListener(eventName, event => event.stopPropagation());
+    }
+    menu.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(true);
+        return;
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const rows = Array.from(menu.querySelectorAll<HTMLElement>('[tabindex="0"]'));
+      if (!rows.length) return;
+      event.preventDefault();
+      const index = rows.indexOf(document.activeElement as HTMLElement);
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      rows[index < 0 ? (step > 0 ? 0 : rows.length - 1) : (index + step + rows.length) % rows.length].focus();
+    });
+  }
   document.addEventListener('click', () => closeDriveActions());
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && activeDriveTrigger) {
@@ -1928,10 +1942,7 @@ export function buildPlayerUI(
     }
   });
 
-  // メニュー内のクリックはここで止める。サブメニューへ潜る際に行を作り直すため、
-  // document まで伝播すると「クリック対象が既にメニュー配下に無い」と判定されて閉じてしまう。
-  fdLibraryMenu.addEventListener('click', (e) => e.stopPropagation());
-  // メニュー外クリック/Escで閉じる。
+  // メニュー外へ移動したときも閉じる。
   document.addEventListener('click', () => closeFdLibraryMenu());
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeFdLibraryMenu(true);

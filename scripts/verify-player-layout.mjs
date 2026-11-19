@@ -24,6 +24,8 @@ export async function verifyPlayerLayout(base, boot, screenshot) {
     assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
       'Choose a file', 'Insert from library', 'Insert FreeDOS(98)', 'Create blank FD (1.2MB, FAT12 formatted)',
     ]);
+    await desktop.keyboard.press('ArrowDown');
+    assert.equal(await desktop.evaluate(() => document.activeElement.textContent), 'Insert from library');
     await desktop.keyboard.press('Escape');
     assert.equal(await menu.isVisible(), false);
     assert.equal(await fd1.locator('.drive-insert').evaluate(el => el === document.activeElement), true);
