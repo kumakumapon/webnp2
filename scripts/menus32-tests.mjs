@@ -36,6 +36,12 @@ export async function menuTests(p,video){
  await h.key('F1');await until(s=>draws(s,0).some(d=>d.handle===BACK),'keyboard F1 opens menu');await h.key('TAB');await until(s=>s.gui.app.active===2&&draws(s,0).some(d=>d.handle===BACK),'Tab belongs to the open menu');await h.key('ESC');await until(s=>!draws(s,0).some(d=>d.handle===BACK),'Esc closes keyboard menu');
  p.pass('390px browser: single-finger launcher/titlebar menu, paged memory add/recall/clear and normal calculator controls', {video});
  await welcome(292,192);await until(s=>samples(s,1)[0]===0x324b474b&&samples(s,1)[2]>0,'second real clock owner');
+ await open(1);
+ // The minimum clock client shows two menu entries per page.
+ await control(1,NEXT);
+ await until(s=>draws(s,1).some(d=>d.text==='Start / stop')&&
+  !draws(s,1).some(d=>d.handle===ITEM+2),'clock mode renders Start / stop without a hit target');
+ await control(1,BACK);
  await choose(1,1);await until(s=>samples(s,1)[14]===1,'touch stopwatch mode');await control(1,115);
  await until(s=>samples(s,1)[6]>=1&&samples(s,1)[15]===1,'stopwatch advances');
  await open(1);const before=samples(await p.inspect(),1)[6];await until(s=>samples(s,1)[6]>before&&draws(s,1).some(d=>d.handle===BACK),'stopwatch continues under its menu');
