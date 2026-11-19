@@ -80,15 +80,18 @@ export async function menuTests(p,video){
  await welcome(292,164);await until(s=>samples(s)[0]===0x32574b47&&samples(s)[2]>0,'touch dictionary launcher');await choose(0,7);await until(s=>samples(s)[19]!==0,'dictionary IME menu');await choose(0,8);await until(s=>s.expanded.slots[0].state===0,'dictionary menu close');
  p.pass('Files, Images and dictionary menus execute owned commands; invert/Undo restores every image pixel without saving');
  const monthDrawn=(s,month)=>draws(s,0).some(d=>d.text===String(month).replace(/(\d{4})(\d{2})/,'$1-$2'));
- await welcome(292,302);
- s=await until(s=>samples(s)[0]===0x314c4143&&samples(s)[2]>0&&monthDrawn(s,samples(s)[6]),'mobile DOS calendar publishes its month');
- const today=samples(s)[6],day=samples(s)[7],calendarFrame=s.bitmaps[0].window;
- assert(today>=198001&&today<=209912&&day>=1&&day<=31);
  function calendarLayout(s){
   const frame=s.bitmaps[0].window,width=frame.w-16,height=frame.h-104;
   return samples(s)[8]===width&&samples(s)[9]===height&&
    draws(s,0).some(d=>d.handle===113&&d.y===height-26);
  }
+ await welcome(292,302);
+ // The retained calendar frame and the driver's window geometry are
+ // published separately when Calendar replaces a differently sized app.
+ s=await until(s=>samples(s)[0]===0x314c4143&&samples(s)[2]>0&&
+  monthDrawn(s,samples(s)[6])&&calendarLayout(s),'mobile DOS calendar publishes its month and window');
+ const today=samples(s)[6],day=samples(s)[7],calendarFrame=s.bitmaps[0].window;
+ assert(today>=198001&&today<=209912&&day>=1&&day<=31);
  await control(0,'n'.charCodeAt(0));
  const next=today%100===12?today+89:today+1;
  await until(s=>samples(s)[6]===next&&samples(s)[7]===0&&monthDrawn(s,next),'calendar next month');
