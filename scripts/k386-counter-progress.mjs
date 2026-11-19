@@ -1,5 +1,8 @@
 // CPU and resource records are sampled across separate emulator turns. Match
 // the actual child PSP and startup output before treating scratch RAM as a counter.
+/** @typedef {{state:number,psp:number,screen:string,counter:number,physical?:number,cr3?:number}} CounterView */
+/** @typedef {{program:string,psp:number,generation?:number,runs?:number,cpuTicks?:number}} CounterOwner */
+/** @param {{cpu?: {views: CounterView[]} | null, resources?: {usage: CounterOwner[]} | null}} snapshot */
 export function counterPairReady({cpu,resources}={}) {
  return !!cpu&&!!resources&&cpu.views.length===2&&resources.usage.length===2&&cpu.views.every((v,i)=>
   v.state===1&&v.psp===resources.usage[i].psp&&resources.usage[i].program==='COUNTER.EXE'&&

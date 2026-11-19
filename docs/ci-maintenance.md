@@ -2,9 +2,9 @@
 
 Status: maintained. Node 24 LTS is recorded in `.nvmrc` and package engines.
 Root and MCP installs use committed lockfiles and `npm ci`. Vite/Vitest and the
-MCP runtime are audited in CI. Puppeteer remains for the existing native DOS
-verifier API; Playwright serves the protected-mode suites. Converting those
-verifiers is a separate migration, so both dependencies are updated and locked.
+MCP runtime are audited in CI. Playwright serves the DOS and protected-mode browser suites. Shared DOS
+verifiers use a small adapter that preserves their wait, input, viewport and
+assertion contracts.
 
 ## One build, all existing browser cases
 
@@ -60,3 +60,15 @@ See [Pages retry procedure](pages-deployment.md).
 MCP releases use the independent locked `mcp/` dependency tree, connection tests,
 audit, single-file bundle and stdio smoke test before publishing `mcp-*` tags.
 Protocol v0.2 requires the private startup pairing URL; see [MCP setup](../mcp/README.md).
+
+
+CI compares the committed diff against the base revision. README and docs
+Markdown changes run the shared build, static checks, tests and committed boot
+link checks. Other changes and manual runs retain the full browser matrix.
+The link check reads README contents from Git and media from the generated
+artifact, including the actual help page served by Pages.
+
+Practical32 input and I/O waits sample compact runtime records. The maximum
+image replacement test arms a single-owner in-page observation before sending
+input and checks the old front bytes using current guest-owned PTEs. The full
+image, Canvas, peer progress and resource recovery assertions remain in place.

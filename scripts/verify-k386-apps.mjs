@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {join} from 'node:path';
+import { waitForAsyncPredicate } from './legacy-browser.mjs';
 import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
@@ -54,7 +55,7 @@ try{
  await key('F10');await wait('KDESK exited.');await type('KHELLO.EXE\r');
  await wait('Open this application in KDESK/386.');
  await type('COPY KHELLO.EXE 000APP.EXE\r');
- await page.waitForFunction(async()=>{try{return (await window.np2debug.np2.diskReadFile('fd1','000APP.EXE')).length>0;}catch{return false;}},null,{timeout:60000});
+ await waitForAsyncPredicate(page,async()=>{try{return (await window.np2debug.np2.diskReadFile('fd1','000APP.EXE')).length>0;}catch{return false;}},null,{timeout:60000});
  // A visible copied file can precede COPY's final close/metadata update.
  await type('ECHO K386 APP FIXTURE READY\r');
  await page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(s=>s.trim()==='K386 APP FIXTURE READY'),null,{timeout:60000});

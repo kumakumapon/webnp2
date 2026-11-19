@@ -25,11 +25,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE_URL = process.env.WEBNP2_URL ?? 'http://127.0.0.1:5173';
@@ -43,7 +42,6 @@ const RHYTHM_DIR = join(ROOT, 'public', 'rhythm');
 
 let server;
 let serverOutput = '';
-let profile;
 let browser;
 let staticFallback = false;
 const results = [];
@@ -108,45 +106,45 @@ const CONTENT_TYPES = {
 
 /**
  * リクエスト経路を仕込む。
- * - staticFallback時: distをPuppeteerのrequest interceptionで返す(dbg-smokeと同じ)。
+ * - staticFallback時: distをPlaywrightのrouteで返す(dbg-smokeと同じ)。
  * - blockRhythm時: rhythm/*.wav へのfetchだけ意図的に失敗させる(ケース2の陽性対照用)。
  * どちらも不要なページでは何もしない(素通り)。
  */
 async function attachRequestHandling(targetPage, { blockRhythm }) {
   if (!staticFallback && !blockRhythm) return;
-  await targetPage.setRequestInterception(true);
-  targetPage.on('request', async (request) => {
+  await targetPage.route('**/*', async route => {
+    const request = route.request();
     try {
       const url = new URL(request.url());
       if (blockRhythm && /\/rhythm\/2608_[a-z]+\.wav$/i.test(url.pathname)) {
-        await request.abort('failed');
+        await route.abort('failed');
         return;
       }
       if (!staticFallback) {
-        await request.continue();
+        await route.continue();
         return;
       }
       if (url.origin !== STATIC_URL) {
-        await request.abort();
+        await route.abort();
         return;
       }
       const relative = decodeURIComponent(
         url.pathname === '/' ? 'index.html' : url.pathname.slice(1),
       );
       if (relative.split('/').includes('..')) {
-        await request.respond({ status: 403, body: 'forbidden' });
+        await route.fulfill({ status: 403, body: 'forbidden' });
         return;
       }
       const body = await readFile(join(ROOT, 'dist', relative));
       const extension = relative.slice(relative.lastIndexOf('.'));
-      await request.respond({
+      await route.fulfill({
         status: 200,
         contentType: CONTENT_TYPES[extension] ?? 'application/octet-stream',
         body,
       });
     } catch {
       try {
-        await request.respond({ status: 404, body: 'not found' });
+        await route.fulfill({ status: 404, body: 'not found' });
       } catch {
         /* すでに処理済みなら無視 */
       }
@@ -296,11 +294,9 @@ async function check(number, name, fn) {
 
 async function run() {
   await ensureServer();
-  profile = await mkdtemp(join(tmpdir(), 'webnp2-rhythm-'));
-  browser = await puppeteer.launch({
+  browser = await launchDosBrowser({
     executablePath: CHROME,
-    userDataDir: profile,
-    headless: 'new',
+    headless: true,
     args: ['--hide-scrollbars'],
   });
 
@@ -462,7 +458,6 @@ try {
   await run();
 } finally {
   if (browser) await browser.close();
-  if (profile) await rm(profile, { recursive: true, force: true });
   if (server && server.exitCode === null) {
     server.kill('SIGTERM');
   }

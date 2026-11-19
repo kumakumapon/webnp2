@@ -53,7 +53,7 @@ export async function verifyKdeskMedia(page, { output = 'test-results/kdesk-medi
     return c.toDataURL('image/png').split(',')[1];
   });
   const input = resolve(output, 'host-input.png'); await writeFile(input, Buffer.from(png,'base64'));
-  await (await page.$('.kdesk-media-file')).uploadFile(input);
+  await page.setInputFiles('.kdesk-media-file',input);
   await action('import-image');
   await page.waitForFunction(() => document.querySelector('.kdesk-media-status').textContent.includes('IMPORT.BMP'), { timeout: 60000 });
   const bmp = await guest('IMPORT.BMP'); assert.equal(bmp.readInt32LE(18),320); assert.equal(bmp.readInt32LE(22),200); assert.equal(bmp.readUInt16LE(28),8);

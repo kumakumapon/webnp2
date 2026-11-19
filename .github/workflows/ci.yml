@@ -15,8 +15,16 @@ jobs:
     timeout-minutes: 30
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      docs_only: ${{ steps.scope.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        run: node scripts/ci/changed-docs.mjs >> "$GITHUB_OUTPUT"
+        env:
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DIFF_HEAD: ${{ github.sha }}
       - uses: ./.github/actions/build
         env:
           VITE_DISK_PROXY: ${{ vars.DISK_PROXY_URL }}
@@ -42,6 +50,7 @@ jobs:
           path: test-results
   browser:
     needs: build
+    if: needs.build.outputs.docs_only != 'true'
     name: E2E (${{ matrix.case }})
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout }}

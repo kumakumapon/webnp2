@@ -2,11 +2,10 @@
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import puppeteer from 'puppeteer-core';
+import { launchDosBrowser } from './legacy-browser.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE_URL = process.env.WEBNP2_URL ?? 'http://127.0.0.1:5173';
@@ -18,7 +17,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let server;
 let serverOutput = '';
-let profile;
 let browser;
 let page;
 let mobilePage;
@@ -72,22 +70,22 @@ async function enableStaticFallback(targetPage) {
     '.css': 'text/css; charset=utf-8', '.wasm': 'application/wasm',
     '.bmp': 'image/bmp', '.xdf': 'application/octet-stream',
   };
-  await targetPage.setRequestInterception(true);
-  targetPage.on('request', async (request) => {
+  await targetPage.route('**/*', async route => {
+    const request = route.request();
     const url = new URL(request.url());
-    if (url.origin !== STATIC_URL) { await request.abort(); return; }
+    if (url.origin !== STATIC_URL) { await route.abort(); return; }
     const relative = decodeURIComponent(url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
-    if (relative.split('/').includes('..')) { await request.respond({ status: 403, body: 'forbidden' }); return; }
+    if (relative.split('/').includes('..')) { await route.fulfill({ status: 403, body: 'forbidden' }); return; }
     try {
       const body = await readFile(join(ROOT, 'dist', relative));
       const extension = relative.slice(relative.lastIndexOf('.'));
-      await request.respond({
+      await route.fulfill({
         status: 200,
         contentType: contentTypes[extension] ?? 'application/octet-stream',
         body,
       });
     } catch {
-      await request.respond({ status: 404, body: 'not found' });
+      await route.fulfill({ status: 404, body: 'not found' });
     }
   });
 }
@@ -127,11 +125,9 @@ function intersectsViewport(rect, width, height) {
 async function run() {
   await check(1, 'Vite・Chrome・FreeDOS(98)起動', async () => {
     await ensureServer();
-    profile = await mkdtemp(join(tmpdir(), 'webnp2-dbg-ui-'));
-    browser = await puppeteer.launch({
+    browser = await launchDosBrowser({
       executablePath: CHROME,
-      userDataDir: profile,
-      headless: 'new',
+        headless: true,
       args: ['--hide-scrollbars'],
     });
     page = await openEmulatorPage({ width: 1180, height: 900, deviceScaleFactor: 1 });
@@ -290,7 +286,6 @@ try {
   await run();
 } finally {
   if (browser) await browser.close();
-  if (profile) await rm(profile, { recursive: true, force: true });
   if (server && server.exitCode === null) server.kill('SIGTERM');
 }
 

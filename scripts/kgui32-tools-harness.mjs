@@ -4,6 +4,7 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
+import {inspectGUI} from './kgui32-inspect.mjs';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 export const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -17,17 +18,30 @@ export async function toolsHarness(base,output,video,options={}){
  let page,ctx,errors=[],fdBefore=fd,last;const results=[];
  const inspect=()=>inspectWorkspace(page);
  async function until(f,label){console.log('CHECK',label);let s,observerError;for(let end=Date.now()+120000;Date.now()<end;){s=await inspect().catch(e=>{observerError=String(e);return null;});if(s&&f(s)){last=s;return s;}await page.waitForTimeout(100);}throw Error(label+' '+JSON.stringify({observerError,editors:s?.editors,imes:s?.imes,gui:s?.gui.app,canvases:s?.canvases,states:s?.cpu.views.map(v=>({state:v.state,generation:v.generation}))}));}
+ async function guiUntil(predicate,label){
+  console.log('CHECK',label);
+  let gui;
+  for(const deadline=Date.now()+120000;Date.now()<deadline;){
+   gui=await inspectGUI(page,{pageTables:false});
+   if(gui?.app&&predicate(gui.app))return gui;
+   await page.waitForTimeout(40);
+  }
+  throw Error(label+' '+JSON.stringify(gui?.app));
+ }
  async function key(value){await page.evaluate(v=>window.np2debug.np2.sendKeys(v),value);await page.waitForTimeout(200);}
  async function type(value){await page.evaluate(v=>window.np2debug.np2.typeText(v),value);await page.waitForTimeout(200);}
  async function enterCommand(value){
-  let s=await until(s=>s.gui.app?.frames,'command input ready'),events=s.gui.app.events;
-  await key('CTRL+L');s=await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===12,'Run command editor');
-  for(const c of value){events=s.gui.app.events;await type(c);s=await until(s=>s.gui.app.events>events&&s.gui.app.lastKey===c.charCodeAt(0),'command character '+c);}
+  let gui=await guiUntil(app=>app.frames,'command input ready'),events=gui.app.events;
+  await key('CTRL+L');gui=await guiUntil(app=>app.events>events&&app.lastKey===12,'Run command editor');
+  for(const c of value){
+   events=gui.app.events;await type(c);
+   gui=await guiUntil(app=>app.events>events&&app.lastKey===c.charCodeAt(0),'command character '+c);
+  }
   await key('ENTER');
  }
  async function chord(modifier,value){await page.evaluate(({modifier,value})=>window.np2debug.np2.runKeySequence([{type:'down',keys:modifier},{type:'wait',ms:200},{type:'press',keys:value,holdMs:60},{type:'wait',ms:700},{type:'up',keys:modifier}]),{modifier,value});}
- async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return until(s=>s.gui.app.mx===x&&s.gui.app.my===y,'pointer');}
- async function button(d){const hb=(await inspect()).gui.app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await until(s=>s.gui.app.heartbeat>=hb+3,'mouse '+d);}
+ async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return guiUntil(app=>app.mx===x&&app.my===y,'pointer');}
+ async function button(d){const hb=(await guiUntil(app=>app.frames,'mouse input ready')).app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await guiUntil(app=>app.heartbeat>=hb+3,'mouse '+d);}
  async function click(x,y){await point(x,y);await button(1);await button(0);}
  async function focus(id){let s=await inspect();if(s.gui.app.active!==id+2)await click(330+146*id,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'active '+id);}
  function origin(s,id){const c=s.canvases[id];return {x:id?s.gui.width-c.width-32:16,y:id?Math.max(40,s.gui.height-c.height-144):40};}
@@ -79,5 +93,5 @@ export async function toolsHarness(base,output,video,options={}){
  function pass(name){results.push(name);console.log('PASS',name);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,results},null,2)+'\n');}
  async function fail(e){const raw=await page?.evaluate(()=>({registers:window.np2debug.np2.dbgReadRegs(),conventionalBase:0x10000,conventional:window.np2debug.np2.readMemoryBase64(0x10000,0x90000).base64})).catch(()=>null);await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last),results,raw},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});}
- return {manifest,distribution,fd,hdd,legacy,inspect,until,key,type,enterCommand,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
+ return {manifest,distribution,fd,hdd,legacy,inspect,until,guiUntil,key,type,enterCommand,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
 }
