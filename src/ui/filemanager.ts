@@ -241,6 +241,7 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   // --- 状態 ---
   let staged: StagedItem[] = [];
   let stagedErrors: StagedError[] = [];
+  let pendingHostFiles: File[] = [];
   const selectedStaged = new Set<number>();
   let targets: FmTarget[] = [];
   let currentTarget: FmTarget | null = null;
@@ -292,6 +293,7 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
       transferProgress.hidden = true;
       busy = false;
       updateControls();
+      stagePendingHostFiles();
     }
   }
 
@@ -378,11 +380,24 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
     renderStagedList();
   }
 
+  function stagePendingHostFiles(): void {
+    if (busy || pendingHostFiles.length === 0) return;
+    const files = pendingHostFiles;
+    pendingHostFiles = [];
+    void perform(() => addHostFiles(files));
+  }
+
+  function enqueueHostFiles(files: File[]): void {
+    // The native picker can deliver files while a disk operation owns the dialog.
+    pendingHostFiles.push(...files);
+    stagePendingHostFiles();
+  }
+
   hostSelectBtn.addEventListener('click', () => hostFileInput.click());
   hostFileInput.addEventListener('change', () => {
     const files = Array.from(hostFileInput.files ?? []);
     hostFileInput.value = '';
-    if (files.length > 0) void perform(() => addHostFiles(files));
+    enqueueHostFiles(files);
   });
 
   // --- ディスク側(右ペイン) ---
@@ -730,7 +745,7 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
         if (internal?.from === 'disk') saveToHost(new Set(internal.names));
       } else {
         const files = Array.from(transfer.files);
-        if (files.length > 0) void perform(() => addHostFiles(files));
+        enqueueHostFiles(files);
       }
     });
   }

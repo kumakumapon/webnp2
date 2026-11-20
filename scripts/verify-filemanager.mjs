@@ -34,7 +34,11 @@ export async function verifyFileManager(page) {
 
   const large = Buffer.from('Longer checked file transfer');
   const small = Buffer.from('x');
-  await modal.locator('input[type="file"]').setInputFiles([
+  const [picker] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    modal.getByRole('button', { name: 'Select Files', exact: true }).click(),
+  ]);
+  await picker.setFiles([
     { name: 'along.txt', mimeType: 'text/plain', buffer: large },
     { name: 'ztiny.txt', mimeType: 'text/plain', buffer: small },
   ]);
