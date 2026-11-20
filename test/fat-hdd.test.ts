@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DiskError,
+  createFormattedFd,
   createFormattedHdd,
   fatFreeSpace,
   fatList,
@@ -9,6 +10,23 @@ import {
   fatWriteFile,
   openDiskImage,
 } from '../src/api/fat.ts';
+
+it('preserves the entire FAT image when a create-only destination already exists', () => {
+  const image = createFormattedFd();
+  const volume = openDiskImage(image, 'transfer.xdf');
+  const original = new Uint8Array([1, 2, 3]);
+  const incoming = new Uint8Array([4, 5, 6]);
+  fatWriteFile(volume, 'SOURCE.TXT', original, { createOnly: true });
+  fatMakeDir(volume, 'FOLDER');
+  const before = image.slice();
+  expect(() => fatWriteFile(volume, 'source.txt', incoming, { createOnly: true }))
+    .toThrow(expect.objectContaining({ code: 'destinationExists' }));
+  expect(() => fatWriteFile(volume, 'FOLDER', incoming, { createOnly: true }))
+    .toThrow(expect.objectContaining({ code: 'destinationExists' }));
+  expect(Buffer.compare(image, before)).toBe(0);
+  fatWriteFile(volume, 'SOURCE.TXT', incoming);
+  expect(fatReadFile(volume, 'SOURCE.TXT')).toEqual(incoming);
+});
 
 // 実イメージ(public/test/HDDimage.thd)は124MBかつ再配布不可のため、
 // ここでは同じジオメトリ(T98 .thd: 8ヘッド×33セクタ×256B、ヘッダ256B)の

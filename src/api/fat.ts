@@ -16,7 +16,8 @@ export type DiskErrorCode =
   | 'mountedUseSlotApi'
   | 'hddEditBeforeBootOnly'
   | 'hddSlotUnsupported'
-  | 'invalidShortName';
+  | 'invalidShortName'
+  | 'destinationExists';
 
 export class DiskError extends Error {
   constructor(
@@ -786,7 +787,12 @@ export function fatReadFile(vol: FatVolume, path: string): Uint8Array {
   return out;
 }
 
-export function fatWriteFile(vol: FatVolume, path: string, data: Uint8Array): void {
+export interface FatWriteOptions {
+  /** Reject an existing destination before changing any bytes. */
+  createOnly?: boolean;
+}
+
+export function fatWriteFile(vol: FatVolume, path: string, data: Uint8Array, options: FatWriteOptions = {}): void {
   const segments = splitPath(path);
   if (segments.length === 0) throw new Error('empty file path');
   const dirCluster = resolveParentDir(vol, segments);
@@ -807,6 +813,9 @@ export function fatWriteFile(vol: FatVolume, path: string, data: Uint8Array): vo
       vol.image.subarray(slots[i].offset, slots[i].offset + 8),
       vol.image.subarray(slots[i].offset + 8, slots[i].offset + 11),
     );
+    if (options.createOnly && name.toUpperCase() === display) {
+      throw new DiskError('destinationExists', `Destination already exists: ${path}`, { name: path });
+    }
     if (name === display) {
       targetSlotIndex = i;
       existingCluster = readU16(vol.image, slots[i].offset + 26);

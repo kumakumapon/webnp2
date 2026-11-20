@@ -47,6 +47,7 @@ import {
 } from './api/roms.ts';
 import { createFormattedFd, createFormattedHdd } from './api/fat.ts';
 import type { FmTarget } from './ui/filemanager.ts';
+import type { LibraryDeleteResult } from './ui/types.ts';
 import {
   type Binding,
   defaultProfileFor,
@@ -875,32 +876,57 @@ async function listStoredDiskImages(): Promise<db.StoredImage[]> {
  * アーカイブ由来で複数ディスクを含むものはフォルダ(group)1件、それ以外は単体(item)1件になる。
  */
 async function listDiskLibrary(): Promise<LibraryNode[]> {
-  return buildLibraryNodes(await listStoredDiskImages(), classifyDiskKind);
+  return buildLibraryNodes(await listStoredDiskImages(), classifyDiskKind, libraryActiveKeys());
+}
+
+function libraryActiveKeys(): Set<string> {
+  const keys = new Set(libraryMounts);
+  for (const disk of np2.getMountedImages()) keys.add(disk.sourceKey);
+  if (!np2.isBooted()) {
+    for (const disk of Object.values(pendingBoot)) if (disk) keys.add(disk.sourceKey);
+  }
+  return keys;
+}
+
+const libraryMounts = new Set<string>();
+
+async function withLibraryDisk(
+  sourceKey: string,
+  use: (stored: db.StoredImage) => void | Promise<void>,
+): Promise<void> {
+  if (libraryMounts.has(sourceKey)) return;
+  libraryMounts.add(sourceKey);
+  try {
+    const stored = await db.get(sourceKey);
+    if (stored) await use(stored);
+  } finally {
+    libraryMounts.delete(sourceKey);
+  }
 }
 
 /** ディスクライブラリのエントリから起動する(起動前オーバーレイ用)。HDDはHDDとして、FDはFD1として起動する。 */
 async function bootFromLibrary(sourceKey: string): Promise<void> {
   if (bootStarted) return;
-  const stored = await db.get(sourceKey);
-  if (!stored) return;
-  const kind = classifyDiskKind(stored.name);
-  if (!kind) return;
+  await withLibraryDisk(sourceKey, async (stored) => {
+    if (bootStarted) return;
+    const kind = classifyDiskKind(stored.name);
+    if (!kind) return;
+    const pending: PendingImage = {
+      slot: kind === 'hdd' ? 'hdd' : 'fd1',
+      name: stored.name,
+      sourceKey,
+      bytes: new Uint8Array(stored.bytes),
+      resumed: true,
+    };
 
-  const pending: PendingImage = {
-    slot: kind === 'hdd' ? 'hdd' : 'fd1',
-    name: stored.name,
-    sourceKey,
-    bytes: new Uint8Array(stored.bytes),
-    resumed: true,
-  };
-
-  bootStarted = true;
-  ui.hideOverlay();
-  setStatusT('statusPreparing');
-  // FD起動でも、セット済みのHDDがあれば一緒に載せる。
-  await bootWithImages(
-    kind === 'hdd' ? { hdd: pending, fd1: pendingBoot.fd1, fd2: pendingBoot.fd2 } : { hdd: pendingBoot.hdd, fd1: pending },
-  );
+    bootStarted = true;
+    ui.hideOverlay();
+    setStatusT('statusPreparing');
+    // FD起動でも、セット済みのHDDがあれば一緒に載せる。
+    await bootWithImages(
+      kind === 'hdd' ? { hdd: pending, fd1: pendingBoot.fd1, fd2: pendingBoot.fd2 } : { hdd: pendingBoot.hdd, fd1: pending },
+    );
+  });
 }
 
 /**
@@ -909,19 +935,18 @@ async function bootFromLibrary(sourceKey: string): Promise<void> {
  */
 async function setHddFromLibrary(sourceKey: string): Promise<void> {
   if (bootStarted) return;
-  const stored = await db.get(sourceKey);
-  if (!stored) return;
-  if (classifyDiskKind(stored.name) !== 'hdd') return;
-
-  pendingBoot.hdd = {
-    slot: 'hdd',
-    name: stored.name,
-    sourceKey,
-    bytes: new Uint8Array(stored.bytes),
-    resumed: true,
-  };
-  refreshPendingBootUI();
-  setStatusT('statusDiskSet', [{ name: stored.name }]);
+  await withLibraryDisk(sourceKey, (stored) => {
+    if (bootStarted || classifyDiskKind(stored.name) !== 'hdd') return;
+    pendingBoot.hdd = {
+      slot: 'hdd',
+      name: stored.name,
+      sourceKey,
+      bytes: new Uint8Array(stored.bytes),
+      resumed: true,
+    };
+    refreshPendingBootUI();
+    setStatusT('statusDiskSet', [{ name: stored.name }]);
+  });
 }
 
 /**
@@ -960,41 +985,44 @@ function clearPendingHdd(): void {
 /** ディスクライブラリのFDイメージをFDD1/FDD2へ挿入する。起動前ならそのFDをセットした状態で起動する。 */
 async function insertFdFromLibrary(drive: 1 | 2, sourceKey: string): Promise<void> {
   try {
-    const stored = await db.get(sourceKey);
-    if (!stored) return;
-    const diskFile: DiskFile = { name: stored.name, bytes: new Uint8Array(stored.bytes) };
-    if (!bootStarted) {
-      const pending: PendingImage = {
-        slot: drive === 1 ? 'fd1' : 'fd2',
-        name: stored.name,
-        sourceKey,
-        bytes: diskFile.bytes,
-        resumed: true,
-      };
-      // HDDをセット中は起動せずセットに留める(編集してから起動できるようにするため)。
-      if (hasPendingHdd()) {
-        pendingBoot[drive === 1 ? 'fd1' : 'fd2'] = pending;
-        refreshPendingBootUI();
-        setStatusT('statusDiskSet', [{ name: stored.name }]);
+    await withLibraryDisk(sourceKey, async (stored) => {
+      const diskFile: DiskFile = { name: stored.name, bytes: new Uint8Array(stored.bytes) };
+      if (!bootStarted) {
+        const pending: PendingImage = {
+          slot: drive === 1 ? 'fd1' : 'fd2',
+          name: stored.name,
+          sourceKey,
+          bytes: diskFile.bytes,
+          resumed: true,
+        };
+        // HDDをセット中は起動せずセットに留める(編集してから起動できるようにするため)。
+        if (hasPendingHdd()) {
+          pendingBoot[drive === 1 ? 'fd1' : 'fd2'] = pending;
+          refreshPendingBootUI();
+          setStatusT('statusDiskSet', [{ name: stored.name }]);
+          return;
+        }
+        bootStarted = true;
+        ui.hideOverlay();
+        setStatusT('statusPreparing');
+        await bootWithImages(drive === 1 ? { fd1: pending } : { fd2: pending });
         return;
       }
-      bootStarted = true;
-      ui.hideOverlay();
-      setStatusT('statusPreparing');
-      await bootWithImages(drive === 1 ? { fd1: pending } : { fd2: pending });
-      return;
-    }
-    await np2.insertFd(drive, diskFile, sourceKey);
-    updateFdSlotsUI();
-    setStatusT('statusFdInserted', [{ drive, name: diskFile.name }]);
+      await np2.insertFd(drive, diskFile, sourceKey);
+      updateFdSlotsUI();
+      setStatusT('statusFdInserted', [{ drive, name: diskFile.name }]);
+    });
   } catch (err) {
     setStatusT('statusBootFailed', [{ message: describeError(err) }], true);
   }
 }
 
-/** ディスクライブラリのエントリを削除する。 */
-async function deleteLibraryEntry(sourceKey: string): Promise<void> {
-  await db.delete(sourceKey);
+/** 使用中のディスクを保護し、復元に必要な元のレコードを返す。 */
+async function deleteLibraryEntries(sourceKeys: readonly string[]): Promise<LibraryDeleteResult> {
+  const images = await db.takeImages(sourceKeys, (key) => libraryActiveKeys().has(key));
+  if (!images) return { status: 'active' };
+  if (images.length === 0) return { status: 'missing' };
+  return { status: 'deleted', restore: () => db.restoreImages(images) };
 }
 
 /** ライブラリエントリの表示名を変更する。実ファイル名(拡張子)は変えないため種別判定は壊れない。 */
@@ -1018,12 +1046,9 @@ async function renameLibraryGroup(groupId: string, groupName: string): Promise<v
 }
 
 /** グループを丸ごと削除する(所属する全ディスクイメージを削除)。 */
-async function deleteLibraryGroup(groupId: string): Promise<void> {
+async function deleteLibraryGroup(groupId: string): Promise<LibraryDeleteResult> {
   const stored = await listStoredDiskImages();
-  for (const item of stored) {
-    if (item.group !== groupId) continue;
-    await db.delete(item.sourceKey);
-  }
+  return deleteLibraryEntries(stored.filter((item) => item.group === groupId).map((item) => item.sourceKey));
 }
 
 // --- アーカイブ(ZIP/LZH)の展開とライブラリ登録 ---
@@ -1173,7 +1198,12 @@ function findMountedSlotForSourceKey(sourceKey: string): 'fd1' | 'fd2' | undefin
 
 /** ライブラリ由来のtargetがマウント中なら対応するスロット名を返す(マウント中はスロット側APIへ振り分けるため)。 */
 function resolveFmSlot(target: FmTarget): 'fd1' | 'fd2' | undefined {
-  if (target.kind === 'slot') return target.ref as 'fd1' | 'fd2';
+  if (target.kind === 'slot') {
+    const slot = target.ref as 'fd1' | 'fd2';
+    const mounted = np2.getMountedImages().find(image => image.slot === slot);
+    if (!mounted || mounted.sourceKey !== target.sourceKey) throw new Error(t('fmDriveChanged'));
+    return slot;
+  }
   return findMountedSlotForSourceKey(target.ref);
 }
 
@@ -1192,6 +1222,7 @@ async function listFmTargets(): Promise<FmTarget[]> {
       kind: 'slot',
       ref: slot,
       drive,
+      sourceKey: m?.sourceKey,
       name: m?.name,
       mounted: !!m,
       editable: !!m && isFmEditableFdName(m.name),
@@ -1227,10 +1258,10 @@ async function fmReadFile(target: FmTarget, path: string): Promise<Uint8Array> {
 async function fmWriteFile(target: FmTarget, path: string, data: Uint8Array): Promise<void> {
   const slot = resolveFmSlot(target);
   if (slot) {
-    await np2.diskWriteFile(slot, path, data);
+    await np2.diskWriteFile(slot, path, data, { createOnly: true });
     return;
   }
-  await np2.libraryWriteFile(target.ref, path, data);
+  await np2.libraryWriteFile(target.ref, path, data, { createOnly: true });
 }
 
 async function fmDeleteFile(target: FmTarget, path: string): Promise<void> {
@@ -2012,7 +2043,7 @@ function init(): void {
       onLibraryBoot: (sourceKey) => bootFromLibrary(sourceKey),
       onLibrarySetHdd: (sourceKey) => setHddFromLibrary(sourceKey),
       onLibraryInsertFd: (drive, sourceKey) => insertFdFromLibrary(drive, sourceKey),
-      onLibraryDelete: (sourceKey) => deleteLibraryEntry(sourceKey),
+      onLibraryDelete: (sourceKey) => deleteLibraryEntries([sourceKey]),
       onLibraryRename: (sourceKey, displayName) => renameLibraryEntry(sourceKey, displayName),
       onLibraryRenameGroup: (groupId, name) => renameLibraryGroup(groupId, name),
       onLibraryDeleteGroup: (groupId) => deleteLibraryGroup(groupId),

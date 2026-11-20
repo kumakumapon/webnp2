@@ -2,9 +2,6 @@
 // ホスト(ブラウザ)⇔実行中FD/ライブラリ内FDイメージ間でファイルを出し入れする。
 // 実際のディスクI/OはWebNP2(main.ts経由のコールバック)に委譲し、このモジュールは
 // DOM構築・ステージング管理・アーカイブ展開・8.3名変換・転送フローのみを担当する。
-//
-// src/api/lzh.ts / zip.ts / archive.ts / archive-util.ts は別Agentがデバッグ中のため、
-// importして使うだけで変更しない。
 
 import { describeError, t } from './strings.ts';
 import type { FatEntry } from '../api/fat.ts';
@@ -17,6 +14,8 @@ export interface FmTarget {
   ref: string;
   /** kind='slot'のときのみ有効。 */
   drive?: 1 | 2;
+  /** スロット一覧を取得したときの媒体。挿し替え後の別媒体への書込みを防ぐ。 */
+  sourceKey?: string;
   /** マウント中/ライブラリ上の実ファイル名。未マウントスロットはundefined。 */
   name?: string;
   /** ライブラリ側のエントリが、いずれかの実行中スロットにマウント中かどうか。 */
@@ -58,6 +57,12 @@ interface StagedError {
   group: string;
   message: string;
 }
+
+type DiskSortKey = 'name' | 'size' | 'mtime';
+const TRANSFER_DRAG_TYPE = 'application/x-webnp2-file-transfer';
+type TransferDrag =
+  | { from: 'host'; ids: number[] }
+  | { from: 'disk'; names: string[]; target: FmTarget; path: string };
 
 let nextStagedId = 1;
 
@@ -109,7 +114,7 @@ function sanitize83(name: string): string {
 }
 
 /** 提案名の重複を "~1" 等の連番で解消する(既存ファイル名/他の提案名とも突き合わせる)。 */
-function dedupe83(names: string[], existingNames: string[]): string[] {
+function dedupe83(names: string[], existingNames: string[]): string[] | null {
   const used = new Set(existingNames.map((n) => n.toUpperCase()));
   const result: string[] = [];
   for (const original of names) {
@@ -123,7 +128,9 @@ function dedupe83(names: string[], existingNames: string[]): string[] {
         if (!used.has(candidate.toUpperCase())) break;
       }
     }
-    used.add(candidate.toUpperCase());
+    const key = candidate.toUpperCase();
+    if (used.has(key)) return null;
+    used.add(key);
     result.push(candidate);
   }
   return result;
@@ -150,7 +157,7 @@ function downloadBytes(name: string, bytes: Uint8Array): void {
  * player.ts からはボタン1つ分の配線(open()呼び出しとapplyStrings()連携)だけ行えばよい。
  */
 export function buildFileManagerDialog(container: HTMLElement, callbacks: FileManagerCallbacks): FileManagerDialog {
-  const titleEl = el('h2', { class: 'fm-title' }, [t('fmDialogTitle')]);
+  const titleEl = el('h2', { class: 'fm-title', id: 'file-transfer-title' }, [t('fmDialogTitle')]);
   const noteEl = el('p', { class: 'fm-note' }, [t('fmDialogNote')]);
 
   // --- 左ペイン(ホスト) ---
@@ -177,9 +184,26 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   const createFdBtn = el('button', { type: 'button', class: 'fm-action-btn' }, [t('fmCreateTransferFdBtn')]);
   const targetRow = el('div', { class: 'fm-target-row' }, [targetSelect, createFdBtn]);
   const upBtn = el('button', { type: 'button', class: 'fm-action-btn' }, [t('fmUpDir')]);
-  const pathLabel = el('span', { class: 'fm-path-label' }, [t('fmPathRoot')]);
-  const pathRow = el('div', { class: 'fm-path-row' }, [upBtn, pathLabel]);
-  const diskList = el('div', { class: 'fm-disk-list' });
+  const breadcrumbs = el('nav', { class: 'fm-breadcrumbs', 'aria-label': t('fmPathLabel') });
+  const pathRow = el('div', { class: 'fm-path-row' }, [upBtn, breadcrumbs]);
+  const diskRows = el('tbody');
+  const sortColumns = [
+    { key: 'name', label: () => t('fmNameColumn') },
+    { key: 'size', label: () => t('fmSizeColumn') },
+    { key: 'mtime', label: () => t('fmModifiedColumn') },
+  ] as const;
+  const sortHeaders = sortColumns.map(({ key, label }) => {
+    const button = el('button', { type: 'button', class: 'fm-sort-btn' }, [label()]);
+    const cell = el('th', { scope: 'col', class: `fm-col-${key}` }, [button]);
+    return { key, button, cell, label };
+  });
+  const selectionHeader = el('th', { scope: 'col', class: 'fm-col-select', 'aria-label': t('fmSelectFilesBtn') });
+  const diskTable = el('table', { class: 'fm-disk-table', 'aria-label': t('fmDiskPaneTitle') }, [
+    el('thead', {}, [el('tr', {}, [selectionHeader, ...sortHeaders.map(({ cell }) => cell)])]),
+    diskRows,
+  ]);
+  const diskEmpty = el('div', { class: 'fm-list-empty' });
+  const diskList = el('div', { class: 'fm-disk-list' }, [diskTable, diskEmpty]);
   const spaceFill = el('div', { class: 'fm-space-fill' });
   const spaceTrack = el('div', { class: 'fm-space-track' }, [spaceFill]);
   const spaceLabel = el('div', { class: 'fm-space-label' });
@@ -197,12 +221,17 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   ]);
 
   const body = el('div', { class: 'fm-body' }, [hostPane, transferControls, diskPane]);
-  const statusLine = el('div', { class: 'fm-status' });
+  const statusLine = el('div', { class: 'fm-status', role: 'status' });
+  const transferProgress = el('progress', { class: 'fm-transfer-progress', hidden: '', 'aria-label': t('fmProgressLabel') });
   const closeBtn = el('button', { type: 'button', class: 'rom-close-btn' }, [t('fmCloseBtn')]);
-  const modal = el('div', { class: 'rom-modal fm-modal', role: 'dialog', 'aria-modal': 'true' }, [
+  const modal = el('div', {
+    class: 'rom-modal fm-modal', role: 'dialog', 'aria-modal': 'true',
+    'aria-labelledby': titleEl.id, tabindex: '-1',
+  }, [
     titleEl,
     noteEl,
     body,
+    transferProgress,
     statusLine,
     el('div', { class: 'rom-modal-footer' }, [closeBtn]),
   ]);
@@ -220,22 +249,50 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   const selectedDiskNames = new Set<string>();
   let freeBytes = 0;
   let totalBytes = 0;
+  let busy = false;
+  let listingReady = false;
+  let sortKey: DiskSortKey = 'name';
+  let sortAscending = true;
+  let drag: TransferDrag | null = null;
 
   function setStatus(message: string, isError = false): void {
     statusLine.textContent = message;
     statusLine.classList.toggle('error', isError);
   }
 
-  function setBusy(v: boolean): void {
-    toDiskBtn.disabled = v;
-    toHostBtn.disabled = v;
-    hostSelectBtn.disabled = v;
-    deleteBtn.disabled = v;
-    mkdirBtn.disabled = v;
-    createFdBtn.disabled = v;
-    targetSelect.disabled = v;
-    upBtn.disabled = v || currentPath === '';
-    closeBtn.disabled = v;
+  function updateControls(): void {
+    const canUseDisk = !busy && listingReady;
+    const canNavigate = !busy && currentTarget?.editable;
+    toDiskBtn.disabled = !canUseDisk || selectedStaged.size === 0;
+    toHostBtn.disabled = !canUseDisk || selectedDiskNames.size === 0;
+    deleteBtn.disabled = toHostBtn.disabled;
+    mkdirBtn.disabled = !canUseDisk;
+    upBtn.disabled = !canNavigate || currentPath === '';
+    for (const button of [hostSelectBtn, createFdBtn, targetSelect, closeBtn]) button.disabled = busy;
+    for (const { button } of sortHeaders) button.disabled = !canUseDisk;
+    for (const control of hostList.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input, button')) {
+      control.disabled = busy;
+    }
+    for (const control of diskRows.querySelectorAll<HTMLInputElement | HTMLButtonElement>('input, button')) {
+      control.disabled = !canUseDisk;
+    }
+    for (const button of breadcrumbs.querySelectorAll('button')) button.disabled = !canNavigate;
+  }
+
+  async function perform(task: () => Promise<void>): Promise<void> {
+    if (busy) return;
+    busy = true;
+    updateControls();
+    setStatus('');
+    try {
+      await task();
+    } catch (error) {
+      setStatus(t('fmListLoadFailed', { message: describeError(error) }), true);
+    } finally {
+      transferProgress.hidden = true;
+      busy = false;
+      updateControls();
+    }
   }
 
   // --- ホスト側(左ペイン) ---
@@ -267,11 +324,12 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   }
 
   function renderStagedRow(item: StagedItem): HTMLElement {
-    const checkbox = el('input', { type: 'checkbox' }) as HTMLInputElement;
+    const checkbox = el('input', { type: 'checkbox', 'aria-label': t('fmSelectEntry', { name: item.name }) });
     checkbox.checked = selectedStaged.has(item.id);
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) selectedStaged.add(item.id);
       else selectedStaged.delete(item.id);
+      updateControls();
     });
     const nameEl = el('span', { class: 'fm-item-name' }, [item.name]);
     const sizeEl = el('span', { class: 'fm-item-size' }, [formatSize(item.size)]);
@@ -280,8 +338,15 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
       staged = staged.filter((s) => s.id !== item.id);
       selectedStaged.delete(item.id);
       renderStagedList();
+      updateControls();
     });
-    return el('div', { class: 'fm-staged-item' }, [checkbox, nameEl, sizeEl, removeBtn]);
+    const selection = el('label', { class: 'fm-entry-select' }, [checkbox]);
+    const row = el('div', { class: 'fm-staged-item', draggable: 'true' }, [selection, nameEl, sizeEl, removeBtn]);
+    row.addEventListener('dragstart', event => {
+      const ids = selectedStaged.has(item.id) ? Array.from(selectedStaged) : [item.id];
+      startDrag(event, { from: 'host', ids });
+    });
+    return row;
   }
 
   async function addHostFiles(files: File[]): Promise<void> {
@@ -317,29 +382,8 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   hostFileInput.addEventListener('change', () => {
     const files = Array.from(hostFileInput.files ?? []);
     hostFileInput.value = '';
-    if (files.length > 0) void addHostFiles(files);
+    if (files.length > 0) void perform(() => addHostFiles(files));
   });
-  {
-    let depth = 0;
-    hostPane.addEventListener('dragover', (e) => e.preventDefault());
-    hostPane.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      depth++;
-      hostPane.classList.add('dropzone-active');
-    });
-    hostPane.addEventListener('dragleave', () => {
-      depth = Math.max(0, depth - 1);
-      if (depth === 0) hostPane.classList.remove('dropzone-active');
-    });
-    hostPane.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      depth = 0;
-      hostPane.classList.remove('dropzone-active');
-      const files = Array.from(e.dataTransfer?.files ?? []);
-      if (files.length > 0) void addHostFiles(files);
-    });
-  }
 
   // --- ディスク側(右ペイン) ---
   function targetLabel(target: FmTarget): string {
@@ -376,14 +420,40 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   }
 
   targetSelect.addEventListener('change', () => {
-    currentTarget = targets[targetSelect.selectedIndex] ?? null;
-    currentPath = '';
-    void refreshDiskList();
+    void perform(async () => {
+      currentTarget = targets[targetSelect.selectedIndex] ?? null;
+      currentPath = '';
+      await refreshDiskList();
+    });
   });
 
+  function navigate(path: string): void {
+    if (!currentTarget?.editable || path === currentPath) return;
+    void perform(async () => {
+      currentPath = path;
+      try {
+        await refreshDiskList();
+      } finally {
+        breadcrumbs.querySelector<HTMLElement>('[aria-current="page"]')?.focus();
+      }
+    });
+  }
+
   function renderPath(): void {
-    pathLabel.textContent = currentPath ? `/${currentPath}` : t('fmPathRoot');
-    upBtn.disabled = currentPath === '';
+    breadcrumbs.replaceChildren();
+    const segments = currentPath ? currentPath.split('/') : [];
+    const labels = [t('fmPathRoot'), ...segments];
+    for (const [index, label] of labels.entries()) {
+      if (index > 0) breadcrumbs.append(el('span', { 'aria-hidden': 'true' }, ['›']));
+      if (index === labels.length - 1) {
+        breadcrumbs.append(el('span', { 'aria-current': 'page', tabindex: '-1' }, [label]));
+        continue;
+      }
+      const path = segments.slice(0, index).join('/');
+      const button = el('button', { type: 'button', class: 'fm-crumb' }, [label]);
+      button.addEventListener('click', () => navigate(path));
+      breadcrumbs.append(button);
+    }
   }
 
   function renderSpace(): void {
@@ -393,84 +463,96 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   }
 
   function renderDiskList(): void {
-    diskList.textContent = '';
-    selectedDiskNames.clear();
+    diskRows.replaceChildren();
+    diskTable.hidden = !listingReady;
     if (!currentTarget || !currentTarget.editable) {
-      diskList.append(el('div', { class: 'fm-list-empty' }, [t('fmSelectEditableTarget')]));
-      return;
+      diskEmpty.textContent = t('fmSelectEditableTarget');
+    } else {
+      diskEmpty.textContent = listingReady && currentEntries.length === 0 ? t('fmEmptyDir') : '';
     }
-    if (currentEntries.length === 0) {
-      diskList.append(el('div', { class: 'fm-list-empty' }, [t('fmEmptyDir')]));
-      return;
+    diskEmpty.hidden = diskEmpty.textContent === '';
+    for (const { key, cell, button, label } of sortHeaders) {
+      button.textContent = label();
+      if (key === sortKey) cell.setAttribute('aria-sort', sortAscending ? 'ascending' : 'descending');
+      else cell.removeAttribute('aria-sort');
     }
     const sorted = [...currentEntries].sort((a, b) => {
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-      return a.name.localeCompare(b.name);
+      const byName = a.name.localeCompare(b.name);
+      const order = sortKey === 'name' ? byName : a[sortKey] - b[sortKey];
+      return order ? order * (sortAscending ? 1 : -1) : byName;
     });
-    for (const entry of sorted) diskList.append(renderDiskRow(entry));
+    for (const entry of sorted) diskRows.append(renderDiskRow(entry));
+    updateControls();
   }
 
   function renderDiskRow(entry: FatEntry): HTMLElement {
-    const checkbox = el('input', { type: 'checkbox' }) as HTMLInputElement;
-    checkbox.disabled = entry.isDir;
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) selectedDiskNames.add(entry.name);
-      else selectedDiskNames.delete(entry.name);
-    });
-    const nameEl = el('span', { class: 'fm-item-name' }, [
-      entry.isDir ? `[${t('fmDirMarker')}] ${entry.name}` : entry.name,
-    ]);
-    const sizeEl = el('span', { class: 'fm-item-size' }, [entry.isDir ? '' : formatSize(entry.size)]);
-    const mtimeEl = el('span', { class: 'fm-item-mtime' }, [entry.mtime ? new Date(entry.mtime).toLocaleString() : '']);
-    const row = el('div', { class: entry.isDir ? 'fm-disk-item dir' : 'fm-disk-item' }, [
-      checkbox,
-      nameEl,
-      sizeEl,
-      mtimeEl,
+    const selection = el('td', { class: 'fm-col-select' });
+    const name = el('td', { class: 'fm-col-name' });
+    const row = el('tr', { class: entry.isDir ? 'fm-disk-item dir' : 'fm-disk-item' }, [
+      selection,
+      name,
+      el('td', { class: 'fm-col-size fm-item-size' }, [entry.isDir ? '' : formatSize(entry.size)]),
+      el('td', { class: 'fm-col-mtime fm-item-mtime' }, [entry.mtime ? new Date(entry.mtime).toLocaleString() : '']),
     ]);
     if (entry.isDir) {
-      row.addEventListener('dblclick', () => {
-        currentPath = joinPath(currentPath, entry.name);
-        void refreshDiskList();
+      const folder = el('button', { type: 'button', class: 'fm-folder-btn', title: entry.name }, [
+        el('span', { class: 'fm-folder-icon', 'aria-hidden': 'true' }),
+        el('span', { class: 'fm-item-name' }, [entry.name]),
+      ]);
+      folder.addEventListener('click', () => navigate(joinPath(currentPath, entry.name)));
+      name.append(folder);
+    } else {
+      const checkbox = el('input', { type: 'checkbox', 'aria-label': t('fmSelectEntry', { name: entry.name }) });
+      checkbox.checked = selectedDiskNames.has(entry.name);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) selectedDiskNames.add(entry.name);
+        else selectedDiskNames.delete(entry.name);
+        updateControls();
+      });
+      selection.append(el('label', { class: 'fm-entry-select' }, [checkbox]));
+      name.append(el('span', { class: 'fm-item-name', title: entry.name }, [entry.name]));
+      row.draggable = true;
+      row.addEventListener('dragstart', event => {
+        if (!currentTarget || !listingReady) return event.preventDefault();
+        const names = selectedDiskNames.has(entry.name) ? Array.from(selectedDiskNames) : [entry.name];
+        startDrag(event, { from: 'disk', names, target: currentTarget, path: currentPath });
       });
     }
     return row;
   }
 
-  upBtn.addEventListener('click', () => {
-    if (!currentPath) return;
-    const segments = currentPath.split('/');
-    segments.pop();
-    currentPath = segments.join('/');
-    void refreshDiskList();
-  });
+  upBtn.addEventListener('click', () => navigate(currentPath.split('/').slice(0, -1).join('/')));
+
+  for (const { key, button } of sortHeaders) {
+    button.addEventListener('click', () => {
+      sortAscending = sortKey === key ? !sortAscending : true;
+      sortKey = key;
+      renderDiskList();
+    });
+  }
 
   async function refreshDiskList(): Promise<void> {
+    listingReady = false;
+    currentEntries = [];
+    selectedDiskNames.clear();
+    freeBytes = totalBytes = 0;
     renderPath();
-    if (!currentTarget || !currentTarget.editable) {
-      currentEntries = [];
-      freeBytes = 0;
-      totalBytes = 0;
-      renderDiskList();
-      renderSpace();
-      return;
-    }
-    try {
+    renderDiskList();
+    renderSpace();
+    if (currentTarget?.editable) {
       const { entries, free, total } = await callbacks.listDir(currentTarget, currentPath);
       currentEntries = entries;
       freeBytes = free;
       totalBytes = total;
+      listingReady = true;
       renderDiskList();
       renderSpace();
-    } catch (err) {
-      currentEntries = [];
-      renderDiskList();
-      setStatus(t('fmListLoadFailed', { message: describeError(err) }), true);
     }
   }
 
   mkdirBtn.addEventListener('click', () => {
-    if (!currentTarget || !currentTarget.editable) return;
+    if (busy || !currentTarget || !listingReady) return;
     const name = prompt(t('fmMakeDirPrompt'), '');
     if (!name) return;
     if (!VALID_83_RE.test(name)) {
@@ -478,142 +560,184 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
       return;
     }
     const target = currentTarget;
-    void (async () => {
-      try {
-        await callbacks.makeDir(target, joinPath(currentPath, name));
-        await refreshDiskList();
-      } catch (err) {
-        setStatus(t('fmListLoadFailed', { message: describeError(err) }), true);
-      }
-    })();
+    const path = joinPath(currentPath, name);
+    void perform(async () => {
+      await callbacks.makeDir(target, path);
+      await refreshDiskList();
+    });
   });
 
   deleteBtn.addEventListener('click', () => {
-    if (!currentTarget || !currentTarget.editable) return;
+    if (busy || !currentTarget || !listingReady) return;
     const names = Array.from(selectedDiskNames);
     if (names.length === 0) return;
     if (!confirm(t('fmDeleteConfirm', { names: names.join(', ') }))) return;
     const target = currentTarget;
-    void (async () => {
-      setBusy(true);
+    const path = currentPath;
+    void perform(async () => {
       for (const name of names) {
         try {
-          await callbacks.deleteFile(target, joinPath(currentPath, name));
+          await callbacks.deleteFile(target, joinPath(path, name));
         } catch (err) {
           setStatus(t('fmListLoadFailed', { message: describeError(err) }), true);
         }
       }
-      setBusy(false);
       await refreshDiskList();
-    })();
+    });
   });
 
   createFdBtn.addEventListener('click', () => {
-    void (async () => {
-      setBusy(true);
-      try {
-        const { sourceKey, name } = await callbacks.createTransferFd('transfer.xdf');
-        await refreshTargets(sourceKey);
-        setStatus(t('fmTransferFdCreated', { name }));
-      } catch (err) {
-        setStatus(t('fmListLoadFailed', { message: describeError(err) }), true);
-      }
-      setBusy(false);
-    })();
+    void perform(async () => {
+      const { sourceKey, name } = await callbacks.createTransferFd('transfer.xdf');
+      await refreshTargets(sourceKey);
+      setStatus(t('fmTransferFdCreated', { name }));
+    });
   });
 
   // --- 転送 ---
-  toDiskBtn.addEventListener('click', () => void transferToDisk());
-  toHostBtn.addEventListener('click', () => void transferToHost());
+  toDiskBtn.addEventListener('click', () => copyToDisk(selectedStaged));
+  toHostBtn.addEventListener('click', () => saveToHost(selectedDiskNames));
 
-  async function transferToDisk(): Promise<void> {
-    if (!currentTarget || !currentTarget.editable) {
-      setStatus(t('fmSelectEditableTarget'), true);
-      return;
-    }
+  function copyToDisk(ids: ReadonlySet<number>): void {
+    if (busy || !currentTarget || !listingReady) return;
     const target = currentTarget;
-    const items = staged.filter((s) => selectedStaged.has(s.id));
+    const path = currentPath;
+    const items = staged.filter((s) => ids.has(s.id));
     if (items.length === 0) return;
-
-    const existingNames = currentEntries.map((e) => e.name);
-    const proposed = dedupe83(
-      items.map((it) => sanitize83(it.name)),
-      existingNames,
-    );
-
-    const renameList = items.map((it, i) => `${it.name} → ${proposed[i]}`).join('\n');
-    if (!confirm(t('fmRenameConfirm', { list: renameList }))) return;
-
-    const totalSize = items.reduce((sum, it) => sum + it.data.length, 0);
-    if (totalSize > freeBytes) {
-      alert(t('fmInsufficientSpace', { needed: formatSize(totalSize), free: formatSize(freeBytes) }));
-      return;
-    }
-
-    const overwriteNames = proposed.filter((n) => existingNames.some((e) => e.toUpperCase() === n.toUpperCase()));
-    if (overwriteNames.length > 0 && !confirm(t('fmOverwriteConfirm', { names: overwriteNames.join(', ') }))) {
-      return;
-    }
-
-    setBusy(true);
-    let succeeded = 0;
-    const failedNames: string[] = [];
-    for (let i = 0; i < items.length; i++) {
-      setStatus(t('fmTransferring', { current: i + 1, total: items.length }));
-      try {
-        await callbacks.writeFile(target, joinPath(currentPath, proposed[i]), items[i].data);
-        succeeded++;
-        selectedStaged.delete(items[i].id);
-      } catch (err) {
-        failedNames.push(`${proposed[i]} (${describeError(err)})`);
+    void perform(async () => {
+      // Read the destination again before proposing names. Reopening the same
+      // directory may reveal files written by the guest after our last listing.
+      const { entries, free } = await callbacks.listDir(target, path);
+      const proposed = dedupe83(items.map((it) => sanitize83(it.name)), entries.map((entry) => entry.name));
+      if (!proposed) {
+        setStatus(t('fmNoAvailableName'), true);
+        return;
       }
+
+      const renameList = items.map((it, i) => `${it.name} → ${proposed[i]}`).join('\n');
+      if (!confirm(t('fmRenameConfirm', { list: renameList }))) return;
+
+      const totalSize = items.reduce((sum, it) => sum + it.data.length, 0);
+      if (totalSize > free) {
+        setStatus(t('fmInsufficientSpace', { needed: formatSize(totalSize), free: formatSize(free) }), true);
+        return;
+      }
+
+      const result = await transferBatch(proposed, async (name, index) => {
+        await callbacks.writeFile(target, joinPath(path, name), items[index].data);
+        selectedStaged.delete(items[index].id);
+      });
+      renderStagedList();
+      await refreshDiskList();
+      reportTransfer(result);
+    });
+  }
+
+  function saveToHost(names: ReadonlySet<string>): void {
+    if (busy || !currentTarget || !listingReady) return;
+    const target = currentTarget;
+    const path = currentPath;
+    const files = currentEntries.filter((entry) => !entry.isDir && names.has(entry.name)).map(({ name }) => name);
+    if (files.length === 0) return;
+    void perform(async () => {
+      const result = await transferBatch(files, async (name, index) => {
+        const bytes = await callbacks.readFile(target, joinPath(path, name));
+        downloadBytes(name, bytes);
+        // Keep the browser's existing spacing between consecutive downloads.
+        if (index + 1 < files.length) await new Promise<void>((resolve) => setTimeout(resolve, 150));
+      });
+      reportTransfer(result);
+    });
+  }
+
+  async function transferBatch(names: string[], transfer: (name: string, index: number) => Promise<void>) {
+    transferProgress.max = names.length;
+    transferProgress.value = 0;
+    transferProgress.hidden = false;
+    let succeeded = 0;
+    const failed: string[] = [];
+    for (const [index, name] of names.entries()) {
+      setStatus(t('fmTransferring', { current: index + 1, total: names.length }));
+      try {
+        await transfer(name, index);
+        succeeded++;
+      } catch (err) {
+        failed.push(`${name} (${describeError(err)})`);
+      }
+      transferProgress.value = index + 1;
     }
-    setBusy(false);
-    renderStagedList();
-    await refreshDiskList();
+    return { succeeded, failed };
+  }
+
+  function reportTransfer({ succeeded, failed }: { succeeded: number; failed: string[] }): void {
     setStatus(
-      failedNames.length === 0
+      failed.length === 0
         ? t('fmTransferDone', { succeeded, failed: 0 })
-        : t('fmTransferFailedDetail', { names: failedNames.join(', ') }),
-      failedNames.length > 0,
+        : t('fmTransferFailedDetail', { names: failed.join(', ') }),
+      failed.length > 0,
     );
   }
 
-  async function transferToHost(): Promise<void> {
-    if (!currentTarget || !currentTarget.editable) {
-      setStatus(t('fmSelectEditableTarget'), true);
+  function startDrag(event: DragEvent, transfer: TransferDrag): void {
+    if (busy || !event.dataTransfer) {
+      event.preventDefault();
       return;
     }
-    const target = currentTarget;
-    const names = Array.from(selectedDiskNames);
-    const fileEntries = currentEntries.filter((e) => names.includes(e.name) && !e.isDir);
-    if (fileEntries.length === 0) return;
+    drag = transfer;
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData(TRANSFER_DRAG_TYPE, transfer.from);
+  }
 
-    setBusy(true);
-    let succeeded = 0;
-    const failedNames: string[] = [];
-    for (let i = 0; i < fileEntries.length; i++) {
-      setStatus(t('fmTransferring', { current: i + 1, total: fileEntries.length }));
-      try {
-        const bytes = await callbacks.readFile(target, joinPath(currentPath, fileEntries[i].name));
-        downloadBytes(fileEntries[i].name, bytes);
-        succeeded++;
-        // 連続ダウンロードのポップアップブロック軽減のため少し間隔を空ける。
-        await new Promise<void>((resolve) => setTimeout(resolve, 150));
-      } catch (err) {
-        failedNames.push(`${fileEntries[i].name} (${describeError(err)})`);
-      }
+  function clearDrag(): void {
+    drag = null;
+    hostPane.classList.remove('dropzone-active');
+    diskPane.classList.remove('dropzone-active');
+  }
+
+  modal.addEventListener('dragend', clearDrag);
+
+  function canDrop(transfer: DataTransfer, destination: 'host' | 'disk'): boolean {
+    if (busy) return false;
+    if (!transfer.types.includes(TRANSFER_DRAG_TYPE)) {
+      return destination === 'host' && transfer.types.includes('Files');
     }
-    setBusy(false);
-    setStatus(
-      failedNames.length === 0
-        ? t('fmTransferDone', { succeeded, failed: 0 })
-        : t('fmTransferFailedDetail', { names: failedNames.join(', ') }),
-      failedNames.length > 0,
-    );
+    if (!drag || drag.from === destination || !listingReady || !currentTarget) return false;
+    return drag.from === 'host' || (drag.target === currentTarget && drag.path === currentPath);
+  }
+
+  for (const [destination, pane] of [['host', hostPane], ['disk', diskPane]] as const) {
+    pane.addEventListener('dragover', event => {
+      if (!event.dataTransfer || !canDrop(event.dataTransfer, destination)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      pane.classList.add('dropzone-active');
+    });
+    pane.addEventListener('dragleave', event => {
+      if (!(event.relatedTarget instanceof Node) || !pane.contains(event.relatedTarget)) {
+        pane.classList.remove('dropzone-active');
+      }
+    });
+    pane.addEventListener('drop', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const transfer = event.dataTransfer;
+      const internal = drag;
+      const accepted = transfer && canDrop(transfer, destination);
+      clearDrag();
+      if (!accepted) return;
+      if (transfer.types.includes(TRANSFER_DRAG_TYPE)) {
+        if (internal?.from === 'host') copyToDisk(new Set(internal.ids));
+        if (internal?.from === 'disk') saveToHost(new Set(internal.names));
+      } else {
+        const files = Array.from(transfer.files);
+        if (files.length > 0) void perform(() => addHostFiles(files));
+      }
+    });
   }
 
   function close(): void {
+    if (busy) return;
+    clearDrag();
     backdrop.classList.add('hidden');
   }
 
@@ -621,11 +745,20 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) close();
   });
+  for (const eventName of ['keydown', 'keyup', 'keypress'] as const) {
+    modal.addEventListener(eventName, event => event.stopPropagation());
+  }
+  modal.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || event.isComposing) return;
+    event.preventDefault();
+    close();
+  });
 
   function open(): void {
+    if (busy) return;
     backdrop.classList.remove('hidden');
-    setStatus('');
-    void refreshTargets();
+    modal.focus();
+    void perform(refreshTargets);
   }
 
   return {
@@ -639,6 +772,10 @@ export function buildFileManagerDialog(container: HTMLElement, callbacks: FileMa
       hostSelectBtn.textContent = t('fmSelectFilesBtn');
       hostDropHint.textContent = t('fmDropHint');
       diskTitle.textContent = t('fmDiskPaneTitle');
+      diskTable.setAttribute('aria-label', t('fmDiskPaneTitle'));
+      selectionHeader.setAttribute('aria-label', t('fmSelectFilesBtn'));
+      breadcrumbs.setAttribute('aria-label', t('fmPathLabel'));
+      transferProgress.setAttribute('aria-label', t('fmProgressLabel'));
       createFdBtn.textContent = t('fmCreateTransferFdBtn');
       upBtn.textContent = t('fmUpDir');
       deleteBtn.textContent = t('fmDeleteSelectedBtn');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildLibraryNodes, classifyLibUrlResult, isLibraryDiskRecord } from '../src/api/library.ts';
+import { buildLibraryNodes, classifyLibUrlResult, filterLibraryNodes, isLibraryDiskRecord } from '../src/api/library.ts';
 import type { StoredImage } from '../src/storage/db.ts';
 
 const HDD_EXTENSIONS = ['.thd', '.hdi', '.nhd', '.hdd'];
@@ -27,6 +27,43 @@ describe('isLibraryDiskRecord', () => {
     expect(isLibraryDiskRecord(image({ sourceKey: 'state:x', name: 'state0.sav' }), classify)).toBe(false);
     expect(isLibraryDiskRecord(image({ sourceKey: 'file:a.txt:1', name: 'a.txt' }), classify)).toBe(false);
     expect(isLibraryDiskRecord(image({ sourceKey: 'file:a.d88:1', name: 'a.d88' }), classify)).toBe(true);
+  });
+});
+
+describe('filterLibraryNodes', () => {
+  const entries = buildLibraryNodes([
+    image({ sourceKey: 'fd2', name: 'original.xdf', displayName: 'Disk2', savedAt: 200, lastUsedAt: 2000 }),
+    image({ sourceKey: 'fd10', name: 'more.xdf', displayName: 'Disk10', savedAt: 300 }),
+    image({ sourceKey: 'arc/games', name: 'games.xdf', group: 'arc', groupName: 'Arc', savedAt: 400 }),
+    image({ sourceKey: 'arc/work', name: 'work.hdi', group: 'arc', groupName: 'Arc', savedAt: 500 }),
+  ], classify, new Set(['arc/work']));
+
+  it('matches original names, display names and group names independent of case and width', () => {
+    expect(filterLibraryNodes(entries, 'ＯＲＩＧＩＮＡＬ', 'name').map(node =>
+      node.kind === 'item' ? node.entry.sourceKey : node.group.id)).toEqual(['fd2']);
+    expect(filterLibraryNodes(entries, 'Disk10', 'name')).toHaveLength(1);
+    const group = filterLibraryNodes(entries, 'ＡＲＣ', 'name')[0];
+    expect(group.kind).toBe('group');
+    if (group.kind === 'group') {
+      expect(group.visibleEntries.map(entry => entry.name)).toEqual(['games.xdf', 'work.hdi']);
+    }
+  });
+
+  it('keeps the complete archive while filtering a visible member', () => {
+    const group = filterLibraryNodes(entries, 'games', 'name')[0];
+    expect(group.kind).toBe('group');
+    if (group.kind === 'group') {
+      expect(group.visibleEntries.map(entry => entry.sourceKey)).toEqual(['arc/games']);
+      expect(group.group.entries.some(entry => entry.active)).toBe(true);
+    }
+  });
+
+  it('orders by modification and recent use independently', () => {
+    const itemKeys = (sort: 'name' | 'updated' | 'used') => filterLibraryNodes(entries, '', sort)
+      .flatMap(node => node.kind === 'item' ? [node.entry.sourceKey] : []);
+    expect(itemKeys('name')).toEqual(['fd2', 'fd10']);
+    expect(itemKeys('updated')).toEqual(['fd10', 'fd2']);
+    expect(itemKeys('used')).toEqual(['fd2', 'fd10']);
   });
 });
 

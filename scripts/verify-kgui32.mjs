@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectGUI} from './kgui32-inspect.mjs';
 import {inspectK386} from './k386-inspect.mjs';
+import {verifyDesktopNotice} from './verify-kgui32-notice.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/kgui32',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -34,6 +35,53 @@ const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseM
 const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await page.waitForTimeout(250);};
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
+async function canvasArea(x, y, width, height) {
+ return page.evaluate(({x, y, width, height}) => {
+  const crop = document.createElement('canvas');
+  crop.width = width;
+  crop.height = height;
+  crop.getContext('2d').drawImage(document.querySelector('#canvas'), x, y, width, height, 0, 0, width, height);
+  return crop.toDataURL();
+ }, {x, y, width, height});
+}
+async function verifyGallery(x, y) {
+ await key('F1');
+ await click(x + 240, y + 94);
+ await point(x + 322, y + 268);
+ const pick = (offsets) => pixels(offsets.map(([left, top]) => [x + left, y + top]));
+ const [primary, secondary, danger, disabled, pressed, focusOuter, focusInner, focusFill] = await pick([
+  [26, 85], [126, 85], [226, 85], [126, 137], [226, 137], [18, 149], [19, 149], [20, 149],
+ ]);
+ assert.ok(primary[2] > primary[0], 'Primary control uses the blue accent');
+ assert.ok(danger[0] > danger[2], 'Danger control uses a red surface');
+ assert.notDeepEqual(secondary, primary);
+ assert.notDeepEqual(disabled, secondary);
+ assert.ok(pressed[1] < primary[1], 'Pressed control uses a darker fill');
+ assert.deepEqual(focusOuter, focusInner, 'Keyboard focus covers two guest pixels');
+ assert.deepEqual(focusFill, secondary, 'Focus preserves the secondary control fill');
+ assert.notDeepEqual(focusInner, focusFill);
+ const [smallStroke, smallClear, largeStroke, largeStrokeSecond, largeClear] = await pick([
+  [124, 193], [124, 194], [194, 188], [194, 189], [194, 190],
+ ]);
+ assert.deepEqual(smallStroke, largeStroke);
+ assert.deepEqual(largeStroke, largeStrokeSecond);
+ assert.deepEqual(smallClear, largeClear);
+ assert.notDeepEqual(smallStroke, smallClear);
+ await page.screenshot({path: join(output, 'components.png')});
+ const english = await canvasArea(x + 18, y + 46, 144, 16);
+ await key('F8');
+ assert.notEqual(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await page.screenshot({path: join(output, 'components-ja.png')});
+ await key('F8');
+ assert.equal(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await key('ESC');
+ assert.notEqual(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await type('g');
+ assert.equal(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await click(x + 80, y + 242);
+ await key('F2');
+ pass('PEGC/Cirrus component gallery renders six button states, two-pixel focus, both icon sizes and English/Shift-JIS labels');
+}
 async function boot(mem){page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',e=>errors.push(e.message));
  if(mem===16){await page.goto(base);const link=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');await link.waitFor({state:'visible'});const href=await link.getAttribute('href'),url=new URL(href,page.url());const distribution=manifest.application_distribution;
   if(manifest.standalone_hdd?.hdd_boot_supported){assert(!url.searchParams.has('fd1')&&!url.searchParams.has('fd2'));assert.equal(url.searchParams.get('hdd'),'./kgui32/'+manifest.standalone_hdd.image);}
@@ -66,6 +114,8 @@ try{
  await key('F1');
  assert.deepEqual(await pixels(helpSample),launcherPixel);
  pass('Welcome and System fit side by side, F1 opens and closes the shortcuts panel');
+ await verifyGallery(s.app.x0, s.app.y0);
+ assert.deepEqual(await pixels(helpSample), launcherPixel, 'Back and F2 return to the normal launcher');
  // Move by odd x/y deltas and inspect actual pixels where the old window was.
  await point(72,75);await button(1);s=await until(s=>s.app?.drag===1,'title drag starts');await point(85,84);await button(0);
  s=await until(s=>s.app?.x0===61&&s.app.y0===73&&s.app.drag===0,'odd-coordinate release');assert.ok(s.rect[2]*s.rect[3]<s.width*s.height);
@@ -75,7 +125,11 @@ try{
  await click(sx+203,sy+12);await click(180,s.height-16);s=await until(s=>s.app?.active===1,'taskbar restore');
  await click(sx+225,sy+12);await click(180,s.height-16);await key('RIGHT');s=await until(s=>s.app?.x1===systemX,'taskbar reopen and keyboard input');
  await page.screenshot({path:join(output,'moved-windows.png')});pass('32bit hit testing, odd-coordinate mouse drag and release, exact old-area restoration, focus, keyboard move, minimize and close/taskbar reopen');
- await type('t');s=await until(s=>s.owned===3&&s.counters.every(n=>n>0)&&s.cpu.a20Owned===0,'GUI plus two independent PM32 workers');owned(s);
+ s = await verifyDesktopNotice({page, s, output, pixels, click, start: async () => {
+  await type('t');
+  return until(s=>s.owned===3&&s.counters.every(n=>n>0)&&s.cpu.a20Owned===0,'GUI plus two independent PM32 workers');
+ }});
+ owned(s);
  let peers=await inspectK386(page);assert.ok(peers);assert.deepEqual(peers.views.map(v=>v.kind),[1,1]);
  for(let id=0;id<2;id++){assert.equal(peers.diagnostics[id].frame.cs,59);assert.equal(peers.diagnostics[id].frame.eflags&0x20000,0);assert.notEqual(s.cpu.pd,peers.views[id].cr3);assert.notEqual(s.cpu.physical,peers.views[id].physical);assert.equal(peers.diagnostics[id].pm32.samples[1],49+id);assert.equal(peers.diagnostics[id].pm32.heapPages,2);}
  assert.notEqual(peers.views[0].cr3,peers.views[1].cr3);assert.notEqual(peers.views[0].physical,peers.views[1].physical);

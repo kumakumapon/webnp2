@@ -1,7 +1,8 @@
 import { classifyDroppedInput, FD_INPUT_ACCEPT, HDD_INPUT_ACCEPT, type DroppedKind } from '../api/disk-kind.ts';
 // プレイヤーUI (素のDOM構築)。canvas/オーバーレイ/ツールバー/進捗バー/D&D を組み立てる。
 
-import { getLang, langSelfName, setLang, t } from './strings.ts';
+import { describeError, getLang, langSelfName, setLang, t } from './strings.ts';
+import { filterLibraryNodes, LIBRARY_SORTS, type LibrarySort } from '../api/library.ts';
 import type { DiskSlot } from '../api/webnp2.ts';
 import type { RomEntry, RejectedRomFile } from '../api/roms.ts';
 import { rhythmRejectReasonText } from '../api/roms.ts';
@@ -37,7 +38,7 @@ import { getTargetSize, resolveAspectMode, type AspectMode } from './aspect.ts';
 import { SharpView } from './sharp-view.ts';
 
 export type { LibraryEntry, LibraryGroup, LibraryNode } from './types.ts';
-import type { LibraryEntry, LibraryGroup, LibraryNode } from './types.ts';
+import type { LibraryDeleteResult, LibraryEntry, LibraryGroup, LibraryNode } from './types.ts';
 
 import { NATIVE_WIDTH, NATIVE_HEIGHT, nativeSize, nativeFullscreenSupported, nativeFullscreenActive, fullscreenRoot, enterNativeFullscreen, exitNativeFullscreen } from './player-screen.ts';
 export { NATIVE_WIDTH, NATIVE_HEIGHT, nativeSize } from './player-screen.ts';
@@ -132,13 +133,13 @@ export interface PlayerCallbacks {
   /** 実行中にディスクライブラリのFDイメージをFD1/FD2へ挿入する。 */
   onLibraryInsertFd: (drive: 1 | 2, sourceKey: string) => Promise<void>;
   /** ディスクライブラリのエントリ削除。 */
-  onLibraryDelete: (sourceKey: string) => Promise<void>;
+  onLibraryDelete: (sourceKey: string) => Promise<LibraryDeleteResult>;
   /** ライブラリエントリの表示名を変更する(実ファイル名は変えない)。空文字なら元のファイル名に戻す。 */
   onLibraryRename: (sourceKey: string, displayName: string) => Promise<void>;
   /** グループ(フォルダ)の表示名を変更する。 */
   onLibraryRenameGroup: (groupId: string, name: string) => Promise<void>;
   /** グループを丸ごと削除する。 */
-  onLibraryDeleteGroup: (groupId: string) => Promise<void>;
+  onLibraryDeleteGroup: (groupId: string) => Promise<LibraryDeleteResult>;
   /** ファイルマネージャ(FTPクライアント風2ペイン)ダイアログが使うコールバック群。詳細はfilemanager.ts参照。 */
   fileManager: FileManagerCallbacks;
   /** CPUデバッガパネルが使う同期コールバック群。詳細はdebugger.ts参照。 */
@@ -1453,47 +1454,153 @@ export function buildPlayerUI(
     });
   }
 
-  // ディスクライブラリダイアログ (IndexedDB保存済みHDD/FD一覧。起動前は起動、起動後は挿入に使う)。
   const libraryDescription = el('p', { class: 'rom-modal-description' }, [t('libraryDialogDescription')]);
+  const librarySearch = el('input', { type: 'search', class: 'library-search' });
+  const librarySort = el('select', { class: 'library-sort' });
   const libraryList = el('div', { class: 'library-list' });
+  const libraryFeedback = el('div', { class: 'library-feedback hidden' });
+  const libraryMessage = el('span', { role: 'status' });
+  const libraryUndoBtn = el('button', { type: 'button', class: 'library-action-btn' });
+  libraryFeedback.append(libraryMessage, libraryUndoBtn);
+  const libraryActionsMenu = el('div', { id: 'library-actions-menu', class: 'library-menu hidden', role: 'menu' });
   const libraryCloseBtn = el('button', { type: 'button', class: 'rom-close-btn' }, [t('libraryDialogClose')]);
-  const libraryTitle = el('h2', { class: 'rom-modal-title' }, [t('libraryDialogTitle')]);
-  const libraryModal = el('div', { class: 'rom-modal', role: 'dialog', 'aria-modal': 'true' }, [
-    libraryTitle,
-    libraryDescription,
-    libraryList,
+  const libraryTitle = el('h2', { id: 'disk-library-title', class: 'rom-modal-title' }, [t('libraryDialogTitle')]);
+  const libraryModal = el('div', {
+    class: 'rom-modal disk-library-modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': libraryTitle.id,
+  }, [libraryTitle, libraryDescription,
+    el('div', { class: 'library-filters' }, [librarySearch, librarySort]),
+    libraryList, libraryFeedback, libraryActionsMenu,
     el('div', { class: 'rom-modal-footer' }, [libraryCloseBtn]),
   ]);
   const libraryBackdrop = el('div', { class: 'rom-modal-backdrop hidden' }, [libraryModal]);
 
-  // ダイアログ全体をドロップゾーンにする(ROM登録ダイアログと同じdepthパターン)。
-  // ドロップされたファイルはスロットへは入れず、ライブラリへ登録するだけに留める。
-  {
-    let depth = 0;
-    libraryModal.addEventListener('dragover', (e) => e.preventDefault());
-    libraryModal.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      depth++;
-      libraryModal.classList.add('dropzone-active');
+  const expandedLibraryGroups = new Set<string>();
+  let libraryNodes: LibraryNode[] = [];
+  let highlightedLibraryGroupId: string | null = null;
+  let libraryListRequest = 0;
+  let libraryOpener: HTMLElement | null = null;
+  let libraryActionsTrigger: HTMLButtonElement | null = null;
+  let libraryBusy = false;
+  let libraryUndo: (() => Promise<void>) | undefined;
+  let libraryUndoTimer: ReturnType<typeof setTimeout> | undefined;
+  let libraryNotice: (() => string) | undefined;
+  let libraryNoticeError = false;
+
+  function renderLibraryFeedback(): void {
+    libraryMessage.textContent = libraryNotice?.() ?? '';
+    libraryMessage.setAttribute('role', libraryNoticeError ? 'alert' : 'status');
+    libraryFeedback.classList.toggle('error', libraryNoticeError);
+    libraryFeedback.classList.toggle('hidden', !libraryNotice);
+    libraryUndoBtn.hidden = !libraryUndo;
+    libraryUndoBtn.disabled = libraryBusy;
+  }
+
+  function libraryFeedbackMessage(message?: () => string, error = false): void {
+    libraryNotice = message;
+    libraryNoticeError = error;
+    renderLibraryFeedback();
+  }
+
+  function applyLibraryStrings(): void {
+    libraryTitle.textContent = t('libraryDialogTitle');
+    libraryDescription.textContent = highlightedLibraryGroupId ? t('libraryGroupFocusHint') : t('libraryDialogDescription');
+    libraryCloseBtn.textContent = t('libraryDialogClose');
+    libraryUndoBtn.textContent = t('libraryActionUndo');
+    librarySearch.placeholder = t('librarySearch');
+    librarySearch.setAttribute('aria-label', t('librarySearch'));
+    librarySort.setAttribute('aria-label', t('librarySort'));
+    const sort = librarySort.value || 'name';
+    const labels = { name: t('librarySortName'), updated: t('librarySortUpdated'), used: t('librarySortUsed') };
+    librarySort.replaceChildren(...LIBRARY_SORTS.map(key => el('option', { value: key }, [labels[key]])));
+    librarySort.value = sort;
+    renderLibraryFeedback();
+  }
+  applyLibraryStrings();
+
+  function closeLibraryActions(restoreFocus = false): void {
+    const trigger = libraryActionsTrigger;
+    libraryActionsTrigger = null;
+    trigger?.setAttribute('aria-expanded', 'false');
+    libraryActionsMenu.classList.add('hidden');
+    libraryActionsMenu.replaceChildren();
+    if (restoreFocus) trigger?.focus();
+  }
+
+  type LibraryAction = { label: string; run: () => void; disabled?: boolean; danger?: boolean };
+  function libraryActions(name: string, actions: LibraryAction[]): HTMLButtonElement {
+    const trigger = el('button', {
+      type: 'button', class: 'library-action-btn library-more', 'aria-label': t('libraryActionsFor', { name }),
+      'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-controls': libraryActionsMenu.id,
+    }, ['…']);
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const reopen = libraryActionsTrigger !== trigger;
+      closeLibraryActions();
+      if (!reopen) return;
+      libraryActionsTrigger = trigger;
+      trigger.setAttribute('aria-expanded', 'true');
+      for (const action of actions) {
+        const disabled = action.disabled || libraryBusy;
+        const row = menuRow(action.label, undefined, action.danger ? 'danger' : '', { disabled });
+        if (!disabled) onActivate(row, () => {
+          closeLibraryActions(true);
+          action.run();
+        });
+        libraryActionsMenu.append(row);
+      }
+      positionDriveMenu(libraryActionsMenu, trigger);
+      libraryActionsMenu.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
     });
-    libraryModal.addEventListener('dragleave', () => {
-      depth = Math.max(0, depth - 1);
-      if (depth === 0) libraryModal.classList.remove('dropzone-active');
-    });
-    libraryModal.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      depth = 0;
-      libraryModal.classList.remove('dropzone-active');
-      const files = Array.from(e.dataTransfer?.files ?? []);
-      if (files.length === 0) return;
-      void (async () => {
-        const { focusGroupId } = await callbacks.onLibraryFilesDropped(files);
-        if (focusGroupId) openLibraryModal(focusGroupId);
-        else await refreshLibraryList();
-      })();
+    return trigger;
+  }
+
+  async function runLibraryMutation(action: () => Promise<void>): Promise<void> {
+    if (libraryBusy) return;
+    libraryBusy = true;
+    renderLibraryFeedback();
+    try {
+      await action();
+      await refreshLibraryList();
+    } catch (err) {
+      const message = describeError(err);
+      libraryFeedbackMessage(() => t('libraryOperationFailed', { message }), true);
+    } finally {
+      libraryBusy = false;
+      renderLibraryFeedback();
+    }
+  }
+
+  async function removeLibraryItem(remove: () => Promise<LibraryDeleteResult>, name: string): Promise<void> {
+    await runLibraryMutation(async () => {
+      const result = await remove();
+      if (result.status === 'active') {
+        libraryFeedbackMessage(() => t('libraryDeleteInUse'), true);
+        return;
+      }
+      if (result.status !== 'deleted') return;
+      clearTimeout(libraryUndoTimer);
+      libraryUndo = result.restore;
+      libraryFeedbackMessage(() => t('libraryDeleted', { name }));
+      libraryUndoTimer = setTimeout(() => {
+        libraryUndo = undefined;
+        if (libraryNoticeError) renderLibraryFeedback();
+        else libraryFeedbackMessage();
+      }, 15_000);
+      void refreshOverlayLibraryButton();
     });
   }
+
+  libraryUndoBtn.addEventListener('click', () => {
+    const restore = libraryUndo;
+    if (!restore) return;
+    void runLibraryMutation(async () => {
+      await restore();
+      clearTimeout(libraryUndoTimer);
+      libraryUndo = undefined;
+      libraryFeedbackMessage(() => t('libraryRestored'));
+      void refreshOverlayLibraryButton();
+    });
+  });
 
   function formatLibrarySize(n: number): string {
     if (n < 1024) return `${n}B`;
@@ -1501,199 +1608,145 @@ export function buildPlayerUI(
     return `${(n / (1024 * 1024)).toFixed(1)}MB`;
   }
 
-  /** 展開状態のグループID。再描画をまたいで開閉を保つ。 */
-  const expandedLibraryGroups = new Set<string>();
-  /** D&D等でopenDiskLibrary(focusGroupId)された直後、注目させるグループID。それ以外はnull。 */
-  let highlightedLibraryGroupId: string | null = null;
+  function showLibraryDisk(action: () => Promise<void>): void {
+    if (libraryBusy) return;
+    closeLibraryModal(false);
+    void action().catch((err: unknown) => {
+      const message = describeError(err);
+      ui.setStatus(t('libraryOperationFailed', { message }), true);
+    });
+  }
 
-  /** ライブラリ1件分の行(バッジ/名前/サイズ/操作ボタン)を組み立てる。 */
-  function buildLibraryItemRow(entry: LibraryEntry, inGroup: boolean): HTMLElement {
+  function buildLibraryItemRow(entry: LibraryEntry, inGroup: boolean, date: Intl.DateTimeFormat): HTMLElement {
     const badge = el('span', { class: `library-item-badge ${entry.kind}` }, [
       t(entry.kind === 'hdd' ? 'libraryKindHdd' : 'libraryKindFd'),
     ]);
     const nameEl = el('span', { class: 'library-item-name' }, [entry.displayName]);
-    // リネーム済みなら元のファイル名をツールチップで確認できるようにする。
     if (entry.displayName !== entry.name) nameEl.title = entry.name;
-    const metaEl = el('span', { class: 'library-item-meta' }, [
-      `${formatLibrarySize(entry.size)} / ${new Date(entry.savedAt).toLocaleString()}`,
+    const modified = t('libraryUpdatedAt', { date: date.format(entry.savedAt) });
+    const lastUsed = entry.lastUsedAt === undefined ? t('libraryUnused') : t('libraryUsedAt', { date: date.format(entry.lastUsedAt) });
+    const details = el('span', { class: 'library-item-details' }, [nameEl,
+      el('span', { class: 'library-item-meta' }, [`${formatLibrarySize(entry.size)} · ${modified}`]),
+      el('span', { class: 'library-item-meta' }, [lastUsed]),
     ]);
-    const actions = el('div', { class: 'library-item-actions' });
-
-    if (!toolbarEnabled && entry.kind === 'hdd') {
-      // 未起動時のHDDは「HDDにセット」と「起動」。
-      // ファイルマネージャでHDDの中身を編集できるのは起動前だけなので、
-      // 起動せずスロットへ割り当てるだけの導線を用意する。
-      const setBtn = el('button', { type: 'button', class: 'library-action-btn' }, [
-        t('libraryActionSetHdd'),
-      ]);
-      setBtn.addEventListener('click', () => {
-        void (async () => {
-          closeLibraryModal();
-          await callbacks.onLibrarySetHdd(entry.sourceKey);
-        })();
-      });
-      actions.append(setBtn);
-
-      const bootBtn = el('button', { type: 'button', class: 'library-action-btn' }, [
-        t('libraryActionBoot'),
-      ]);
-      bootBtn.addEventListener('click', () => {
-        void (async () => {
-          closeLibraryModal();
-          await callbacks.onLibraryBoot(entry.sourceKey);
-        })();
-      });
-      actions.append(bootBtn);
-    } else if (entry.kind === 'hdd') {
-      // 起動済みHDDはコアが実行中の差し替えに未対応のため注記のみ。
-      actions.append(el('span', { class: 'library-item-note' }, [t('libraryActionNeedsRestart')]));
-    } else {
-      // FDは起動前/起動後どちらもFD1/FD2を選べる(起動前はそのFDをセットして起動する)。
-      for (const drive of [1, 2] as const) {
-        const insertBtn = el('button', { type: 'button', class: 'library-action-btn' }, [
-          t(drive === 1 ? 'libraryActionInsertFd1' : 'libraryActionInsertFd2'),
-        ]);
-        insertBtn.addEventListener('click', () => {
-          void (async () => {
-            await callbacks.onLibraryInsertFd(drive, entry.sourceKey);
-            closeLibraryModal();
-          })();
-        });
-        actions.append(insertBtn);
-      }
-    }
-
-    const renameBtn = el('button', { type: 'button', class: 'library-action-btn' }, [
-      t('libraryActionRename'),
+    const canBoot = entry.kind === 'hdd' && !toolbarEnabled;
+    const actionLabel = entry.kind === 'fd' ? t('libraryActionInsertFd1') : t(canBoot ? 'libraryActionBoot' : 'libraryActionNeedsRestart');
+    const primary = el('button', { type: 'button', class: 'library-primary' }, [
+      badge, details, el('span', { class: 'library-primary-label' }, [actionLabel]),
     ]);
-    renameBtn.addEventListener('click', () => {
+    primary.disabled = entry.kind === 'hdd' && !canBoot;
+    primary.addEventListener('click', () => showLibraryDisk(() => entry.kind === 'fd'
+      ? callbacks.onLibraryInsertFd(1, entry.sourceKey) : callbacks.onLibraryBoot(entry.sourceKey)));
+
+    const actions: LibraryAction[] = [];
+    if (entry.kind === 'fd') actions.push({ label: t('libraryActionInsertFd2'), run: () =>
+      showLibraryDisk(() => callbacks.onLibraryInsertFd(2, entry.sourceKey)) });
+    if (canBoot) actions.push({ label: t('libraryActionSetHdd'), run: () =>
+      showLibraryDisk(() => callbacks.onLibrarySetHdd(entry.sourceKey)) });
+    actions.push({ label: t('libraryActionRename'), run: () => {
       const next = prompt(t('libraryRenamePrompt', { name: entry.name }), entry.displayName);
-      if (next === null) return;
-      void (async () => {
-        await callbacks.onLibraryRename(entry.sourceKey, next);
-        await refreshLibraryList();
-      })();
-    });
-    actions.append(renameBtn);
-
-    const deleteBtn = el('button', { type: 'button', class: 'library-action-btn danger' }, [
-      t('libraryActionDelete'),
-    ]);
-    deleteBtn.addEventListener('click', () => {
-      if (!confirm(t('libraryDeleteConfirm', { name: entry.displayName }))) return;
-      void (async () => {
-        await callbacks.onLibraryDelete(entry.sourceKey);
-        await refreshLibraryList();
-        void refreshOverlayLibraryButton();
-      })();
-    });
-    actions.append(deleteBtn);
-
-    return el('div', { class: `library-list-item${inGroup ? ' in-group' : ''}` }, [
-      badge,
-      nameEl,
-      metaEl,
-      actions,
-    ]);
+      if (next !== null) void runLibraryMutation(() => callbacks.onLibraryRename(entry.sourceKey, next));
+    } }, { label: entry.active ? t('libraryDeleteInUse') : t('libraryActionDelete'), disabled: entry.active, danger: true, run: () => {
+      if (confirm(t('libraryDeleteConfirm', { name: entry.displayName }))) {
+        void removeLibraryItem(() => callbacks.onLibraryDelete(entry.sourceKey), entry.displayName);
+      }
+    } });
+    return el('div', { class: `library-list-item${inGroup ? ' in-group' : ''}` }, [primary, libraryActions(entry.displayName, actions)]);
   }
 
-  /** アーカイブ由来グループのフォルダ行(クリックで開閉)と、その中身の行をまとめて組み立てる。 */
-  function buildLibraryGroupRow(group: LibraryGroup): HTMLElement {
-    const expanded = expandedLibraryGroups.has(group.id);
-    const twisty = el('span', { class: 'library-group-twisty' }, [expanded ? '▼' : '▶']);
-    const nameEl = el('span', { class: 'library-group-name' }, [group.name]);
-    const countEl = el('span', { class: 'library-item-meta' }, [
-      t('libraryGroupCount', { count: group.entries.length }),
+  function buildLibraryGroupRow(group: LibraryGroup, visible: LibraryEntry[], date: Intl.DateTimeFormat): HTMLElement {
+    const expanded = Boolean(librarySearch.value.trim()) || expandedLibraryGroups.has(group.id);
+    const children = el('div', { class: 'library-group-children' });
+    const primary = el('button', { type: 'button', class: 'library-primary', 'aria-expanded': String(expanded) }, [
+      el('span', { class: 'library-group-twisty', 'aria-hidden': 'true' }, [expanded ? '▼' : '▶']),
+      el('span', { class: 'library-group-name' }, [group.name]),
+      el('span', { class: 'library-item-meta' }, [t('libraryGroupCount', { count: group.entries.length })]),
     ]);
-    const actions = el('div', { class: 'library-item-actions' });
-
-    const renameBtn = el('button', { type: 'button', class: 'library-action-btn' }, [
-      t('libraryActionRename'),
-    ]);
-    renameBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const twisty = primary.querySelector('.library-group-twisty');
+    primary.addEventListener('click', () => {
+      const opening = primary.getAttribute('aria-expanded') !== 'true';
+      if (opening) expandedLibraryGroups.add(group.id);
+      else expandedLibraryGroups.delete(group.id);
+      primary.setAttribute('aria-expanded', String(opening));
+      children.hidden = !opening;
+      if (twisty) twisty.textContent = opening ? '▼' : '▶';
+    });
+    const active = group.entries.some(entry => entry.active);
+    const actions = libraryActions(group.name, [{ label: t('libraryActionRename'), run: () => {
       const next = prompt(t('libraryRenameGroupPrompt'), group.name);
-      if (next === null) return;
-      void (async () => {
-        await callbacks.onLibraryRenameGroup(group.id, next);
-        await refreshLibraryList();
-      })();
-    });
-    const deleteBtn = el('button', { type: 'button', class: 'library-action-btn danger' }, [
-      t('libraryActionDelete'),
-    ]);
-    deleteBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!confirm(t('libraryDeleteGroupConfirm', { name: group.name, count: group.entries.length })))
-        return;
-      void (async () => {
-        await callbacks.onLibraryDeleteGroup(group.id);
-        await refreshLibraryList();
-        void refreshOverlayLibraryButton();
-      })();
-    });
-    actions.append(renameBtn, deleteBtn);
-
-    const header = el(
-      'div',
-      { class: 'library-list-group', role: 'button', tabindex: '0', 'aria-expanded': String(expanded) },
-      [twisty, nameEl, countEl, actions],
-    );
-    const toggle = (): void => {
-      if (expandedLibraryGroups.has(group.id)) expandedLibraryGroups.delete(group.id);
-      else expandedLibraryGroups.add(group.id);
-      void refreshLibraryList();
-    };
-    header.addEventListener('click', toggle);
-    header.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggle();
+      if (next !== null) void runLibraryMutation(() => callbacks.onLibraryRenameGroup(group.id, next));
+    } }, { label: active ? t('libraryDeleteInUse') : t('libraryActionDelete'), disabled: active, danger: true, run: () => {
+      if (confirm(t('libraryDeleteGroupConfirm', { name: group.name, count: group.entries.length }))) {
+        void removeLibraryItem(() => callbacks.onLibraryDeleteGroup(group.id), group.name);
       }
-    });
-
-    const children = group.entries.map((entry) => buildLibraryItemRow(entry, true));
+    } }]);
+    children.hidden = !expanded;
+    children.append(...visible.map(entry => buildLibraryItemRow(entry, true, date)));
     return el('div', {
       class: `library-group${group.id === highlightedLibraryGroupId ? ' focused' : ''}`,
       'data-group-id': group.id,
-    }, [
-      header,
-      ...(expanded ? children : []),
-    ]);
+    }, [el('div', { class: 'library-list-group' }, [primary, actions]), children]);
+  }
+
+  function renderLibraryList(): void {
+    closeLibraryActions();
+    const view = filterLibraryNodes(libraryNodes, librarySearch.value, librarySort.value as LibrarySort);
+    const date = new Intl.DateTimeFormat(getLang(), { dateStyle: 'short', timeStyle: 'short' });
+    libraryList.replaceChildren(...view.map(node => node.kind === 'group'
+      ? buildLibraryGroupRow(node.group, node.visibleEntries, date)
+      : buildLibraryItemRow(node.entry, false, date)));
+    if (view.length === 0) libraryList.append(el('div', { class: 'library-list-empty' }, [
+      t(libraryNodes.length ? 'libraryNoMatches' : 'libraryDialogListEmpty'),
+    ]));
   }
 
   async function refreshLibraryList(): Promise<void> {
-    const nodes = await callbacks.onListLibrary();
-    libraryList.textContent = '';
-    if (nodes.length === 0) {
-      libraryList.append(el('div', { class: 'library-list-empty' }, [t('libraryDialogListEmpty')]));
-      return;
-    }
-    for (const node of nodes) {
-      libraryList.append(
-        node.kind === 'group' ? buildLibraryGroupRow(node.group) : buildLibraryItemRow(node.entry, false),
-      );
-    }
-    if (highlightedLibraryGroupId) {
-      const escaped = CSS.escape(highlightedLibraryGroupId);
-      const target = libraryList.querySelector(`.library-group[data-group-id="${escaped}"]`);
-      target?.scrollIntoView({ block: 'nearest' });
+    const request = ++libraryListRequest;
+    libraryList.setAttribute('aria-busy', 'true');
+    try {
+      const nodes = await callbacks.onListLibrary();
+      if (request !== libraryListRequest) return;
+      libraryNodes = nodes;
+      renderLibraryList();
+      if (highlightedLibraryGroupId) {
+        const target = libraryList.querySelector(`.library-group[data-group-id="${CSS.escape(highlightedLibraryGroupId)}"]`);
+        target?.scrollIntoView({ block: 'nearest' });
+      }
+    } catch (err) {
+      if (request !== libraryListRequest) return;
+      const message = describeError(err);
+      libraryFeedbackMessage(() => t('libraryOperationFailed', { message }), true);
+    } finally {
+      if (request === libraryListRequest) libraryList.setAttribute('aria-busy', 'false');
     }
   }
 
   function openLibraryModal(focusGroupId?: string): void {
+    if (libraryBackdrop.classList.contains('hidden')) {
+      libraryOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      librarySearch.value = '';
+      libraryNodes = [];
+      libraryList.replaceChildren();
+    }
     highlightedLibraryGroupId = focusGroupId ?? null;
-    if (focusGroupId) expandedLibraryGroups.add(focusGroupId);
-    libraryDescription.textContent = focusGroupId ? t('libraryGroupFocusHint') : t('libraryDialogDescription');
+    if (focusGroupId) {
+      expandedLibraryGroups.add(focusGroupId);
+      librarySearch.value = '';
+    }
+    applyLibraryStrings();
     libraryBackdrop.classList.remove('hidden');
+    libraryCloseBtn.focus();
     void refreshLibraryList();
   }
 
-  function closeLibraryModal(): void {
+  function closeLibraryModal(restoreFocus = true): void {
+    libraryListRequest++;
+    closeLibraryActions();
     libraryBackdrop.classList.add('hidden');
+    if (restoreFocus) (libraryOpener?.isConnected ? libraryOpener : btnToolbarOverflow).focus();
+    libraryOpener = null;
   }
 
-  /** ライブラリが空でなければオーバーレイの「保存済みディスクから起動」ボタンを表示する。 */
   async function refreshOverlayLibraryButton(): Promise<void> {
     try {
       const entries = await callbacks.onListLibrary();
@@ -1704,10 +1757,50 @@ export function buildPlayerUI(
   }
   void refreshOverlayLibraryButton();
 
+  let libraryDropDepth = 0;
+  libraryModal.addEventListener('dragover', event => event.preventDefault());
+  libraryModal.addEventListener('dragenter', event => {
+    event.preventDefault();
+    libraryDropDepth++;
+    libraryModal.classList.add('dropzone-active');
+  });
+  libraryModal.addEventListener('dragleave', () => {
+    if (--libraryDropDepth <= 0) {
+      libraryDropDepth = 0;
+      libraryModal.classList.remove('dropzone-active');
+    }
+  });
+  libraryModal.addEventListener('drop', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    libraryDropDepth = 0;
+    libraryModal.classList.remove('dropzone-active');
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (!files.length) return;
+    void runLibraryMutation(async () => {
+      const { focusGroupId } = await callbacks.onLibraryFilesDropped(files);
+      if (focusGroupId) openLibraryModal(focusGroupId);
+      void refreshOverlayLibraryButton();
+    });
+  });
+  librarySearch.addEventListener('input', renderLibraryList);
+  librarySort.addEventListener('change', renderLibraryList);
+  libraryList.addEventListener('scroll', () => closeLibraryActions());
+  document.addEventListener('click', () => closeLibraryActions());
+  for (const eventName of ['keydown', 'keyup', 'keypress'] as const) {
+    libraryModal.addEventListener(eventName, event => event.stopPropagation());
+  }
+  libraryModal.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !event.isComposing) {
+      event.preventDefault();
+      if (libraryActionsTrigger) closeLibraryActions(true);
+      else closeLibraryModal();
+    }
+  });
   btnDiskLibrary.addEventListener('click', () => openLibraryModal());
   libraryCloseBtn.addEventListener('click', () => closeLibraryModal());
-  libraryBackdrop.addEventListener('click', (e) => {
-    if (e.target === libraryBackdrop) closeLibraryModal();
+  libraryBackdrop.addEventListener('click', event => {
+    if (event.target === libraryBackdrop) closeLibraryModal();
   });
 
   // --- FDDスロットの「ライブラリから挿入」メニュー ---
@@ -1914,7 +2007,8 @@ export function buildPlayerUI(
       });
     }
   }
-  for (const [menu, close] of [[driveActionsMenu, closeDriveActions], [fdLibraryMenu, closeFdLibraryMenu]] as const) {
+  for (const [menu, close] of [[driveActionsMenu, closeDriveActions], [fdLibraryMenu, closeFdLibraryMenu],
+    [libraryActionsMenu, closeLibraryActions]] as const) {
     menu.addEventListener('click', event => event.stopPropagation());
     for (const eventName of ['keydown', 'keyup', 'keypress'] as const) {
       menu.addEventListener(eventName, event => event.stopPropagation());
@@ -2901,6 +2995,7 @@ export function buildPlayerUI(
       // HDDがセットされた(D&D/ライブラリ/起動前ペンディング/URLパラメータ経由の起動時
       // マウントいずれも、ここでslotMounted.hddが真になる)ら、トグルOFFのままでもHDD欄を表示する。
       updateHddSlotVisibility();
+      if (!libraryBackdrop.classList.contains('hidden')) void refreshLibraryList();
     },
     setPendingBootMode(hasPending: boolean) {
       pendingBootMode = hasPending;
@@ -3055,9 +3150,7 @@ export function buildPlayerUI(
       libraryStartBtn.textContent = t('overlayLibraryBtn');
       btnDiskLibrary.title = t('toolbarDiskLibrary');
       btnDiskLibrary.setAttribute('aria-label', t('toolbarDiskLibrary'));
-      libraryTitle.textContent = t('libraryDialogTitle');
-      libraryDescription.textContent = highlightedLibraryGroupId ? t('libraryGroupFocusHint') : t('libraryDialogDescription');
-      libraryCloseBtn.textContent = t('libraryDialogClose');
+      applyLibraryStrings();
       if (!libraryBackdrop.classList.contains('hidden')) void refreshLibraryList();
       btnKdeskMedia.title = t('toolbarKdeskMedia');
       btnKdeskMedia.setAttribute('aria-label', t('toolbarKdeskMedia'));

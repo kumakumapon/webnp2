@@ -220,6 +220,21 @@ interface Dict {
   /** ディスクライブラリダイアログの説明文(D&D取り込み直後、特定グループに注目させる場合)。 */
   libraryGroupFocusHint(): string;
   libraryDialogListEmpty(): string;
+  librarySearch(): string;
+  librarySort(): string;
+  librarySortName(): string;
+  librarySortUpdated(): string;
+  librarySortUsed(): string;
+  libraryNoMatches(): string;
+  libraryUpdatedAt(args: { date: string }): string;
+  libraryUsedAt(args: { date: string }): string;
+  libraryUnused(): string;
+  libraryActionsFor(args: { name: string }): string;
+  libraryActionUndo(): string;
+  libraryDeleted(args: { name: string }): string;
+  libraryRestored(): string;
+  libraryDeleteInUse(): string;
+  libraryOperationFailed(args: { message: string }): string;
   libraryKindHdd(): string;
   libraryKindFd(): string;
   libraryActionBoot(): string;
@@ -311,10 +326,14 @@ interface Dict {
   fmUnmountedLabel(): string;
   fmMountedBadge(): string;
   fmNotEditableNote(): string;
+  fmDriveChanged(): string;
   fmPathRoot(): string;
+  fmPathLabel(): string;
   fmUpDir(): string;
-  /** ディレクトリ行の[DIR]表記。 */
-  fmDirMarker(): string;
+  fmNameColumn(): string;
+  fmSizeColumn(): string;
+  fmModifiedColumn(): string;
+  fmSelectEntry(args: { name: string }): string;
   fmDeleteSelectedBtn(): string;
   fmMakeDirBtn(): string;
   fmMakeDirPrompt(): string;
@@ -326,8 +345,9 @@ interface Dict {
   fmEmptyDir(): string;
   /** 転送前の8.3名変換確認ダイアログ(元名 → 変換後名の一覧)。 */
   fmRenameConfirm(args: { list: string }): string;
-  fmOverwriteConfirm(args: { names: string }): string;
+  fmNoAvailableName(): string;
   fmInsufficientSpace(args: { needed: string; free: string }): string;
+  fmProgressLabel(): string;
   fmTransferring(args: { current: number; total: number }): string;
   fmTransferDone(args: { succeeded: number; failed: number }): string;
   fmTransferFailedDetail(args: { names: string }): string;
@@ -493,6 +513,7 @@ interface Dict {
   errHddEditBeforeBootOnly(): string;
   errHddSlotUnsupported(): string;
   errInvalidShortName(args: { name: string }): string;
+  errDestinationExists(args: { name: string }): string;
 }
 
 const STRINGS: Record<Lang, Dict> = {
@@ -673,6 +694,21 @@ const STRINGS: Record<Lang, Dict> = {
       'これまでにブラウザ内(IndexedDB)に保存されたHDD/FDイメージの一覧です。前回の続き(変更後のデータ)がそのまま保存されています。サーバーには送信されません。このダイアログへファイルをドラッグ＆ドロップして登録することもできます。',
     libraryGroupFocusHint: () => '取り込んだ圧縮ファイルの中身です。使うディスクを選んでください。',
     libraryDialogListEmpty: () => '保存済みのディスクイメージはありません。',
+    librarySearch: () => 'ディスクを検索',
+    librarySort: () => '並べ替え',
+    librarySortName: () => '名前順',
+    librarySortUpdated: () => '最終更新順',
+    librarySortUsed: () => '最終使用順',
+    libraryNoMatches: () => '一致するディスクはありません。',
+    libraryUpdatedAt: ({ date }) => `更新 ${date}`,
+    libraryUsedAt: ({ date }) => `最終使用 ${date}`,
+    libraryUnused: () => '使用履歴なし',
+    libraryActionsFor: ({ name }) => `「${name}」のその他の操作`,
+    libraryActionUndo: () => '元に戻す',
+    libraryDeleted: ({ name }) => `「${name}」を削除しました。`,
+    libraryRestored: () => '削除を取り消しました。',
+    libraryDeleteInUse: () => '使用中のディスクは削除できません',
+    libraryOperationFailed: ({ message }) => `ディスクライブラリの操作に失敗しました。 ${message}`,
     libraryKindHdd: () => 'HDD',
     libraryKindFd: () => 'FD',
     libraryActionBoot: () => '起動',
@@ -750,9 +786,14 @@ const STRINGS: Record<Lang, Dict> = {
     fmUnmountedLabel: () => '未マウント',
     fmMountedBadge: () => 'マウント中',
     fmNotEditableNote: () => '編集非対応',
+    fmDriveChanged: () => 'ドライブのディスクが交換されました。ファイル転送を開き直して選択してください。',
     fmPathRoot: () => '/ (ルート)',
+    fmPathLabel: () => '現在のフォルダ',
     fmUpDir: () => '.. 上へ',
-    fmDirMarker: () => 'DIR',
+    fmNameColumn: () => '名前',
+    fmSizeColumn: () => 'サイズ',
+    fmModifiedColumn: () => '更新日時',
+    fmSelectEntry: ({ name }) => `${name} を選択`,
     fmDeleteSelectedBtn: () => '選択を削除',
     fmMakeDirBtn: () => '新規フォルダ',
     fmMakeDirPrompt: () => '新規フォルダ名(8.3形式)を入力してください:',
@@ -764,8 +805,9 @@ const STRINGS: Record<Lang, Dict> = {
       '編集可能なディスクを選択してください(D88は非対応、HDDは起動前のみ編集できます)。',
     fmEmptyDir: () => '(空のフォルダ)',
     fmRenameConfirm: ({ list }) => `以下のファイル名でディスクへ転送します(8.3形式へ変換済み)。よろしいですか？\n\n${list}`,
-    fmOverwriteConfirm: ({ names }) => `同名のファイルを上書きします: ${names}\nよろしいですか？`,
+    fmNoAvailableName: () => '重複しない転送先の名前を作成できません。転送するファイルの名前を変更してください。',
     fmInsufficientSpace: ({ needed, free }) => `空き容量が不足しています(必要: ${needed} / 空き: ${free})。`,
+    fmProgressLabel: () => 'ファイル転送の進捗',
     fmTransferring: ({ current, total }) => `転送中… (${current}/${total})`,
     fmTransferDone: ({ succeeded }) => `${succeeded}件の転送が完了しました。`,
     fmTransferFailedDetail: ({ names }) => `一部の転送に失敗しました: ${names}`,
@@ -799,7 +841,7 @@ const STRINGS: Record<Lang, Dict> = {
     gamepadRowSelectedHint: () => '行を選択中: 下のキーボードでキーを押すと、この行に割り当てます。',
     gamepadPickerIdleHint: () => '割り当てる行を選ぶか、[新規検出]を押してパッドのボタンを押してください。',
     gamepadDeadzoneLabel: () => 'デッドゾーン',
-    gamepadKeyPickerTitle: () => 'PC-98キーボード(クリックで選択、送信はされません)',
+    gamepadKeyPickerTitle: () => '割り当てるPC-98キー',
     gamepadPresetCursorZxBtn: () => 'カーソルキー+Z/X',
     gamepadPresetCursorZxBtnTitle: () => '十字キー/左スティックをカーソルキーへ、A/BをZ/Xへ割り当て直します(既存の割当は消去)',
     gamepadPresetTenkeySpaceBtn: () => 'テンキー+SPACE',
@@ -894,6 +936,7 @@ const STRINGS: Record<Lang, Dict> = {
     errHddSlotUnsupported: () => 'この操作はFD1/FD2のみ対応しています(HDDは非対応)。',
     errInvalidShortName: ({ name }) =>
       `ファイル名は8.3形式にしてください(2バイト文字・長い名前は不可): ${name}`,
+    errDestinationExists: ({ name }) => `${name} はすでに存在します。名前を変えて再試行してください。`,
   },
   en: {
     title: () => 'WebNP2 - PC-98 Emulator',
@@ -1075,6 +1118,21 @@ const STRINGS: Record<Lang, Dict> = {
       'These are the HDD/FD disk images previously saved in your browser (IndexedDB), including your progress. Nothing is sent to any server. You can also drag & drop files onto this dialog to register them.',
     libraryGroupFocusHint: () => 'Contents of the imported archive. Choose a disk to use.',
     libraryDialogListEmpty: () => 'No saved disk images yet.',
+    librarySearch: () => 'Search disks',
+    librarySort: () => 'Sort disks',
+    librarySortName: () => 'Name',
+    librarySortUpdated: () => 'Last updated',
+    librarySortUsed: () => 'Last used',
+    libraryNoMatches: () => 'No matching disks.',
+    libraryUpdatedAt: ({ date }) => `Updated ${date}`,
+    libraryUsedAt: ({ date }) => `Last used ${date}`,
+    libraryUnused: () => 'No usage history',
+    libraryActionsFor: ({ name }) => `More actions for ${name}`,
+    libraryActionUndo: () => 'Undo',
+    libraryDeleted: ({ name }) => `Deleted “${name}”.`,
+    libraryRestored: () => 'Deletion undone.',
+    libraryDeleteInUse: () => 'A disk in use cannot be deleted',
+    libraryOperationFailed: ({ message }) => `The disk library operation failed. ${message}`,
     libraryKindHdd: () => 'HDD',
     libraryKindFd: () => 'FD',
     libraryActionBoot: () => 'Boot',
@@ -1152,9 +1210,14 @@ const STRINGS: Record<Lang, Dict> = {
     fmUnmountedLabel: () => 'not mounted',
     fmMountedBadge: () => 'mounted',
     fmNotEditableNote: () => 'not editable',
+    fmDriveChanged: () => 'The disk in the drive changed. Reopen File Transfer and select the disk again.',
     fmPathRoot: () => '/ (root)',
+    fmPathLabel: () => 'Current folder',
     fmUpDir: () => '.. Up',
-    fmDirMarker: () => 'DIR',
+    fmNameColumn: () => 'Name',
+    fmSizeColumn: () => 'Size',
+    fmModifiedColumn: () => 'Modified',
+    fmSelectEntry: ({ name }) => `Select ${name}`,
     fmDeleteSelectedBtn: () => 'Delete Selected',
     fmMakeDirBtn: () => 'New Folder',
     fmMakeDirPrompt: () => 'Enter a new folder name (8.3 format):',
@@ -1166,8 +1229,9 @@ const STRINGS: Record<Lang, Dict> = {
       'Select an editable disk (D88 is unsupported; HDD images can only be edited before boot).',
     fmEmptyDir: () => '(empty folder)',
     fmRenameConfirm: ({ list }) => `These files will be sent to the disk with the following 8.3 names. Continue?\n\n${list}`,
-    fmOverwriteConfirm: ({ names }) => `This will overwrite existing file(s): ${names}\nContinue?`,
+    fmNoAvailableName: () => 'No unique destination name is available. Rename the file before transferring it.',
     fmInsufficientSpace: ({ needed, free }) => `Not enough free space (needed: ${needed} / free: ${free}).`,
+    fmProgressLabel: () => 'File transfer progress',
     fmTransferring: ({ current, total }) => `Transferring… (${current}/${total})`,
     fmTransferDone: ({ succeeded }) => `${succeeded} file(s) transferred successfully.`,
     fmTransferFailedDetail: ({ names }) => `Some transfers failed: ${names}`,
@@ -1201,7 +1265,7 @@ const STRINGS: Record<Lang, Dict> = {
     gamepadRowSelectedHint: () => 'Row selected: press a key on the keyboard below to assign it to this row.',
     gamepadPickerIdleHint: () => 'Select a row to assign, or press [Detect New] and then press a button on the pad.',
     gamepadDeadzoneLabel: () => 'Deadzone',
-    gamepadKeyPickerTitle: () => 'PC-98 keyboard (click to select, no keys are sent)',
+    gamepadKeyPickerTitle: () => 'PC-98 key to assign',
     gamepadPresetCursorZxBtn: () => 'Cursor Keys + Z/X',
     gamepadPresetCursorZxBtnTitle: () => 'Reassigns the D-Pad/left stick to cursor keys and A/B to Z/X (clears existing assignments)',
     gamepadPresetTenkeySpaceBtn: () => 'Numpad + SPACE',
@@ -1296,6 +1360,7 @@ const STRINGS: Record<Lang, Dict> = {
     errHddSlotUnsupported: () => 'This operation supports FD1/FD2 only (not HDD).',
     errInvalidShortName: ({ name }) =>
       `File names must be in 8.3 form (no double-byte or long names): ${name}`,
+    errDestinationExists: ({ name }) => `${name} already exists. Choose a different name and try again.`,
   },
 };
 
@@ -1383,6 +1448,8 @@ export function describeError(err: unknown): string {
         return t('errHddSlotUnsupported');
       case 'invalidShortName':
         return t('errInvalidShortName', params);
+      case 'destinationExists':
+        return t('errDestinationExists', params);
       default:
         break;
     }

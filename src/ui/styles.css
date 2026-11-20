@@ -1042,6 +1042,28 @@ footer.app-footer a {
 }
 
 /* ディスクライブラリダイアログ (rom-modal系のスタイルを踏襲) */
+.disk-library-modal {
+  max-width: 580px;
+}
+
+.library-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.library-filters > * {
+  padding: 8px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.library-search {
+  flex: 1;
+  min-width: 0;
+}
+
 .library-list {
   display: flex;
   flex-direction: column;
@@ -1058,13 +1080,56 @@ footer.app-footer a {
   color: var(--text-dim);
 }
 
-.library-list-item {
+.library-list-item,
+.library-list-group {
   display: flex;
   align-items: center;
+  gap: 4px;
+}
+
+.library-primary {
+  display: flex;
+  flex: 1;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
   font-size: 12px;
-  flex-wrap: wrap;
-  padding: 4px 0;
+  cursor: pointer;
+}
+
+.library-primary:not(:disabled):hover {
+  background: var(--bg);
+  border-color: var(--border);
+}
+
+.library-primary:disabled {
+  cursor: default;
+}
+
+.library-primary-label {
+  flex: 0 0 auto;
+  max-width: 28%;
+  color: var(--accent);
+  font-size: 11px;
+  text-align: right;
+}
+
+.library-primary:disabled .library-primary-label {
+  color: var(--text-dim);
+}
+
+.library-primary:focus-visible,
+.library-action-btn:focus-visible,
+.library-filters > :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .library-item-badge {
@@ -1082,8 +1147,15 @@ footer.app-footer a {
   color: var(--danger);
 }
 
+.library-item-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 .library-item-name {
-  flex: 1 1 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1095,12 +1167,6 @@ footer.app-footer a {
   color: var(--text-dim);
   flex: 0 0 auto;
   font-size: 11px;
-}
-
-.library-item-actions {
-  display: flex;
-  gap: 6px;
-  flex: 0 0 auto;
 }
 
 .library-action-btn {
@@ -1118,24 +1184,41 @@ footer.app-footer a {
   color: #ffffff;
 }
 
-.library-action-btn.danger {
-  border-color: var(--danger);
+.library-more {
+  min-width: 36px;
+  min-height: 36px;
+  font-size: 16px;
+}
+
+#library-actions-menu .danger {
   color: var(--danger);
 }
 
-.library-action-btn.danger:hover {
-  background: var(--danger);
-  color: #ffffff;
+.library-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
 }
 
-.library-item-note {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-style: italic;
+.library-feedback.hidden {
+  display: none;
+}
+
+.library-feedback.error {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 /* 圧縮ファイル由来の複数ディスクをまとめるフォルダ全体のラッパー(見出し行+開いた中身) */
-.library-group {
+.library-group,
+.library-group-children:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1149,18 +1232,7 @@ footer.app-footer a {
   background: rgba(74, 144, 217, 0.12);
 }
 
-/* 圧縮ファイル由来の複数ディスクをまとめるフォルダ行(クリックで開閉) */
-.library-list-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  padding: 5px 0;
-  cursor: pointer;
-  user-select: none;
-}
-
-.library-list-group:hover .library-group-name {
+.library-list-group .library-primary:hover .library-group-name {
   color: var(--accent);
 }
 
@@ -1182,9 +1254,21 @@ footer.app-footer a {
 
 /* フォルダ配下のディスク行は一段下げて親子関係を見せる */
 .library-list-item.in-group {
-  padding-left: 20px;
+  padding-left: 10px;
   border-left: 2px solid var(--border);
   margin-left: 5px;
+}
+
+@media (pointer: coarse) {
+  .disk-library-modal .library-primary,
+  .disk-library-modal .library-action-btn,
+  .disk-library-modal .rom-close-btn,
+  .library-filters > * {
+    min-height: 44px;
+  }
+  .disk-library-modal .library-more {
+    min-width: 44px;
+  }
 }
 
 /* FDDスロットの「ライブラリから挿入」ポップアップメニュー */
@@ -1439,7 +1523,7 @@ footer.app-footer a {
 
 .fm-pane {
   flex: 1 1 300px;
-  min-width: 260px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1516,8 +1600,7 @@ footer.app-footer a {
   border-bottom: 1px dashed var(--border);
 }
 
-.fm-staged-item,
-.fm-disk-item {
+.fm-staged-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1526,20 +1609,77 @@ footer.app-footer a {
   border-radius: 4px;
 }
 
-.fm-disk-item:not(.dir) {
-  cursor: default;
+.fm-disk-list { display: block; }
+
+.fm-disk-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
 }
 
-.fm-disk-item.dir {
+.fm-disk-table thead { background: var(--bg); }
+.fm-disk-table :is(th, td) { padding: 2px 4px; text-align: left; }
+.fm-disk-table .fm-col-select { width: 24px; padding-inline: 0; }
+.fm-disk-table .fm-col-size { width: 4.8em; text-align: right; }
+.fm-disk-table .fm-col-mtime { width: clamp(5.8em, 14vw, 10em); text-align: right; overflow-wrap: anywhere; }
+.fm-disk-table .fm-item-name { display: block; }
+.fm-disk-item:nth-child(even) { background: var(--bg); }
+.fm-staged-item[draggable], .fm-disk-item[draggable] { cursor: grab; }
+
+.fm-entry-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  /* ダブルクリックで下の階層へ入る行。既定のままだとフォルダ名が選択状態になり、
-     ブラウザの翻訳ポップアップ等が出てしまうので選択させない。 */
-  -webkit-user-select: none;
-  user-select: none;
 }
 
-.fm-disk-item.dir:hover {
-  background: var(--bg);
+.fm-sort-btn, .fm-folder-btn, .fm-crumb {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.fm-sort-btn:hover, .fm-folder-btn:hover, .fm-crumb:hover { background: var(--border); }
+.fm-sort-btn:focus-visible, .fm-folder-btn:focus-visible, .fm-crumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.fm-disk-table [aria-sort='ascending'] .fm-sort-btn::after { content: ' ↑'; }
+.fm-disk-table [aria-sort='descending'] .fm-sort-btn::after { content: ' ↓'; }
+
+.fm-folder-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+}
+
+.fm-folder-icon {
+  position: relative;
+  flex: 0 0 14px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 0 2px 2px 2px;
+  color: var(--accent-dim);
+}
+
+.fm-folder-icon::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  width: 6px;
+  height: 2px;
+  border: 1px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
 }
 
 .fm-item-name {
@@ -1642,14 +1782,19 @@ footer.app-footer a {
   gap: 6px;
 }
 
-.fm-path-label {
+.fm-path-row > button { flex: 0 0 auto; }
+.fm-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 4px;
   font-size: 11px;
   color: var(--text-dim);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
+
+.fm-crumb { color: var(--text); text-decoration: underline; }
+.fm-breadcrumbs [aria-current='page'] { color: var(--text); font-weight: 600; }
 
 .fm-space-track {
   height: 6px;
@@ -1715,9 +1860,24 @@ footer.app-footer a {
   color: var(--danger);
 }
 
+.fm-transfer-progress {
+  width: 100%;
+  height: 10px;
+  accent-color: var(--accent);
+}
+
 @media (max-width: 700px) {
   .fm-body { flex-direction: column; }
+  .fm-pane { flex-basis: auto; }
   .fm-transfer-controls { flex-direction: row; }
+  .fm-disk-table .fm-col-mtime { width: 6.2em; }
+}
+
+@media (pointer: coarse) {
+  .fm-action-btn, .fm-select-btn, .fm-target-select, .fm-entry-select,
+  .fm-folder-btn, .fm-sort-btn, .fm-crumb, .fm-remove-btn { min-height: 44px; }
+  .fm-entry-select, .fm-remove-btn, .fm-crumb { min-width: 44px; }
+  .fm-disk-table .fm-col-select { width: 44px; }
 }
 
 /* ゲームパッド設定ダイアログ。rom-modal系の見た目を踏襲しつつ、上段(割当一覧)+下段(PC-98
@@ -1748,6 +1908,25 @@ footer.app-footer a {
   color: var(--text-dim);
 }
 
+.gp-empty-state:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.gp-empty-icon {
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 6px 6px 9px 9px;
+  padding: 0 4px 2px;
+  font: 600 13px/1.2 ui-monospace, monospace;
+}
+
 .gp-live-container {
   display: flex;
   flex-direction: column;
@@ -1758,6 +1937,8 @@ footer.app-footer a {
   border-radius: 6px;
   padding: 8px;
 }
+
+.gp-live-container[hidden] { display: none; }
 
 .gp-live-title {
   margin: 0 0 4px;
@@ -1973,6 +2154,11 @@ footer.app-footer a {
 .gp-detect-status {
   font-size: 11px;
   color: var(--accent-dim);
+}
+
+.gp-picker-section:not([hidden]) {
+  display: grid;
+  gap: 4px;
 }
 
 .gp-picker-title {

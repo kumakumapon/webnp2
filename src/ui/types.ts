@@ -10,6 +10,9 @@ export interface LibraryEntry {
   displayName: string;
   size: number;
   savedAt: number;
+  lastUsedAt?: number;
+  /** スロットにセット済み、またはエミュレータでマウント中。 */
+  active?: boolean;
   kind: 'hdd' | 'fd';
   /** 所属グループID(アーカイブ由来の複数ディスク)。単体イメージでは未設定。 */
   group?: string;
@@ -28,3 +31,7 @@ export interface LibraryGroup {
 export type LibraryNode =
   | { kind: 'group'; savedAt: number; group: LibraryGroup }
   | { kind: 'item'; savedAt: number; entry: LibraryEntry };
+
+export type LibraryDeleteResult =
+  | { status: 'deleted'; restore: () => Promise<void> }
+  | { status: 'active' | 'missing' };
