@@ -35,19 +35,26 @@ const point=async(x,y)=>{await page.evaluate(({x,y})=>window.np2debug.np2.mouseM
 const button=async down=>{await page.evaluate(down=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,down]),down);await page.waitForTimeout(250);};
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
-async function canvasArea(x, y, width, height) {
- return page.evaluate(({x, y, width, height}) => {
+async function galleryHeading(x, y, expected = null, changed = false) {
+ const frame = await page.waitForFunction(({x, y, expected, changed}) => {
   const crop = document.createElement('canvas');
-  crop.width = width;
-  crop.height = height;
-  crop.getContext('2d').drawImage(document.querySelector('#canvas'), x, y, width, height, 0, 0, width, height);
-  return crop.toDataURL();
- }, {x, y, width, height});
+  crop.width = 144;
+  crop.height = 16;
+  crop.getContext('2d').drawImage(document.querySelector('#canvas'),
+   x + 18, y + 46, crop.width, crop.height, 0, 0, crop.width, crop.height);
+  const heading = crop.toDataURL();
+  return expected === null || (heading !== expected) === changed ? heading : false;
+ }, {x, y, expected, changed}, {timeout: 5000});
+ try { return await frame.jsonValue(); }
+ finally { await frame.dispose(); }
 }
 async function verifyGallery(x, y) {
+ const launcher = await galleryHeading(x, y);
  await key('F1');
+ const guide = await galleryHeading(x, y, launcher, true);
  await click(x + 240, y + 94);
  await point(x + 322, y + 268);
+ const english = await galleryHeading(x, y, guide, true);
  const pick = (offsets) => pixels(offsets.map(([left, top]) => [x + left, y + top]));
  const [primary, secondary, danger, disabled, pressed, focusOuter, focusInner, focusFill] = await pick([
   [26, 85], [126, 85], [226, 85], [126, 137], [226, 137], [18, 149], [19, 149], [20, 149],
@@ -68,18 +75,18 @@ async function verifyGallery(x, y) {
  assert.deepEqual(smallClear, largeClear);
  assert.notDeepEqual(smallStroke, smallClear);
  await page.screenshot({path: join(output, 'components.png')});
- const english = await canvasArea(x + 18, y + 46, 144, 16);
  await key('F8');
- assert.notEqual(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await galleryHeading(x, y, english, true);
  await page.screenshot({path: join(output, 'components-ja.png')});
  await key('F8');
- assert.equal(await canvasArea(x + 18, y + 46, 144, 16), english);
- await key('ESC');
- assert.notEqual(await canvasArea(x + 18, y + 46, 144, 16), english);
- await type('g');
- assert.equal(await canvasArea(x + 18, y + 46, 144, 16), english);
+ await galleryHeading(x, y, english);
+ // The loader reserves Escape for exiting from desktop-owned windows.
  await click(x + 80, y + 242);
+ await galleryHeading(x, y, guide);
+ await key('G');
+ await galleryHeading(x, y, english);
  await key('F2');
+ await galleryHeading(x, y, launcher);
  pass('PEGC/Cirrus component gallery renders six button states, two-pixel focus, both icon sizes and English/Shift-JIS labels');
 }
 async function boot(mem){page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',e=>errors.push(e.message));
@@ -115,7 +122,7 @@ try{
  assert.deepEqual(await pixels(helpSample),launcherPixel);
  pass('Welcome and System fit side by side, F1 opens and closes the shortcuts panel');
  await verifyGallery(s.app.x0, s.app.y0);
- assert.deepEqual(await pixels(helpSample), launcherPixel, 'Back and F2 return to the normal launcher');
+ assert.deepEqual(await pixels(helpSample), launcherPixel, 'F2 returns to the normal launcher');
  // Move by odd x/y deltas and inspect actual pixels where the old window was.
  await point(72,75);await button(1);s=await until(s=>s.app?.drag===1,'title drag starts');await point(85,84);await button(0);
  s=await until(s=>s.app?.x0===61&&s.app.y0===73&&s.app.drag===0,'odd-coordinate release');assert.ok(s.rect[2]*s.rect[3]<s.width*s.height);
