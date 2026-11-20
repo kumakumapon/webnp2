@@ -534,7 +534,7 @@
               2ペインダイアログを開けます。上/左ペインが「このブラウザ」、
               下/右ペインが「ディスクイメージ(PC-98側)」です。
             </p>
-            <img src="./help/filemanager.png" alt="ファイル転送ダイアログ。左右(または上下)2ペインとブラウザ⇔ディスクイメージの転送ボタン" />
+            <img src="./help/filemanager.png" alt="ファイル転送ダイアログ。ブラウザとディスクの一覧、現在のフォルダ、転送ボタン" />
             <ul>
               <li>
                 「このブラウザ」側は、ファイル選択またはドラッグ&ドロップで
@@ -543,17 +543,18 @@
               </li>
               <li>
                 「ディスクイメージ(PC-98側)」側は、対象(実行中のFDD1/FDD2、
-                またはライブラリ内のFDイメージ)を選んでから、ファイル一覧の
-                閲覧・ディレクトリ移動・削除・新規フォルダ作成ができます。
-                空き容量も表示されます。
+                またはライブラリ内のFDイメージ)を選びます。フォルダ名をタップして開き、
+                上部のパスから親フォルダへ戻れます。列見出しで名前・サイズ・更新日時を
+                並べ替えられます。空き容量の確認、ファイル削除、新規フォルダ作成もできます。
               </li>
               <li>
                 「転送用FDを作成」ボタンで、フォーマット済み1.2MBのFDイメージを
                 ワンクリックで作り、ディスクライブラリへ保存できます。
               </li>
               <li>
-                中央の矢印ボタン(→/←、画面が狭いときは↓/↑)で転送します。
-                長いファイル名は8.3形式への短縮案を確認してから書き込みます。
+                対象を選び、「PC-98へコピー」または「この端末に保存」を押します。
+                ファイルを相手側のペインへドラッグしても転送できます。ディスクへコピーする前に
+                書き込む8.3形式の名前を確認します。転送中は処理済みの件数を表示します。
               </li>
             </ul>
             <p>
@@ -580,7 +581,7 @@
               two-pane dialog. The top/left pane is "This browser" and the
               bottom/right pane is "Disk image (PC-98 side)".
             </p>
-            <img src="./help/filemanager-en.png" alt="File transfer dialog with two panes (side by side or stacked) and transfer arrow buttons between browser and disk image" />
+            <img src="./help/filemanager-en.png" alt="File transfer dialog showing browser and disk files, the current folder path, and transfer buttons" />
             <ul>
               <li>
                 "This browser" accepts files via a file picker or
@@ -590,18 +591,20 @@
               </li>
               <li>
                 "Disk image (PC-98 side)" lets you pick a target (a running
-                FDD1/FDD2, or an FD image from the library), then browse the
-                file list, navigate directories, delete files, and create new
-                folders. Free space is also shown.
+                FDD1/FDD2, or an FD image from the library). Select a folder name
+                to open it and use the path above the list to return to a parent folder.
+                Select a column header to sort by name, size, or modification time.
+                You can also check free space, delete files, and create folders.
               </li>
               <li>
                 The "Create Transfer FD" button creates a formatted 1.2MB FD
                 image with one click and saves it to the Disk Library.
               </li>
               <li>
-                Use the center arrow buttons (→/←, or ↓/↑ on narrow screens)
-                to transfer files. Long filenames are shortened to 8.3 format,
-                with a confirmation before writing.
+                Select files and choose “Copy to PC-98” or “Save to this device.”
+                You can also drag files to the other pane. Confirm the 8.3
+                destination names before writing to the disk. The progress
+                indicator counts processed files.
               </li>
             </ul>
             <p>
@@ -707,8 +710,10 @@
               3タブがあります。物理ゲームパッドのボタン・軸やホストの物理キーをPC-98キーへ
               割り当てられ、割当先は共通のPC-98配列キーピッカーから選びます。ホストキー再割り当ては
               既定OFFで、組み込みの「テンキー移動(矢印キー→テンキー)」などを複製して編集できます。
+              ゲームパッドが表示されないときは、接続したパッドのボタンを1回押してください。
+              認識後に割当先のキーを選べます。
             </p>
-            <img src="./help/input-settings.png" alt="ゲームパッド・キーボード・バーチャルパッドの3タブを持つ入力設定ダイアログ" />
+            <img src="./help/input-settings.png" alt="入力設定のゲームパッドタブと、パッドが未検出の場合の案内" />
             <p>
               バーチャルパッドは縦持ちでは画面の下、横持ちでは左右の余白へ自動配置されます。
               ダーク背景の上へ表示されるため、白系の操作部も見分けやすくなっています。
@@ -763,8 +768,10 @@
               PC-98 keys using the shared PC-98 keyboard picker. Host-key remapping
               is off by default and includes a built-in “Tenkey Movement
               (Arrows → Tenkey)” profile that you can duplicate and edit.
+              If your gamepad does not appear, press one of its buttons once.
+              The key picker becomes available when the browser detects the pad.
             </p>
-            <img src="./help/input-settings-en.png" alt="Input Settings dialog with Gamepad, Keyboard, and Virtual Pad tabs" />
+            <img src="./help/input-settings-en.png" alt="The Gamepad tab in Input Settings with instructions when no gamepad is detected" />
             <p>
               In portrait, the Virtual Pad appears below the screen; in landscape,
               it uses the left and right margins. The dark page background keeps its
@@ -865,8 +872,13 @@
             <p>
               また、ディスクの変更内容はブラウザ内(IndexedDB)へ自動保存され、
               次回同じイメージで開いたときに続きから再開します。ディスク
-              ライブラリでは、これまでに保存されたHDD/FDイメージの一覧から
-              起動・FD挿入・名前変更・削除ができます。
+              ライブラリでは、ディスク名やアーカイブ名で検索し、名前・最終更新・最終使用の
+              順に並べ替えられます。FDの行を押すとFD1へ挿入し、起動前にHDDの行を押すと
+              そのHDDから起動します。FD2への挿入や名前変更、削除は行の「…」から選べます。
+            </p>
+            <p>
+              直近の削除は、ライブラリに表示される「元に戻す」で15秒以内に取り消せます。
+              ドライブにセット済みか使用中のディスクは削除できません。
             </p>
             <p>
               <code>.zip</code> / <code>.lzh</code> をドラッグ＆ドロップすると、
@@ -879,21 +891,21 @@
               せずライブラリへの登録だけを行います。
             </p>
             <p>
-              HDDイメージを持っていない場合は、HDDスロットの「ブランクHDDを作成」
-              ボタンで、FAT16でフォーマット済みの空HDD(40MB)をその場で作れます。
+              HDDイメージを持っていない場合は、HDDスロットの「挿入」→「ブランクHDDを作成」
+              で、FAT16でフォーマット済みの空HDD(40MB)をその場で作れます。
               作成したHDDはライブラリへ保存され、そのままHDDスロットへセットされます。
               ただしIPL(起動コード)は持たないためHDD単体では起動できません。
               FDからDOSを起動したうえで、データ用ドライブとして使ってください
               (FreeDOS(98)なら<code>C:</code>として認識されます)。
             </p>
             <p>
-              ディスク入れ替えは、FDDスロットの「ライブラリから挿入」ボタン
-              (ディスクが重なったアイコン)からも行えます。フォルダを選ぶと
+              ディスク入れ替えは、FDDスロットの「挿入」→「ライブラリから挿入」
+              からも行えます。フォルダを選ぶと
               その中のディスク一覧に切り替わるので、ライブラリを開かずに
               2枚目・3枚目へ差し替えられます。名前は「名前変更」で自由に
               付け替えられます(元のファイル名は保持されます)。
             </p>
-            <img src="./help/library.png" alt="ディスクライブラリダイアログ。圧縮ファイル由来のフォルダを展開した一覧" />
+            <img src="./help/library.png" alt="ディスクライブラリの検索欄と並べ替え。アーカイブを開き、各ディスクの使用履歴と操作を表示" />
             <img src="./help/library-menu.png" alt="FDDスロットの「ライブラリから挿入」メニュー。フォルダ内のディスク一覧" />
             <p>
               「初期状態に戻す」ボタンを押すと、保存済みの進行状況を削除し、
@@ -913,8 +925,8 @@
             </ul>
             <div class="note-box">
               <strong>大事なデータは定期的にダウンロードしてください。</strong>
-              ディスクライブラリやドライブ行から、ゲストの書き込みを反映したディスクイメージを
-              手元のファイルとして書き出せます。ブラウザのストレージはいつ消えてもおかしくない
+              ドライブ行の「…」→「ダウンロード」から、ゲストの書き込みを反映したディスク
+              イメージを手元に書き出せます。ブラウザのストレージはいつ消えてもおかしくない
               ものなので、遊び込んだディスクほど控えを持っておくと安心です。別のブラウザや
               別の端末へも引き継がれないため、持ち出すときにも書き出したファイルを使います。
             </div>
@@ -928,8 +940,14 @@
             <p>
               Disk changes are also auto-saved to your browser (IndexedDB), so
               opening the same image again resumes from where you left off. The
-              Disk Library lets you boot, insert into an FD drive, rename, or
-              delete any previously saved HDD/FD image.
+              Disk Library lets you search by disk or archive name and sort by
+              name, last update, or last use. Select an FD row to insert it into FD1.
+              Before booting, select an HDD row to boot from it. The row’s “…” menu
+              includes actions such as inserting into FD2, renaming, and deleting.
+            </p>
+            <p>
+              To reverse the most recent deletion, choose “Undo” in the library
+              within 15 seconds. The library protects disks that are selected or mounted.
             </p>
             <p>
               Dropping a <code>.zip</code> / <code>.lzh</code> archive extracts
@@ -941,21 +959,21 @@
               the library, without setting it into any slot.
             </p>
             <p>
-              If you don't have a HDD image, the "Create blank HDD" button on the
-              HDD slot builds an empty FAT16-formatted 40MB disk on the spot. It is
+              If you don't have a HDD image, use Insert → Create blank HDD on the
+              HDD slot to build an empty FAT16-formatted 40MB disk. It is
               saved to the library and set into the HDD slot right away. It carries
               no IPL (boot code), so it cannot boot on its own — boot DOS from a
               floppy and use it as a data drive (FreeDOS(98) picks it up as
               <code>C:</code>).
             </p>
             <p>
-              You can also swap disks from the "Insert from library" button on
-              each FD slot. Selecting a folder switches the menu to the disks it
+              You can also swap disks from Insert → Insert from library on each
+              FD slot. Selecting a folder switches the menu to the disks it
               contains, so you can move to disk 2 or 3 without opening the
               library. "Rename" changes the displayed name only; the original
               file name is kept.
             </p>
-            <img src="./help/library-en.png" alt="Disk Library dialog with an archive folder expanded" />
+            <img src="./help/library-en.png" alt="Disk Library search and sort controls with an archive expanded to show its disks and their actions" />
             <img src="./help/library-menu-en.png" alt="The &quot;Insert from library&quot; menu on an FD slot, listing the disks in a folder" />
             <p>
               "Reset to Original" discards your saved progress and restores the
@@ -975,8 +993,8 @@
             </ul>
             <div class="note-box">
               <strong>Download anything you care about, regularly.</strong>
-              The disk library and the drive rows let you export a disk image — including the
-              guest's writes — as a file on your machine. Browser storage can vanish at any time,
+              Use … → Download on the drive row to export the disk image with the guest’s
+              writes. Browser storage can vanish at any time,
               so the more you have invested in a disk, the more worth keeping a copy. Storage is
               never shared with another browser or device either, so use the exported file when you
               want to take a disk elsewhere.
