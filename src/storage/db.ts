@@ -8,6 +8,8 @@ export interface StoredImage {
   name: string;
   bytes: ArrayBuffer;
   savedAt: number;
+  /** 最後に起動またはマウントした時刻。未使用の既存イメージにはない。 */
+  lastUsedAt?: number;
   /** ライブラリ一覧での表示名。未設定なら name をそのまま表示する。 */
   displayName?: string;
   /** 同一アーカイブから展開した複数ディスクをまとめるグループID。単体イメージでは未設定。 */
@@ -71,30 +73,108 @@ export async function put(image: StoredImage): Promise<void> {
  * ユーザーが付けた名前が消えるのを防ぐ用途で使う。
  */
 export async function putPreservingMeta(image: StoredImage): Promise<void> {
-  const existing = await get(image.sourceKey);
-  if (!existing) {
-    await put(image);
-    return;
-  }
-  const hasMeta =
-    existing.displayName !== undefined ||
-    existing.group !== undefined ||
-    existing.groupName !== undefined ||
-    existing.groupIndex !== undefined;
-  await put({
-    ...image,
-    displayName: hasMeta ? existing.displayName : image.displayName,
-    group: hasMeta ? existing.group : image.group,
-    groupName: hasMeta ? existing.groupName : image.groupName,
-    groupIndex: hasMeta ? existing.groupIndex : image.groupIndex,
+  await updateImage(image.sourceKey, (existing) => {
+    if (!existing) return image;
+    const hasMeta =
+      existing.displayName !== undefined ||
+      existing.group !== undefined ||
+      existing.groupName !== undefined ||
+      existing.groupIndex !== undefined;
+    return {
+      ...image,
+      savedAt: Math.max(image.savedAt, existing.savedAt + 1),
+      lastUsedAt: Math.max(existing.lastUsedAt ?? 0, image.lastUsedAt ?? 0) || undefined,
+      displayName: hasMeta ? existing.displayName : image.displayName,
+      group: hasMeta ? existing.group : image.group,
+      groupName: hasMeta ? existing.groupName : image.groupName,
+      groupIndex: hasMeta ? existing.groupIndex : image.groupIndex,
+    };
+  });
+}
+
+async function updateImage(
+  sourceKey: string,
+  update: (image: StoredImage | undefined) => StoredImage | undefined,
+): Promise<void> {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(sourceKey);
+    request.onsuccess = () => {
+      const image = update(request.result as StoredImage | undefined);
+      if (image) store.put(image);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error ?? new Error('failed to update image'));
   });
 }
 
 /** 既存レコードのメタ情報(表示名/グループ)だけを更新する。イメージ本体は書き換えない。 */
 export async function updateMeta(sourceKey: string, meta: ImageMeta): Promise<void> {
-  const existing = await get(sourceKey);
-  if (!existing) return;
-  await put({ ...existing, ...meta });
+  await updateImage(sourceKey, (existing) => existing && { ...existing, ...meta });
+}
+
+/** 利用時刻だけを記録する。更新時刻やイメージの内容は維持する。 */
+export async function markUsed(sourceKey: string, time: number): Promise<void> {
+  await updateImage(sourceKey, (image) =>
+    image && time > (image.lastUsedAt ?? 0) ? { ...image, lastUsedAt: time } : undefined);
+}
+
+/** Keep concurrent metadata changes and reject writes based on a removed or newer image. */
+export async function replaceImageBytes(source: StoredImage, bytes: ArrayBuffer): Promise<void> {
+  let replaced = false;
+  await updateImage(source.sourceKey, (image) => {
+    if (!image || image.savedAt !== source.savedAt) return undefined;
+    replaced = true;
+    return { ...image, bytes, savedAt: Math.max(Date.now(), image.savedAt + 1) };
+  });
+  if (!replaced) throw new Error(`Disk image changed during the operation: ${source.name}`);
+}
+
+/** 指定したイメージをまとめて取り出す。どれか1件でも使用中なら削除全体を取り消す。 */
+export async function takeImages(
+  sourceKeys: readonly string[],
+  isActive: (sourceKey: string) => boolean,
+): Promise<StoredImage[] | null> {
+  const db = await openDb();
+  return new Promise<StoredImage[] | null>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const images: StoredImage[] = [];
+    let active = false;
+    for (const key of new Set(sourceKeys)) {
+      const request = store.get(key);
+      request.onsuccess = () => {
+        const image = request.result as StoredImage | undefined;
+        if (!image) return;
+        if (isActive(key)) {
+          active = true;
+          tx.abort();
+          return;
+        }
+        images.push(image);
+        store.delete(key);
+      };
+    }
+    tx.oncomplete = () => resolve(images);
+    tx.onabort = () => {
+      if (active) resolve(null);
+      else reject(tx.error ?? new Error('failed to delete images'));
+    };
+  });
+}
+
+/** Undo で同じキーが再登録されていた場合は、既存の内容を上書きせず全体を取り消す。 */
+export async function restoreImages(images: readonly StoredImage[]): Promise<void> {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    for (const image of images) store.add(image);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error ?? new Error('failed to restore images'));
+  });
 }
 
 /** sourceKey が prefix で始まる全レコードを取得する。 */

@@ -62,6 +62,7 @@ function compareByName(nameA: string, nameB: string, tieBreakKeyA: string, tieBr
 export function buildLibraryNodes(
   stored: StoredImage[],
   classify: (name: string) => 'hdd' | 'fd' | null,
+  activeKeys?: ReadonlySet<string>,
 ): LibraryNode[] {
   const groups = new Map<string, { name: string; entries: LibraryEntry[]; savedAt: number }>();
   const nodes: LibraryNode[] = [];
@@ -75,6 +76,8 @@ export function buildLibraryNodes(
       displayName: item.displayName ?? item.name,
       size: item.bytes.byteLength,
       savedAt: item.savedAt,
+      ...(item.lastUsedAt !== undefined ? { lastUsedAt: item.lastUsedAt } : {}),
+      ...(activeKeys?.has(item.sourceKey) ? { active: true } : {}),
       kind,
       group: item.group,
       groupIndex: item.groupIndex,
@@ -112,4 +115,48 @@ export function buildLibraryNodes(
     return compareByName(nameA, nameB, keyA, keyB);
   });
   return nodes;
+}
+
+export const LIBRARY_SORTS = ['name', 'updated', 'used'] as const;
+export type LibrarySort = typeof LIBRARY_SORTS[number];
+
+type LibraryViewNode =
+  | Extract<LibraryNode, { kind: 'item' }>
+  | (Extract<LibraryNode, { kind: 'group' }> & { visibleEntries: LibraryEntry[] });
+
+function librarySearchText(text: string): string {
+  return text.normalize('NFKC').trim().toLowerCase();
+}
+
+/** Search disk names and their archive names without losing the full group for group actions. */
+export function filterLibraryNodes(
+  nodes: readonly LibraryNode[],
+  query: string,
+  sort: LibrarySort,
+): LibraryViewNode[] {
+  const needle = librarySearchText(query);
+  const matching = (entry: LibraryEntry): boolean =>
+    librarySearchText(entry.name).includes(needle) || librarySearchText(entry.displayName).includes(needle);
+  const age = (entry: LibraryEntry): number => sort === 'used' ? entry.lastUsedAt ?? 0 : entry.savedAt;
+  const view: LibraryViewNode[] = [];
+  for (const node of nodes) {
+    if (node.kind === 'item') {
+      if (matching(node.entry)) view.push(node);
+      continue;
+    }
+    const entries = librarySearchText(node.group.name).includes(needle)
+      ? [...node.group.entries] : node.group.entries.filter(matching);
+    if (entries.length === 0) continue;
+    if (sort !== 'name') entries.sort((a, b) =>
+      age(b) - age(a) || compareByName(a.displayName, b.displayName, a.sourceKey, b.sourceKey));
+    view.push({ ...node, visibleEntries: entries });
+  }
+  if (sort === 'name') return view;
+  const nodeAge = (node: LibraryViewNode): number => node.kind === 'item'
+    ? age(node.entry)
+    : node.group.entries.reduce((latest, entry) => Math.max(latest, age(entry)), 0);
+  return view.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'group' ? -1 : 1;
+    return nodeAge(b) - nodeAge(a);
+  });
 }

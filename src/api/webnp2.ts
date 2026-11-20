@@ -61,6 +61,7 @@ import {
   createFormattedFd,
   DiskError,
   type FatEntry,
+  type FatWriteOptions,
 } from './fat.ts';
 
 const STATE_PATH = '/state0.sav';
@@ -199,6 +200,7 @@ const HDD_MIN_INTERVAL_MS = 30_000;
 const COMPARE_CHUNK_BYTES = 4096;
 
 interface MountedEntry extends MountedImage {
+  lastUsedAt: number;
   lastSavedSnapshot?: { length: number; head: Uint8Array; tail: Uint8Array };
   /** 前回保存時の MEMFS stat。一致すればフルコピー読み出し自体をスキップできる。 */
   lastSavedStat?: { mtimeMs: number; size: number };
@@ -518,6 +520,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
       this.hostdrvRoot = params.hostdrv ? (params.hostdrv.root ?? DEFAULT_HOSTDRV_ROOT) : null;
 
       this.mounted.clear();
+      const lastUsedAt = Date.now();
       // IndexedDBから読み出した(=保存済み内容と同一の)イメージは、初回の全量保存も不要なので
       // マウント時点のstatを記録しておく。以後はゲストが書き込むまで永続化がスキップされる。
       if (params.hdd) {
@@ -526,6 +529,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
           name: params.hdd.file.name,
           sourceKey: params.hdd.sourceKey,
           url: params.hdd.url,
+          lastUsedAt,
           lastSavedStat: params.hdd.alreadyPersisted
             ? (statDiskFile(fs, params.hdd.file.name) ?? undefined)
             : undefined,
@@ -537,6 +541,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
           name: fd.file.name,
           sourceKey: fd.sourceKey,
           url: fd.url,
+          lastUsedAt,
           lastSavedStat: fd.alreadyPersisted
             ? (statDiskFile(fs, fd.file.name) ?? undefined)
             : undefined,
@@ -545,6 +550,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
 
       this.startPersistLoop();
       await this.restoreStateIfPresent();
+      for (const disk of this.mounted.values()) this.markMountedImageUsed(disk);
       this.emit('booted', { fs });
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -589,6 +595,12 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
     }, PERSIST_INTERVAL_MS);
     document.addEventListener('visibilitychange', this.boundOnVisibilityChange);
     window.addEventListener('pagehide', this.boundOnPageHide);
+  }
+
+  private markMountedImageUsed(disk: MountedEntry): void {
+    void db.markUsed(disk.sourceKey, disk.lastUsedAt).catch((err: unknown) => {
+      this.emit('log', { level: 'info', message: `could not record disk use: ${String(err)}` });
+    });
   }
 
   private stopPersistLoop(): void {
@@ -665,6 +677,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
           name: entry.name,
           bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer,
           savedAt: Date.now(),
+          lastUsedAt: entry.lastUsedAt,
         });
 
         savedBytes += bytes.byteLength;
@@ -779,14 +792,17 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
     }
 
     // IndexedDBの保存済み内容をそのまま挿入した場合は初回の全量保存も不要。
-    this.mounted.set(slot, {
+    const mounted: MountedEntry = {
       slot,
       name,
       sourceKey,
       url,
+      lastUsedAt: Date.now(),
       lastSavedSnapshot: undefined,
       lastSavedStat: stored ? (statDiskFile(this.fs, name) ?? undefined) : undefined,
-    });
+    };
+    this.mounted.set(slot, mounted);
+    if (stored) this.markMountedImageUsed(mounted);
     this.emit('fdChanged', { drive, name });
   }
 
@@ -903,9 +919,9 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
   }
 
   /** FD内のFAT12/16ディスクイメージへファイルを書き込む(新規作成/上書き)。 */
-  async diskWriteFile(slot: 'fd1' | 'fd2', path: string, data: Uint8Array): Promise<void> {
+  async diskWriteFile(slot: 'fd1' | 'fd2', path: string, data: Uint8Array, options?: FatWriteOptions): Promise<void> {
     const { name, image, vol } = this.openSlotFat(slot);
-    fatWriteFile(vol, path, data);
+    fatWriteFile(vol, path, data, options);
     await this.writeBackSlotImage(slot, name, image);
   }
 
@@ -970,10 +986,10 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
   }
 
   /** ライブラリ(未マウント)イメージへファイルを書き込み、IndexedDBへ書き戻す。 */
-  async libraryWriteFile(sourceKey: string, path: string, data: Uint8Array): Promise<void> {
+  async libraryWriteFile(sourceKey: string, path: string, data: Uint8Array, options?: FatWriteOptions): Promise<void> {
     const { stored, image, vol } = await this.openLibraryFat(sourceKey);
     this.assertLibraryWritable(sourceKey, stored.name);
-    fatWriteFile(vol, path, data);
+    fatWriteFile(vol, path, data, options);
     await this.putLibraryImage(stored, image);
   }
 
@@ -995,11 +1011,8 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
 
   /** 変更後のライブラリイメージ全体をIndexedDBへ書き戻す。 */
   private async putLibraryImage(stored: db.StoredImage, image: Uint8Array): Promise<void> {
-    await db.put({
-      ...stored,
-      bytes: image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer,
-      savedAt: Date.now(),
-    });
+    const bytes = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer;
+    await db.replaceImageBytes(stored, bytes);
   }
 
   /**

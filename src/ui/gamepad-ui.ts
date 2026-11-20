@@ -509,8 +509,13 @@ export function buildGamepadDialog(
   const tabVpadBtn = el('button', { type: 'button', class: 'gp-tab' }, [t('inputTabVpad')]);
   const tabsRow = el('div', { class: 'gp-tabs' }, [tabGamepadBtn, tabHostkeyBtn, tabVpadBtn]);
 
-  // --- タブ1: ゲームパッド(既存の内容をそのまま移しただけ、挙動は変えない) ---
+  // --- タブ1: ゲームパッド ---
   const descEl = el('p', { class: 'gp-desc' }, [t('gamepadDialogDescription')]);
+  const noPadsText = el('span', {}, [t('gamepadNoPads')]);
+  const noPadsState = el('div', { class: 'gp-empty-state', role: 'status', hidden: '' }, [
+    el('span', { class: 'gp-empty-icon', 'aria-hidden': 'true' }, ['+ ••']),
+    noPadsText,
+  ]);
   const listTitleEl = el('h3', { class: 'rom-modal-section-title' }, [t('gamepadConnectedTitle')]);
   const liveContainerEl = el('div', { class: 'gp-live-container' });
   const editorTitleEl = el('h3', { class: 'rom-modal-section-title' }, [t('gamepadBindingsTitle')]);
@@ -518,6 +523,7 @@ export function buildGamepadDialog(
   const editorEl = el('div', { class: 'gp-editor' });
   const gamepadPanelEl = el('div', { class: 'gp-tab-panel' }, [
     descEl,
+    noPadsState,
     listTitleEl,
     liveContainerEl,
     editorTitleEl,
@@ -597,6 +603,7 @@ export function buildGamepadDialog(
   // 文言と disabled/見た目をまとめて更新する(更新漏れ防止)。
   const pickerHintEl = el('div', { class: 'gp-picker-hint' });
   const pickerPanelEl = el('div', { class: 'gp-picker kbd-panel' });
+  const pickerSection = el('div', { class: 'gp-picker-section' }, [pickerTitleEl, pickerHintEl, pickerPanelEl]);
   const closeBtn = el('button', { type: 'button', class: 'rom-close-btn' }, [t('gamepadDialogClose')]);
   const modal = el('div', { class: 'rom-modal gp-modal', role: 'dialog', 'aria-modal': 'true' }, [
     titleEl,
@@ -604,9 +611,7 @@ export function buildGamepadDialog(
     gamepadPanelEl,
     hostkeyPanelEl,
     vpadPanelEl,
-    pickerTitleEl,
-    pickerHintEl,
-    pickerPanelEl,
+    pickerSection,
     el('div', { class: 'rom-modal-footer' }, [closeBtn]),
   ]);
   const backdrop = el('div', { class: 'rom-modal-backdrop gp-modal-backdrop hidden' }, [modal]);
@@ -872,11 +877,14 @@ export function buildGamepadDialog(
   }
 
   function renderLive(pads: Gamepad[]): void {
-    liveContainerEl.textContent = '';
-    if (pads.length === 0) {
-      liveContainerEl.append(el('div', { class: 'gp-hint' }, [t('gamepadNoPads')]));
-      return;
+    const empty = pads.length === 0;
+    if (listTitleEl.hidden !== empty) {
+      listTitleEl.hidden = empty;
+      liveContainerEl.hidden = empty;
+      noPadsState.hidden = !empty;
     }
+    if (empty && !liveContainerEl.hasChildNodes()) return;
+    liveContainerEl.replaceChildren();
     for (const pad of pads) {
       const header = el('h4', { class: 'gp-live-title' }, [t('gamepadLiveTitle', { name: pad.id })]);
       const physical = el('div', { class: 'gp-live-col' }, [
@@ -970,9 +978,9 @@ export function buildGamepadDialog(
 
     editorPadSelectEl.textContent = '';
     editorEl.textContent = '';
+    editorTitleEl.hidden = pads.length === 0;
 
     if (pads.length === 0) {
-      editorEl.append(el('div', { class: 'gp-hint' }, [t('gamepadNoPads')]));
       setPickerActive(gamepadPickerAvailability({ hasPad: false, isPendingGeneric: false, hasSelectedRow: false, isWaitingGenericPad: false }));
       return;
     }
@@ -1173,6 +1181,8 @@ export function buildGamepadDialog(
 
   function render(): void {
     const pads = connectedPads();
+    const hidePicker = activeTab === 'gamepad' && pads.length === 0;
+    if (pickerSection.hidden !== hidePicker) pickerSection.hidden = hidePicker;
     renderLive(pads);
     tickDetect(pads);
     const key = pads.map((p) => p.id).join(',');
@@ -1378,6 +1388,7 @@ export function buildGamepadDialog(
       tabHostkeyBtn.textContent = t('inputTabHostkey');
       tabVpadBtn.textContent = t('inputTabVpad');
       descEl.textContent = t('gamepadDialogDescription');
+      noPadsText.textContent = t('gamepadNoPads');
       listTitleEl.textContent = t('gamepadConnectedTitle');
       editorTitleEl.textContent = t('gamepadBindingsTitle');
       pickerTitleEl.textContent = t('gamepadKeyPickerTitle');

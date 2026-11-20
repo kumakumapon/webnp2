@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
+import { verifyFileManager } from './verify-filemanager.mjs';
 import { chromium } from 'playwright';
+import { verifyDiskLibrary } from './verify-disk-library.mjs';
 
 export async function verifyPlayerLayout(base, boot, screenshot) {
   const browser = await chromium.launch({
@@ -42,6 +44,7 @@ export async function verifyPlayerLayout(base, boot, screenshot) {
     assert.equal(await desktop.locator('html').getAttribute('data-theme'), 'light');
     await desktop.reload();
     await desktop.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+    await verifyFileManager(desktop);
     await desktop.close();
 
     const phone = await browser.newPage({
@@ -90,6 +93,8 @@ export async function verifyPlayerLayout(base, boot, screenshot) {
     await phone.getByRole('button', { name: 'Hide controls' }).tap();
     assert.equal(await footer.isVisible(), false);
     console.log('PASS: drive menus, file picker, persistent theme and touch controls in portrait and landscape');
+    await phone.close();
+    await verifyDiskLibrary(browser, base, boot);
   } finally {
     await browser.close();
   }
