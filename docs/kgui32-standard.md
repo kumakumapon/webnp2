@@ -11,6 +11,7 @@ Work は検証済み HDD、FD 単独起動では `A:\WORK` です。保存・復
 
 **System → Settings** または **F9** で XMS／EMS、FILES／BUFFERS、FD98 の自動起動を
 編集します。Apply CONFIG と Apply AUTOEXEC で個別に保存し、再起動すると反映されます。
+各起動ファイルの編集上限は、CPANEL と同じ 2 KiB です。
 XMS の無効化、または EMS の有効化は、再起動後に KGUI32 を起動できなくなる可能性が
 あるため、保存前に確認します。媒体のその他のファイルは保持します。
 
