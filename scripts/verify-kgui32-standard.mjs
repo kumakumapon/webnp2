@@ -49,7 +49,11 @@ function onlyBootChanges(before,after){
 async function settings(slot,inspect){
  const snapshot=async()=>inspect(await h.disk(slot)),before=await snapshot();
  if(slot==='hdd')await h.click((await h.inspect()).gui.width-132,274);
- else await h.key('F9');
+ else {
+  await h.key('F2');
+  await h.guiUntil(app=>app.active===0,'Welcome for Settings shortcut');
+  await h.key('F9');
+ }
  let s=await configured(v=>v[2]>0&&v[11]===3);
  const initial=config(s);
  assert.equal(initial[5],1);assert.equal(initial[6],0);
