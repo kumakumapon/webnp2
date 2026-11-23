@@ -59,12 +59,14 @@ def workspace_hdd(root, destination):
             'logical_sector_bytes':1024,'initial_free_bytes':10114*4096,
             'disposable_volume_marker':'KHDPROOF'}
 
-RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
+RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGSET.EXE', 'KGFILES.EXE', 'KGEDIT.EXE',
              'COUNT32.EXE', 'ARGS32.EXE', 'KGIMAGE.EXE', 'KGWORDS.EXE', 'PRACT32.EXE', 'KSH32.EXE', 'KTOOL32.EXE', 'PROCTEST.EXE')
 
-# Large standalone SDK diagnostic stays on the original K386 disk and native HDD.
-# The complete GUI FD keeps every user application and its Work capacity.
-FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE',)
+# Keep the original K386 diagnostics and the duplicate DOS editor executable
+# on their own disks. The complete GUI floppy still includes EDIT.EXE.
+FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE')
+FD_OMITTED_ALIASES = ('EDIT98.EXE',)
+FD_OMITTED = FD_OMITTED_DIAGNOSTICS + FD_OMITTED_ALIASES
 
 def application_hdd(root, destination, files):
     # Build offline from a NEW marked volume. No mounted/user image is opened.
@@ -165,7 +167,7 @@ def main():
     files['KXHIGH.SYS'] = (source/'tools/kxms32/build/KXHIGH.SYS').read_bytes()
     files['CONFIG.SYS'] = files['CONFIG.SYS'].replace(b'DEVICE=FDXMS286.SYS\r\n', b'DEVICE=KXHIGH.SYS\r\nDEVICE=FDXMS286.SYS\r\nDEVICE=KXMS32.SYS\r\n')
     files['CONFIG.SYS'] += b'LASTDRIVE=E\r\nDEVICE=KHD98.SYS\r\n'
-    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE', 'KGWORDS.EXE'):
+    for name in ('KGUILDR.EXE', 'KGUI32.EXE', 'KGPROOF.COM', 'KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGSET.EXE', 'KGBAD.EXE', 'KGFILES.EXE', 'KGDIRBAD.EXE', 'KGDIRNO.EXE', 'KGEDIT.EXE', 'KGSAVEB.EXE', 'KGSAVENO.EXE', 'KGSAVE64.EXE', 'KGRECNEG.EXE', 'KGRECNON.EXE', 'KGIMAGE.EXE', 'KGBITBAD.EXE', 'KGWORDS.EXE'):
         files[name] = (source/'tools/kgui32/build'/name).read_bytes()
     files['PRACT32.EXE'] = (source/'tools/k38632/build/PRACT32.EXE').read_bytes()
     for name in ('KSH32.EXE','KTOOL32.EXE','PROCTEST.EXE','KPRUN.COM'):
@@ -194,7 +196,7 @@ def main():
     helper = module('kgui32_image', source/'ports/pc98/image.py')
     excluded = {'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
-        [(name,data) for name,data in files.items() if name not in excluded and name not in FD_OMITTED_DIAGNOSTICS],
+        [(name,data) for name,data in files.items() if name not in excluded and name not in FD_OMITTED],
         kernel=files['MSDOS.SYS'],command=files['COMMAND.COM'],autoexec=autoexec)
     entries.append(add_workspace(image))
     sha = hashlib.sha256(image).hexdigest()
@@ -205,7 +207,7 @@ def main():
     (destination/name).write_bytes(image)
     app_hdd = application_hdd(root, destination, files)
     boot_hdd = standalone_hdd(source, destination, app_hdd, files, autoexec)
-    compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED and n not in FD_OMITTED_DIAGNOSTICS]
+    compact_files = [(n,d) for n,d in files.items() if n not in excluded and n not in RELOCATED and n not in FD_OMITTED]
     compact, compact_entries = helper.make_image(original[:1024], files['IO.SYS'],
         compact_files, kernel=files['MSDOS.SYS'], command=files['COMMAND.COM'], autoexec=autoexec)
     compact_entries.append(add_workspace(compact))
@@ -227,11 +229,18 @@ def main():
                             'high_memory_driver':'KXMS32.SYS','capture_driver':'KXHIGH.SYS','physical_ceiling':33554432},
         'dos_files_read_only':False,'workspace_save_api':1,'workspace_information_api':1,
         'files_workspace_browser':1,'files_editor_launch':1,
+        'work_management':{'version':1,'path_components':3,'copy_max_bytes':1048576,
+            'operations':['copy','move','rename','mkdir','trash','restore'],
+            'trash_directory':'KTRASH','trash_hidden':True,'trash_empty_folders':True,'overwrites':False},
+        'settings':{'executable':'KGSET.EXE','shortcut':'F9','boot_files':['CONFIG.SYS','AUTOEXEC.BAT'],
+            'controls':['xms','ems','files','buffers','fd98-autostart'],'apply_after_reboot':True},
+        'memo':{'executable':'KGEDIT.EXE','shortcut':'F4','work_file':'NOTE.TXT'},
         'v86_hdd_read_only':1,'v86_private_drives':1,
         'workspace_recovery_api':1,'editor_tools':['find','replace','shift-selection','lf-crlf','adaptive-viewport','recovery'],'keyboard_modifiers':1,
         'text_encoding':'shift-jis','japanese_glyphs':'pc98-cg-rom','japanese_ime':True,
         'ui_language':{'version':1,'languages':['en','ja'],'default':'en','switch':'F8','live_apps':True,'preserves_document_and_composition':True},
         'fd_omitted_diagnostics':list(FD_OMITTED_DIAGNOSTICS),
+        'fd_omitted_aliases':list(FD_OMITTED_ALIASES),
         'process_api':{'version':1,'feature':512,'helper':'K32PROC.EXE','shell':'KSH32.EXE','tools':'KTOOL32.EXE','diagnostics':['PROCTEST.EXE','KPRUN.COM'],'gui_independent':True,'records':8,'root_records':4,'child_records':4,'parent_owns_children':True,'generation_checked':True,'orphan_cancellation':True,'message_bytes':64,'message_slots':4,'pipes':4,'pipe_bytes':512,'stream_chunk_bytes':256,'shell_pipeline_commands':3,'background_jobs':1,'separate_console_stderr':True,'independent_ipc':'receiver-admits-live-peer','shell_line_bytes':126,'redirection_max_bytes':1048576,'retains_original_on_failure':True},
         'dos_terminal_modes':{'version':2,'helper':'KV98VID.EXE','diagnostic':'KVTERM.COM',
             'columns':[40,80],'rows':[20,25],'gaiji_glyphs':188,'private_vram_bytes':262144,'graphics_pages':2,'independent_access_display_pages':True,'backing_bytes':950272,'private_glyph_offset':675840,'extended_diagnostic':'KVEXT.COM','bios18_functions':[10,11,12,13,14,17,18,19,22,64,65,66],'keyboard_functions':[0,1,2,3,5],'dos_console_flush':True,'word_io_ports':[96,98,160,162,164,166],'denied_io_widths':[32],
@@ -257,7 +266,7 @@ def main():
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
-        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE'],'widget_sdk':4,'window_menu':{'version':1,'activation':'titlebar-left-tap','right_click_required':False,'placement':['maximize','restore','left','right'],'shell_touch_commands':['enter','escape','cancel','eof'],'keyboard':['F1','Up','Down','Enter','Esc'],'max_items':24,'item_height':36,'paged':True,'modal_commands_disabled':True,'apps':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE']},'utility_apps':{'calendar':{'executable':'KGCAL.EXE','date_source':'DOS','years':[1980,2099]},'calculator_memory':['add','subtract','recall','clear'],'clock_stopwatch':{'resolution_seconds':1,'max_seconds':359999,'source':'DOS wall clock'}},'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
+        'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGSET.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE'],'widget_sdk':4,'window_menu':{'version':1,'activation':'titlebar-left-tap','right_click_required':False,'placement':['maximize','restore','left','right'],'shell_touch_commands':['enter','escape','cancel','eof'],'keyboard':['F1','Up','Down','Enter','Esc'],'max_items':24,'item_height':36,'paged':True,'modal_commands_disabled':True,'apps':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE']},'utility_apps':{'calendar':{'executable':'KGCAL.EXE','date_source':'DOS','years':[1980,2099]},'calculator_memory':['add','subtract','recall','clear'],'clock_stopwatch':{'resolution_seconds':1,'max_seconds':359999,'source':'DOS wall clock'}},'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only A: root',
     },indent=2)+'\n')
     (destination/'LICENSE.txt').write_bytes(files['LICENSE.TXT']+b'\r\nKGUI32 original extension\r\n'+files['KGLIC.TXT'])
     print(f'Generated independent KGUI32 disk: {name} ({sha})')
