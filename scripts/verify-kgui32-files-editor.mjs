@@ -69,14 +69,26 @@ const filters=['',''];
 async function focus(id){const s=await inspect();await click(330+146*id,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'active slot '+id);}
 async function selectAll(id){await key('CTRL+A');return until(s=>s.gui.app.active===id+2&&s.editors[id]?.anchor===0&&s.editors[id]?.cursor===s.editors[id]?.bytes,'Editor selection committed');}
 async function files(){await launch(268,230);return until(s=>s.files[0]?.frames>0&&!(s.files[0].mode&2),'Files root');}
-async function localFocus(id,target){for(let i=0;i<8;i++){const s=await inspect();if(s.files[id].focus===target)return;const next=(s.files[id].focus+1)%8;await key('TAB');await until(s=>s.files[id]?.focus===next,'local focus '+next);}throw Error('local focus');}
+async function localFocus(id,target){
+ for(let i=0;i<9;i++){
+  const s=await inspect(),file=s.files[id];
+  if(file.focus===target)return;
+  const controls=(file.mode&32)&&!(file.mode&1)?9:8;
+  const next=(file.focus+1)%controls;
+  await key('TAB');await until(s=>s.files[id]?.focus===next,'local focus '+next);
+ }
+ throw Error('local focus');
+}
 async function filter(name){
  await focus(0);let s=await inspect();if(s.files[0].mode&1){await key('ESC');await until(s=>!(s.files[0]?.mode&1),'back to list');}
  s=await inspect();if(filters[0]===name&&s.files[0]?.matches===1&&s.files[0]?.nameHash===fnv(name))return s;
  await localFocus(0,0);await key('HOME');for(let i=0;i<filters[0].length;i++)await key('DEL');await type(name);filters[0]=name;
  return until(s=>!(s.files[0]?.mode&2)&&s.files[0]?.matches===1&&s.files[0]?.nameHash===fnv(name),'selected '+name);
 }
-async function work(){await key('CTRL+W');return until(s=>(s.files[0]?.mode&32)&&!(s.files[0].mode&2),'Work enumeration');}
+async function work(){
+ await key('CTRL+W');
+ return until(s=>(s.files[0]?.mode&32)&&!(s.files[0].mode&2)&&s.canvases[0]?.controls.includes(106),'Work enumeration and Manage button');
+}
 async function preview(name,bytes){await filter(name);await localFocus(0,1);await key('ENTER');return until(s=>(s.files[0]?.mode&1)&&s.files[0].bytes===bytes.length&&s.files[0].hash===fnv(bytes),'native preview '+name);}
 async function linked(name,bytes,drive=1){
  const normalized=Buffer.from(bytes.toString().replaceAll('\r',''));
