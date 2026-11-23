@@ -112,7 +112,7 @@ try{
  await h.key('F4');await h.until(s=>s.editors[0]?.frames&&canvas(s)?.texts.some(v=>v.includes('NOTE.TXT')),'Memo opened');
  await h.setText(0,'FD Work note');await h.key('CTRL+S');
  await h.until(s=>s.editors[0]?.mode===0&&!s.editors[0].dirty,'FD memo saved');
- await h.key('CTRL+E');await h.until(s=>s.cpu.views[0].state===0,'Memo closed');
+ await h.end(0);
  await files();await input(403,'EMPTY');await waitText('Folder created');
  await recycle('EMPTY','In Trash');
  await recycle('NOTE.TXT','In Trash');await button(402);
