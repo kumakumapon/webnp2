@@ -37,6 +37,9 @@ describe('independent native PM32 GUI image',()=>{
   expect(new TextDecoder().decode(fatReadFile(disk,'AUTOEXEC.BAT'))).toContain('SET COMSPEC=A:\\COMMAND.COM');
   expect(fatList(disk,'/WORK')).toEqual([]);
   expect(fatFreeSpace(disk).free).toBe(h.initial_free_bytes);
+  const entries=inspectHdd(bytes).entries;
+  for(const name of ['CONFIG.SYS','AUTOEXEC.BAT'])expect(entries.get(name)?.attr).toBe(32);
+  expect(entries.get('COMMAND.COM')?.attr).toBe(33);
   for(const app of manifest.application_distribution.relocated){
    expect(fatList(disk,'/').some(e=>e.name===app)).toBe(false);
    expect(createHash('sha256').update(fatReadFile(disk,'APPS/'+app)).digest('hex')).toBe(h.applications.find((e:{name:string})=>e.name==='APPS/'+app).sha256);
@@ -61,7 +64,10 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.utility_apps.calendar).toEqual({executable:'KGCAL.EXE',date_source:'DOS',years:[1980,2099]});expect(manifest.utility_apps.calculator_memory).toEqual(['add','subtract','recall','clear']);expect(manifest.utility_apps.clock_stopwatch.resolution_seconds).toBe(1);
   expect(manifest.widget_sdk).toBe(4);expect(manifest.graphical_clients).toContain('KGEDIT.EXE');
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
-  const files=fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE');expect(files[92]).toBe(231);
+  const files=Buffer.from(fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE'));expect(files.readUInt32LE(92)).toBe(487);
+  expect(manifest.work_management).toMatchObject({version:1,path_components:3,copy_max_bytes:1048576,trash_hidden:true,trash_empty_folders:true,overwrites:false});
+  expect(manifest.settings).toMatchObject({executable:'KGSET.EXE',shortcut:'F9',boot_files:['CONFIG.SYS','AUTOEXEC.BAT'],apply_after_reboot:true});
+  expect(manifest.memo).toEqual({executable:'KGEDIT.EXE',shortcut:'F4',work_file:'NOTE.TXT'});
   expect(manifest.runtime_profiles).toEqual({default:{extended_memory_mb:16,application_slots:2},expanded:{extended_memory_mb:32,application_slots:4},manager_version:2,manager_bytes:264,pm32_private_bytes:4194304,high_memory_driver:'KXMS32.SYS',capture_driver:'KXHIGH.SYS',physical_ceiling:33554432});expect(manifest.dedicated_gui_context).toBe(true);expect(manifest.application_slots).toBe(2);expect(manifest.gui_bits).toBe(32);expect(manifest.dos_files_read_only).toBe(false);expect(manifest.workspace_save_api).toBe(1);expect(manifest.workspace_information_api).toBe(1);expect(manifest.writable_workspace).toBe('auto: verified HDD / WORK');expect(manifest.workspace_fd_fallback).toBe('A:\\WORK');expect(manifest.root_browser_read_only).toBe(true);
   expect(manifest.omitted_base_fixtures).toEqual(['DATA32.BIN']);
   expect(manifest.files.some((f:{name:string})=>f.name==='DATA32.BIN')).toBe(false);
@@ -125,16 +131,23 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.process_api).toMatchObject({version:1,feature:512,helper:'K32PROC.EXE',gui_independent:true,parent_owns_children:true,generation_checked:true,message_bytes:64,pipe_bytes:512,stream_chunk_bytes:256,retains_original_on_failure:true});
   expect(manifest.image_transport).toMatchObject({request_bytes:3144,status_header_bytes:72,control_reply_bytes:72,successful_upload_roundtrip_bytes:3216,metrics_record:'KGXFER01'});
   expect(manifest.process_api).toMatchObject({shell_pipeline_commands:3,background_jobs:1,separate_console_stderr:true,independent_ipc:'receiver-admits-live-peer'});
-  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE']);
+  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE']);
+  expect(manifest.fd_omitted_aliases).toEqual(['EDIT98.EXE']);
   for(const [image,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
    const d=openDiskImage(readFileSync('public/kgui32/'+image),image);
    for(const app of ['KSH32.EXE','KTOOL32.EXE','PROCTEST.EXE']){const b=Buffer.from(fatReadFile(d,prefix+app));expect(b.readUInt16LE(80)).toBe(258);expect(b.readUInt32LE(92)).toBe(783);expect(b.toString('ascii',b.readUInt32LE(84)-24,b.readUInt32LE(84)-16)).toBe('K32RES01');}
    const calendar=Buffer.from(fatReadFile(d,prefix+'KGCAL.EXE'));
    expect(calendar.toString('ascii',72,80)).toBe('K32EXE01');
+   const settings=Buffer.from(fatReadFile(d,prefix+'KGSET.EXE'));
+   expect(settings.toString('ascii',72,80)).toBe('K32EXE01');
+   expect(settings.readUInt16LE(80)).toBe(257);expect(settings.readUInt32LE(92)).toBe(295);
    for(const helper of ['K32PROC.EXE','KPRUN.COM','KVEXT.COM'])expect(fatReadFile(d,helper).length).toBeGreaterThan(100);
   }
   const fd=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image),hd=openDiskImage(readFileSync('public/kgui32/'+manifest.standalone_hdd.image),manifest.standalone_hdd.image);
-  expect(fatList(fd,'/').some(e=>e.name==='MEM32.EXE')).toBe(false);expect(fatReadFile(hd,'MEM32.EXE').length).toBeGreaterThan(65536);
+  const excluded=[...manifest.fd_omitted_diagnostics,...manifest.fd_omitted_aliases];
+  expect(fatList(fd,'/').some(e=>excluded.includes(e.name))).toBe(false);
+  expect(fatReadFile(fd,'EDIT.EXE')).toEqual(fatReadFile(hd,'EDIT98.EXE'));
+  expect(fatReadFile(hd,'MEM32.EXE').length).toBeGreaterThan(65536);
  });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
   if(!manifest.enabled)return;
