@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 import { inspectGUI } from './kgui32-inspect.mjs';
+import { inspectClients } from './kgui32-client-inspect.mjs';
 
 const [base = 'http://127.0.0.1:4173/webnp2/', output = 'test-results/kgui32-start', video = 'pegc'] =
   process.argv.slice(2);
@@ -16,15 +17,37 @@ const browser = await chromium.launch({
   args: process.env.WEBNP2_NO_SANDBOX === '1' ? ['--no-sandbox'] : [],
 });
 
-async function waitForDesktop(page, condition, label, timeout) {
+async function waitForState(inspect, condition, label, timeout) {
   const deadline = Date.now() + timeout;
   let state;
   do {
-    state = await inspectGUI(page, { pageTables: false });
-    if (state?.ready === 1 && state.app?.frames > 1 && condition(state)) return state;
+    state = await inspect();
+    if (state && condition(state)) return state;
     await delay(250);
   } while (Date.now() < deadline);
   throw new Error(`${label}: ${JSON.stringify(state)}`);
+}
+
+// The Calculator publishes a client frame before the guest compositor renders it.
+async function renderedDigit(page, previous) {
+  const handle = await page.waitForFunction(previous => {
+    const crop = document.createElement('canvas');
+    crop.width = 8;
+    crop.height = 16;
+    const context = crop.getContext('2d');
+    context.drawImage(document.querySelector('#canvas'), 40, 123, 8, 16, 0, 0, 8, 16);
+    const rgba = context.getImageData(0, 0, 8, 16).data;
+    const light = rgba.some((value, i) => i % 4 !== 3 && value >= 240);
+    const dark = rgba.some((value, i) => i % 4 !== 3 && value < 100);
+    if (!light || !dark) return false;
+    const frame = crop.toDataURL();
+    return frame !== previous && frame;
+  }, previous, { polling: 200, timeout: 15_000 });
+  try {
+    return await handle.jsonValue();
+  } finally {
+    await handle.dispose();
+  }
 }
 
 async function verifyBoot({ slot, image, viewport, lang, orientation }) {
@@ -65,7 +88,8 @@ async function verifyBoot({ slot, image, viewport, lang, orientation }) {
     assert.deepEqual([...url.searchParams].sort(), [...params].sort());
     await Promise.all([page.waitForURL(url.href), choice.tap()]);
     await page.waitForFunction(() => window.np2debug?.np2?.isBooted(), null, { timeout: 60_000 });
-    const desktop = await waitForDesktop(page, () => true, 'booting KGUI32', 120_000);
+    const desktop = await waitForState(() => inspectGUI(page, { pageTables: false }),
+      state => state.ready === 1 && state.app?.frames > 1, 'booting KGUI32', 120_000);
     assert.deepEqual([desktop.width, desktop.height, desktop.bpp], cirrus ? [800, 600, 2] : [640, 400, 1]);
     assert.equal(desktop.error, 0);
     assert.equal(await primary.count(), 0);
@@ -77,15 +101,24 @@ async function verifyBoot({ slot, image, viewport, lang, orientation }) {
     await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
     assert.ok(box && box.width > 100 && box.height > 100, JSON.stringify(box));
-    // Calculator is a visible launcher control on both native desktop modes.
-    await page.touchscreen.tap(
-      box.x + (desktop.app.x0 + 88) * box.width / desktop.width,
-      box.y + (desktop.app.y0 + 130) * box.height / desktop.height,
+    const tap = (x, y) => page.touchscreen.tap(
+      box.x + x * box.width / desktop.width,
+      box.y + y * box.height / desktop.height,
     );
-    await waitForDesktop(page, state => state.app.active === 2, 'starting Calculator from a touchscreen tap', 30_000);
+    // Tap the Welcome launcher and then the first digit of the native Calculator.
+    await tap(desktop.app.x0 + 88, desktop.app.y0 + 130);
+    const calculator = async () => {
+      const state = await inspectClients(page);
+      if (state?.gui.app?.active === 2 && state.apps[0]?.magic === 0x3243474b) return state.apps[0];
+    };
+    await waitForState(calculator, app => app.frames > 0, 'opening Calculator by touch', 30_000);
+    const zero = await renderedDigit(page, null);
+    await tap(70, 164);
+    await waitForState(calculator, app => app.value === 7 && app.frames > 1, 'entering 7 by touch', 30_000);
+    await renderedDigit(page, zero);
     await page.screenshot({ path: join(output, `${orientation}-calculator.png`) });
     assert.deepEqual(errors, []);
-    console.log(`PASS ${video} ${slot}: ${orientation} phone boot and desktop Calculator tap`);
+    console.log(`PASS ${video} ${slot}: ${orientation} phone boot and Calculator touch input`);
   } finally {
     await page.close();
   }
