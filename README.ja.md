@@ -17,8 +17,9 @@ PC-98 エミュレータ [NP2kai](https://github.com/AZO234/NP2kai) の wasm ビ
 
 - **公開ページ**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic 起動メニュー**: <https://kumakumapon.github.io/webnp2/?lang=ja>
-  （**MS-DOS 4.0 + RetroBasic で起動**を選ぶと、現在の生成済みイメージを使います）
+- **KGUI32／KDESK 起動画面**: <https://kumakumapon.github.io/webnp2/?lang=ja>
+  先頭の **KGUI32 で起動** は HDD・PEGC で標準の32bitデスクトップを開きます。
+  **KGUI32 の起動オプション** で Cirrus・FD・拡張メモリを、**KDESK（互換用）で起動** で従来のデスクトップを選べます。
 - **FreeDOS(98) 自動起動デモ**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   （クリック不要で DOS プロンプトまで起動。音声は最初のクリックで有効化）
 
@@ -89,15 +90,10 @@ https://.../?hdd=<HDDイメージURL>&fd1=<FD1イメージURL>&fd2=<FD2イメー
 | `alat` | AudioWorklet リングの下限水位の初期値(ms) | 小さいほど低遅延だが途切れやすい。既定はコア1チャンク分(約23ms)。途切れを検出すると自動で引き上げる |
 | `perf` | `1` で性能計測オーバーレイを表示 (FPS/メインスレッド占有/音声供給) | スローダウンの原因調査用 |
 
-`hdd`/`fd1`/`fd2`/`freedos` のいずれも指定しない場合、起動オーバーレイに
-「そのまま起動」（イメージ無しの状態で開始し、以降は画面へのドラッグ&ドロップで
-HDD/FDイメージを読み込める）と「FreeDOS(98) で起動」（後述の同梱起動FDで起動する）の
-ほか、「MS-DOS 2.0 で起動」（同梱のPC-98移植版を `fd1` 指定の自動起動URLで開く）の
-3択が表示されます。ディスクライブラリに保存済みイメージがあれば、4つ目の
-「保存済みディスクから起動」も表示されます。URLパラメータでディスクを1つでも指定した場合は、従来通り単一の
-「クリックして起動」ボタンになります。
-起動するのは表示されたボタンを押した場合だけです。オーバーレイの余白をクリックしても
-起動しないため、ボタンを外したときの誤操作を防げます。
+公開版で `hdd`/`fd1`/`fd2`/`freedos` を指定せずに開くと、起動画面の先頭に
+「KGUI32 で起動」が表示されます。KDESK（互換用）、FreeDOS(98)、MS-DOS 2.0、
+ディスク無しの起動も選べます。ライブラリにイメージがあれば「保存済みディスクから起動」も表示されます。
+URLでディスクを指定した場合は「クリックして起動」を選びます。`run=1` を指定すると自動で起動します。
 
 **重要: `hdd`/`fd1`/`fd2` に指定するURLは CORS (`Access-Control-Allow-Origin`) が
 有効な配信元である必要があります。** ブラウザの `fetch` でイメージを取得するため、配布側の
@@ -284,7 +280,7 @@ IBM PC の BIOS・画面・ハードウェアを直接操作するソフトは P
 
 ### 同梱の MS-DOS 4.0 + RetroBasic 起動FD
 
-起動画面の **「MS-DOS 4.0 + RetroBasic で起動」** を選択します。
+公開版の起動画面で **「KDESK（互換用）で起動」** を選択します。
 同梱の 1232 KiB FAT12 FD からKDESKが自動起動します。F10で `A>` に戻り、
 `VER` は **4.00** を表示します。
 `RBASIC` で BASIC の対話モード、`RBASIC PRIMES.BAS`、`RBASIC GRAPHICS.BAS`、

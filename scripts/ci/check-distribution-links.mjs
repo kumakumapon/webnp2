@@ -17,8 +17,8 @@ for (const match of readFileSync('dist/help.html', 'utf8').matchAll(/href="([^"]
 assert.equal(helpLinks, 2, 'both help languages link to the generated DOS4 image');
 for (const [file, language] of [['README.md', 'en'], ['README.ja.md', 'ja']]) {
   const text = execFileSync('git', ['show', 'HEAD:' + file], {encoding:'utf8'});
-  const link = text.split('\n').find(line => line.startsWith('- **MS-DOS 4.0 + RetroBasic '));
-  assert(link, file + ' DOS4 boot menu entry');
+  const link = text.split('\n').find(line => line.startsWith('- **KGUI32') && line.includes('KDESK'));
+  assert(link, file + ' KGUI32 and KDESK boot menu entry');
   assert(link.includes('<' + base + '?lang=' + language + '>'), file + ' links to the stable boot menu');
   assert(!/msdos4-retrobasic-[0-9a-f]{12}\.xdf/.test(text), file + ' contains a generated image filename');
 }

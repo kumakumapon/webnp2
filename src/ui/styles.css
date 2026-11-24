@@ -326,18 +326,53 @@ header.app-header .app-tagline {
 }
 
 .overlay-choices {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
   width: min(100%, 620px);
 }
 
-.overlay .start-btn:nth-child(1):only-child,
-.overlay .start-btn-library {
+.overlay-choices,
+.boot-profile-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.overlay-choices > .start-btn:only-child,
+.overlay .start-btn-primary,
+.overlay .start-btn-kgui32,
+.overlay .start-btn-library,
+.boot-profiles {
   grid-column: 1 / -1;
 }
 
-.overlay .start-btn-library:not(.hidden) {
+.overlay .start-btn-primary {
+  background: #345e8b;
+  border-color: #829fbe;
+}
+
+.overlay .start-btn-primary:hover {
+  background: #406c9e;
+}
+
+.boot-profiles summary {
+  list-style: none;
+  gap: 8px;
+}
+
+.boot-profiles summary::-webkit-details-marker { display: none; }
+
+.boot-profiles summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.boot-profiles[open] summary::after { transform: rotate(225deg); }
+.boot-profile-links { margin-top: 6px; }
+
+.overlay-choices:not(.has-default-boot) .start-btn-library:not(.hidden) {
   order: -1;
 }
 

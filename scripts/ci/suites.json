@@ -224,7 +224,8 @@
     "base": "/webnp2/",
     "commands": [
       {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps", "{video}"]},
-      {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps/standalone-repeat", "{video}", "standalone"], "env": {"KGUI32_STANDALONE_REPEATS": "5"}}
+      {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps/standalone-repeat", "{video}", "standalone"], "env": {"KGUI32_STANDALONE_REPEATS": "5"}},
+      {"argv": ["scripts/verify-kgui32-start.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-start", "{video}"]}
     ]
   },
   "hdd-workspace": {

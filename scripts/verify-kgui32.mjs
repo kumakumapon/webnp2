@@ -90,16 +90,16 @@ async function verifyGallery(x, y) {
  pass('PEGC/Cirrus component gallery renders six button states, two-pixel focus, both icon sizes and English/Shift-JIS labels');
 }
 async function boot(mem){page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('pageerror',e=>errors.push(e.message));
- if(mem===16){await page.goto(base);const link=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');await link.waitFor({state:'visible'});const href=await link.getAttribute('href'),url=new URL(href,page.url());const distribution=manifest.application_distribution;
+ if(mem===16){await page.goto(base);await page.locator('.boot-profiles summary').click();const link=page.locator(video==='cirrus'?'.start-btn-kgui32-highcolor':'.start-btn-kgui32');await link.waitFor({state:'visible'});const href=await link.getAttribute('href'),url=new URL(href,page.url());const distribution=manifest.application_distribution;
   if(manifest.standalone_hdd?.hdd_boot_supported){assert(!url.searchParams.has('fd1')&&!url.searchParams.has('fd2'));assert.equal(url.searchParams.get('hdd'),'./kgui32/'+manifest.standalone_hdd.image);}
   else{assert.equal(url.searchParams.get('fd1'),'./kgui32/'+(distribution?.image??manifest.image));if(distribution)assert.equal(url.searchParams.get('hdd'),'./kgui32/'+distribution.hdd.image);}
   assert.equal(url.searchParams.get('mem'),'16');assert.equal(url.searchParams.get('video'),video==='cirrus'?'cirrus':null);
   // Keep this regression on the explicit complete-FD compatibility choice.
   // The shipping HDD-only profile has its own real-CPU/media acceptance suite.
-  const fdLink=page.locator('.start-btn-kgui32-fd');await fdLink.waitFor({state:'visible'});
+  const fdLink=page.locator(video==='cirrus'?'.start-btn-kgui32-fd-highcolor':'.start-btn-kgui32-fd');await fdLink.waitFor({state:'visible'});
   const fdUrl=new URL(await fdLink.getAttribute('href'),page.url());
   assert.equal(fdUrl.searchParams.get('fd1'),'./kgui32/'+manifest.image);assert(!fdUrl.searchParams.has('hdd'));assert.equal(fdUrl.searchParams.get('mem'),'16');
-  if(video==='cirrus')fdUrl.searchParams.set('video','cirrus');await page.goto(fdUrl.href);}
+  assert.equal(fdUrl.searchParams.get('video'),video==='cirrus'?'cirrus':null);await page.goto(fdUrl.href);}
  else await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
 }
 async function command(mode){const previous=await inspectGUI(page);await page.evaluate(cookie=>{window.kgui32ExcludedCookie=cookie;delete window.kgui32Address;},previous?.cookie);await type('KGUILDR KGUI32.EXE '+mode+'\r');}
