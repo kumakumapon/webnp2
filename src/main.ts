@@ -18,9 +18,16 @@ import { createDebugger, createWebNP2, type DebuggerController } from '../packag
 import { Bridge } from './api/bridge.ts';
 import { WEBNP2_VERSION_FOOTER } from './version.ts';
 import { MSDOS2_BOOT_URL } from './bundled-msdos2.ts';
-import { MSDOS4_BOOT_URL, MSDOS4_IMAGE_URL } from './bundled-msdos4.ts';
+import { MSDOS4_BOOT_URL, MSDOS4_IMAGE_URL, MSDOS4_STARTS_KDESK } from './bundled-msdos4.ts';
 import { K386_BOOT_URL, K386_HIGH_COLOR_BOOT_URL } from './bundled-k386.ts';
-import { KGUI32_BOOT_URL, KGUI32_HIGH_COLOR_BOOT_URL, KGUI32_FD_BOOT_URL, KGUI32_EXPANDED_BOOT_URL, KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL } from './bundled-kgui32.ts';
+import {
+  KGUI32_BOOT_URL,
+  KGUI32_HIGH_COLOR_BOOT_URL,
+  KGUI32_FD_BOOT_URL,
+  KGUI32_FD_HIGH_COLOR_BOOT_URL,
+  KGUI32_EXPANDED_BOOT_URL,
+  KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL,
+} from './bundled-kgui32.ts';
 import * as db from './storage/db.ts';
 import type { DiskFile } from './core/module.ts';
 import {
@@ -639,8 +646,8 @@ function onTrackpadButton(button: 0 | 1, down: boolean): void {
 /** トラックパッドのタップ(クリック要求)をパルス化(押して離す)して送る。 */
 function onTrackpadTap(button: 0 | 1): void {
   queueTouchOp(async () => {
-    // 相対移動なので絶対追従(trackSettle)の収束待ちは不要。押下時間はcanvas直タッチの
-    // onTouchClick(60ms)より長めの100msにして、コアがボタンを読み落とさないようにする。
+    // 相対移動なので絶対追従(trackSettle)の収束待ちは不要。
+    // コアがボタンを読み落とさないよう100ms押下する。
     coreMouseButton(button, 1);
     await sleep(100);
     coreMouseButton(button, 0);
@@ -2003,14 +2010,25 @@ function init(): void {
       onTrackpadButton: (button, down) => onTrackpadButton(button, down),
       onTrackpadTap: (button) => onTrackpadTap(button),
       onTrackpadStrokeEnd: () => onTrackpadStrokeEnd(),
-      onTouchClick: (x, y, button) =>
+      onTouchClick: (x, y, button) => {
+        const epoch = mouseTrackEpoch;
         queueTouchOp(async () => {
-          mouseTrackTarget = { x, y };
-          await trackSettle();
-          coreMouseButton(button, 1);
-          await sleep(60);
-          coreMouseButton(button, 0);
-        }),
+          if (epoch !== mouseTrackEpoch) return;
+          // Keep this tap's position as later touches move the tracking target.
+          mouseTrackButtonTarget = { x, y };
+          try {
+            await trackSettle(1500);
+            if (epoch !== mouseTrackEpoch) return;
+            coreMouseButton(button, 1);
+            // A short pulse can fall between mouse polls while Cirrus is drawing.
+            await sleep(120);
+            if (np2.isBooted()) coreMouseButton(button, 0);
+            await sleep(60);
+          } finally {
+            if (epoch === mouseTrackEpoch) mouseTrackButtonTarget = null;
+          }
+        });
+      },
       onTouchDragStart: () =>
         queueTouchOp(async () => {
           await trackSettle();
@@ -2076,11 +2094,13 @@ function init(): void {
       offerFreeDosChoice: !diskSpecified,
       msDosBootUrl: !diskSpecified ? MSDOS2_BOOT_URL : undefined,
       msDos4BootUrl: !diskSpecified ? MSDOS4_BOOT_URL : undefined,
+      msDos4StartsKdesk: MSDOS4_STARTS_KDESK,
       k386BootUrl: !diskSpecified ? K386_BOOT_URL : undefined,
       k386HighColorBootUrl: !diskSpecified ? K386_HIGH_COLOR_BOOT_URL : undefined,
       kgui32BootUrl: !diskSpecified ? KGUI32_BOOT_URL : undefined,
       kgui32HighColorBootUrl: !diskSpecified ? KGUI32_HIGH_COLOR_BOOT_URL : undefined,
       kgui32FdBootUrl: !diskSpecified ? KGUI32_FD_BOOT_URL : undefined,
+      kgui32FdHighColorBootUrl: !diskSpecified ? KGUI32_FD_HIGH_COLOR_BOOT_URL : undefined,
       kgui32ExpandedBootUrl: !diskSpecified ? KGUI32_EXPANDED_BOOT_URL : undefined,
       kgui32ExpandedHighColorBootUrl: !diskSpecified ? KGUI32_EXPANDED_HIGH_COLOR_BOOT_URL : undefined,
       trackingEnabled: params.get('mousetrack') !== '0',

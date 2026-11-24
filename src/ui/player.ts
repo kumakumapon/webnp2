@@ -158,6 +158,7 @@ export interface PlayerOptions {
   msDosBootUrl?: string;
   /** Optional standalone-player link to the bundled DOS 4.0 + RetroBasic disk. */
   msDos4BootUrl?: string;
+  msDos4StartsKdesk?: boolean;
   k386BootUrl?: string;
   k386HighColorBootUrl?: string;
   kgui32BootUrl?: string;
@@ -165,6 +166,7 @@ export interface PlayerOptions {
   kgui32ExpandedBootUrl?: string;
   kgui32ExpandedHighColorBootUrl?: string;
   kgui32FdBootUrl?: string;
+  kgui32FdHighColorBootUrl?: string;
   /** false でマウス追従を無効化する(既定は有効)。 */
   trackingEnabled?: boolean;
   /**
@@ -632,57 +634,41 @@ export function buildPlayerUI(
   const freeDosBtn = options.offerFreeDosChoice
     ? el('button', { class: 'start-btn start-btn-freedos', type: 'button' }, [t('startBtnFreeDos')])
     : undefined;
-  // Use the existing fd1/run URL flow; embedded players need not offer this link.
-  const msDosHref = () => `${options.msDosBootUrl}&lang=${getLang()}`;
-  const msDosBtn = options.msDosBootUrl
-    ? el('a', { class: 'start-btn start-btn-msdos2', href: msDosHref() }, [t('startBtnMsDos2')])
-    : undefined;
-  const msDos4Href = () => `${options.msDos4BootUrl}&lang=${getLang()}`;
-  const msDos4Btn = options.msDos4BootUrl
-    ? el('a', { class: 'start-btn start-btn-msdos4', href: msDos4Href() }, [t('startBtnMsDos4')])
-    : undefined;
-  const k386Href = () => `${options.k386BootUrl}&lang=${getLang()}`;
-  const k386Btn = options.k386BootUrl
-    ? el('a', { class: 'start-btn start-btn-k386', href: k386Href() }, [t('startBtnK386')])
-    : undefined;
-  const k386HighColorHref = () => `${options.k386HighColorBootUrl}&lang=${getLang()}`;
-  const k386HighColorBtn = options.k386HighColorBootUrl
-    ? el('a', {class:'start-btn start-btn-k386-highcolor',href:k386HighColorHref()}, [t('startBtnK386HighColor')])
-    : undefined;
-  const kgui32Href = () => `${options.kgui32BootUrl}&lang=${getLang()}`;
-  const kgui32Btn = options.kgui32BootUrl
-    ? el('a', {class:'start-btn start-btn-kgui32',href:kgui32Href()}, [t('startBtnKgui32')])
-    : undefined;
-  const kgui32HighColorHref = () => `${options.kgui32HighColorBootUrl}&lang=${getLang()}`;
-  const kgui32HighColorBtn = options.kgui32HighColorBootUrl
-    ? el('a', {class:'start-btn start-btn-kgui32-highcolor',href:kgui32HighColorHref()}, [t('startBtnKgui32HighColor')])
-    : undefined;
-  const kgui32ExpandedHref = () => `${options.kgui32ExpandedBootUrl}&lang=${getLang()}`;
-  const kgui32ExpandedBtn = options.kgui32ExpandedBootUrl
-    ? el('a', {class:'start-btn start-btn-kgui32-expanded',href:kgui32ExpandedHref()}, [t('startBtnKgui32Expanded')]) : undefined;
-  const kgui32ExpandedHighColorHref = () => `${options.kgui32ExpandedHighColorBootUrl}&lang=${getLang()}`;
-  const kgui32ExpandedHighColorBtn = options.kgui32ExpandedHighColorBootUrl
-    ? el('a', {class:'start-btn start-btn-kgui32-expanded-highcolor',href:kgui32ExpandedHighColorHref()}, [t('startBtnKgui32ExpandedHighColor')]) : undefined;
-  const kgui32FdHref = () => `${options.kgui32FdBootUrl}&lang=${getLang()}`;
-  const kgui32FdBtn = options.kgui32FdBootUrl
-    ? el('a', {class:'start-btn start-btn-kgui32-fd',href:kgui32FdHref()}, [t('startBtnKgui32Fd')])
-    : undefined;
+  const bootLinks: Array<{ link: HTMLAnchorElement; url: string; label: () => string }> = [];
+  const bootLink = (url: string | undefined, className: string, label: () => string) => {
+    if (!url) return undefined;
+    const link = el('a', { class: `start-btn ${className}`, href: `${url}&lang=${getLang()}` }, [label()]);
+    bootLinks.push({ link, url, label });
+    return link;
+  };
+  const msDosBtn = bootLink(options.msDosBootUrl, 'start-btn-msdos2', () => t('startBtnMsDos2'));
+  const msDos4Btn = bootLink(options.msDos4BootUrl, 'start-btn-msdos4',
+    () => t(options.msDos4StartsKdesk ? 'startBtnKdesk' : 'startBtnMsDos4'));
+  const k386Btn = bootLink(options.k386BootUrl, 'start-btn-k386', () => t('startBtnK386'));
+  const k386HighColorBtn = bootLink(options.k386HighColorBootUrl, 'start-btn-k386-highcolor',
+    () => t('startBtnK386HighColor'));
+  const kgui32Btn = bootLink(options.kgui32BootUrl, 'start-btn-kgui32 start-btn-primary', () => t('startBtnKgui32'));
+  const profileLinks = [
+    bootLink(options.kgui32HighColorBootUrl, 'start-btn-kgui32-highcolor', () => t('startBtnKgui32HighColor')),
+    bootLink(options.kgui32ExpandedBootUrl, 'start-btn-kgui32-expanded', () => t('startBtnKgui32Expanded')),
+    bootLink(options.kgui32ExpandedHighColorBootUrl, 'start-btn-kgui32-expanded-highcolor',
+      () => t('startBtnKgui32ExpandedHighColor')),
+    bootLink(options.kgui32FdBootUrl, 'start-btn-kgui32-fd', () => t('startBtnKgui32Fd')),
+    bootLink(options.kgui32FdHighColorBootUrl, 'start-btn-kgui32-fd-highcolor', () => t('startBtnKgui32FdHighColor')),
+  ].filter(link => link !== undefined);
+  const profileSummary = el('summary', { class: 'start-btn' }, [t('kgui32BootOptions')]);
+  const bootProfiles = profileLinks.length ? el('details', { class: 'boot-profiles' }, [
+    profileSummary,
+    el('div', { class: 'boot-profile-links' }, profileLinks),
+  ]) : undefined;
   // ライブラリが空の場合もあるため既定は非表示。起動可否は非同期チェック後に表示する。
   const libraryStartBtn = el('button', { class: 'start-btn start-btn-library hidden', type: 'button' }, [
     t('overlayLibraryBtn'),
   ]);
-  const overlayButtonList: HTMLElement[] = [startBtn];
-  if (freeDosBtn) overlayButtonList.push(freeDosBtn);
-  if (msDosBtn) overlayButtonList.push(msDosBtn);
-  if (msDos4Btn) overlayButtonList.push(msDos4Btn);
-  if (k386Btn) overlayButtonList.push(k386Btn);
-  if (k386HighColorBtn) overlayButtonList.push(k386HighColorBtn);
-  if (kgui32Btn) overlayButtonList.push(kgui32Btn);
-  if (kgui32HighColorBtn) overlayButtonList.push(kgui32HighColorBtn);
-  if (kgui32ExpandedBtn) overlayButtonList.push(kgui32ExpandedBtn);
-  if (kgui32ExpandedHighColorBtn) overlayButtonList.push(kgui32ExpandedHighColorBtn);
-  if (kgui32FdBtn) overlayButtonList.push(kgui32FdBtn);
-  overlayButtonList.push(libraryStartBtn);
+  const overlayButtonList = (kgui32Btn
+    ? [kgui32Btn, bootProfiles, msDos4Btn, freeDosBtn, msDosBtn, startBtn, k386Btn, k386HighColorBtn, libraryStartBtn]
+    : [startBtn, freeDosBtn, msDosBtn, msDos4Btn, k386Btn, k386HighColorBtn, bootProfiles, libraryStartBtn]
+  ).filter(button => button !== undefined);
   const labelBootCards = (): void => {
     const descriptions = [
       [pendingBootMode ? undefined : startBtn, t('bootPlainDescription')],
@@ -696,7 +682,10 @@ export function buildPlayerUI(
     if (pendingBootMode) startBtn.removeAttribute('aria-description');
   };
   labelBootCards();
-  const overlayButtons = el('div', { class: 'overlay-choices' }, overlayButtonList);
+  const overlayButtons = el('div', {
+    class: kgui32Btn ? 'overlay-choices has-default-boot' : 'overlay-choices',
+  }, overlayButtonList);
+  const disklessNextChoice = startBtn.nextElementSibling;
   const bootFile = el('input', { type: 'file', class: 'fd-file-input', accept: `${FD_INPUT_ACCEPT},${HDD_INPUT_ACCEPT}` });
   const bootFileButton = el('button', { class: 'boot-file-picker', type: 'button' }, [t('driveChooseFile')]);
   bootFileButton.addEventListener('click', () => bootFile.click());
@@ -708,7 +697,9 @@ export function buildPlayerUI(
     if (kind) callbacks.onFilesDropped([{ file, kind }]);
     else alert(t('dropUnsupported'));
   });
-  const overlay = el('div', { class: 'overlay' }, [bootFileButton, bootFile, overlayButtons, overlayNote]);
+  const overlay = el('div', { class: 'overlay' }, kgui32Btn
+    ? [overlayButtons, bootFileButton, bootFile, overlayNote]
+    : [bootFileButton, bootFile, overlayButtons, overlayNote]);
 
   // ポーズ中オーバーレイ。起動前オーバーレイ(.overlay)とは別要素で、起動後にツールバーの
   // ポーズボタンから止めたときだけ出す(状態の扱いはbtnPauseの結線箇所のコメント参照)。
@@ -2998,7 +2989,14 @@ export function buildPlayerUI(
       if (!libraryBackdrop.classList.contains('hidden')) void refreshLibraryList();
     },
     setPendingBootMode(hasPending: boolean) {
+      if (pendingBootMode === hasPending) return;
       pendingBootMode = hasPending;
+      if (kgui32Btn) {
+        if (hasPending) overlayButtons.prepend(startBtn);
+        else overlayButtons.insertBefore(startBtn, disklessNextChoice);
+        startBtn.classList.toggle('start-btn-primary', hasPending);
+        kgui32Btn.classList.toggle('start-btn-primary', !hasPending);
+      }
       startBtn.textContent = startBtnLabel();
       labelBootCards();
     },
@@ -3009,35 +3007,10 @@ export function buildPlayerUI(
       startBtn.textContent = startBtnLabel();
       labelBootCards();
       if (freeDosBtn) freeDosBtn.textContent = t('startBtnFreeDos');
-      if (msDosBtn) {
-        msDosBtn.textContent = t('startBtnMsDos2');
-        msDosBtn.setAttribute('href', msDosHref());
-      }
-      if (k386Btn) {
-        k386Btn.textContent = t('startBtnK386');
-        k386Btn.href = k386Href();
-      }
-      if (k386HighColorBtn) {
-        k386HighColorBtn.textContent = t('startBtnK386HighColor');
-        k386HighColorBtn.href = k386HighColorHref();
-      }
-      if (kgui32Btn) {
-        kgui32Btn.textContent = t('startBtnKgui32');
-        kgui32Btn.href = kgui32Href();
-      }
-      if (kgui32HighColorBtn) {
-        kgui32HighColorBtn.textContent = t('startBtnKgui32HighColor');
-        kgui32HighColorBtn.href = kgui32HighColorHref();
-      }
-      if (kgui32ExpandedBtn) {kgui32ExpandedBtn.textContent = t('startBtnKgui32Expanded');kgui32ExpandedBtn.href = kgui32ExpandedHref();}
-      if (kgui32ExpandedHighColorBtn) {kgui32ExpandedHighColorBtn.textContent = t('startBtnKgui32ExpandedHighColor');kgui32ExpandedHighColorBtn.href = kgui32ExpandedHighColorHref();}
-      if (kgui32FdBtn) {
-        kgui32FdBtn.textContent = t('startBtnKgui32Fd');
-        kgui32FdBtn.href = kgui32FdHref();
-      }
-      if (msDos4Btn) {
-        msDos4Btn.textContent = t('startBtnMsDos4');
-        msDos4Btn.setAttribute('href', msDos4Href());
+      profileSummary.textContent = t('kgui32BootOptions');
+      for (const { link, url, label } of bootLinks) {
+        link.textContent = label();
+        link.href = `${url}&lang=${getLang()}`;
       }
       pauseOverlayText.textContent = t('pauseOverlayLabel');
       // 言語切替では状態(corePaused/pausedByUser)自体は変わらないため、そのままだと

@@ -46,13 +46,15 @@ try {
   await page.setViewport({ width: 390, height: 844 });
   await page.goto(new URL('?lang=en', base).href, { waitUntil: 'networkidle2' });
   await page.waitForSelector('.start-btn-msdos4');
-  assert.equal(await page.$eval('.start-btn-msdos4', el => el.textContent), 'Start with MS-DOS 4.0 + RetroBasic');
+  assert.equal(await page.$eval('.start-btn-msdos4', el => el.textContent),
+    manifest.desktop_autostart ? 'Start KDESK (compatibility)' : 'Start with MS-DOS 4.0 + RetroBasic');
   assert.equal(new URL(await page.$eval('.start-btn-msdos4', el => el.href)).searchParams.get('lang'), 'en');
   assert.ok(await page.$('.start-btn-msdos2'), 'MS-DOS 2.0 must remain available');
   assert.ok(await page.$('.start-btn-freedos'), 'FreeDOS must remain available');
   await page.goto(new URL('?lang=ja', base).href, { waitUntil: 'networkidle2' });
   await page.waitForSelector('.start-btn-msdos4');
-  assert.equal(await page.$eval('.start-btn-msdos4', el => el.textContent), 'MS-DOS 4.0 + RetroBasic で起動');
+  assert.equal(await page.$eval('.start-btn-msdos4', el => el.textContent),
+    manifest.desktop_autostart ? 'KDESK（互換用）で起動' : 'MS-DOS 4.0 + RetroBasic で起動');
   const boot = new URL(await page.$eval('.start-btn-msdos4', el => el.href));
   assert.equal(boot.searchParams.get('fd1'), `./msdos4/${manifest.image}`);
   assert.equal(boot.searchParams.get('run'), '1');

@@ -306,17 +306,16 @@
           <div class="lang-ja">
             <h2>起動する</h2>
             <p>
-              ページを開くと起動オーバーレイが表示されます。URLでディスクイメージを
-              指定していない場合は「そのまま起動」（イメージ無しで開始し、後から
-              ドラッグ&ドロップで読み込む）と「FreeDOS(98) で起動」（同梱の起動FDで
-              すぐに試す）、「MS-DOS 2.0 で起動」、
-              「MS-DOS 4.0 + RetroBasic で起動」（MIT License のPC-98移植版）の
-              4択が、URLでディスクを指定している場合は単一の
-              「クリックして起動」ボタンが表示されます。ライブラリに保存済みの
-              イメージがあれば「保存済みディスクから起動」も表示されます。
-              起動するのはこれらのボタンを押した場合だけで、余白をクリックしても起動しません。
+              公開版では、起動画面の先頭にある「KGUI32 で起動」をタップすると、
+              HDDから標準の32bitデスクトップが開きます。「KGUI32 の起動オプション」で
+              Cirrus、FD、拡張メモリを選べます。従来のデスクトップは「KDESK（互換用）で起動」を選びます。
+              FreeDOS(98)、MS-DOS 2.0、ディスク無しの起動も選べます。
             </p>
-            <img src="./help/overlay.png" alt="起動オーバーレイ。そのまま起動/FreeDOS(98)で起動などの選択ボタンが並ぶ" />
+            <p>
+              URLでディスクを指定した場合は「クリックして起動」を選びます。手元のディスクをセットした場合は
+              「セットしたディスクで起動」、ライブラリのイメージを使う場合は「保存済みディスクから起動」を選びます。
+            </p>
+            <img src="./help/overlay.png" alt="KGUI32と互換用KDESKを選べる起動画面" />
             <div class="note-box">
               「FreeDOS(98) で起動」で立ち上がるのは、コマンドを打って操作する DOS の画面です。
               何を打てばいいのか・どんなコマンドが使えるのかは
@@ -331,7 +330,7 @@
             </div>
             <div class="note-box">
               <a href="./?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&amp;run=1&amp;lang=ja">MS-DOS 4.0 + RetroBasic を起動</a>すると
-              <code>A&gt;</code> が表示されます。<code>VER</code> は 4.00、
+              公開版ではKDESKが開きます。F10で <code>A&gt;</code> に戻れます。<code>VER</code> は 4.00、
               <code>FD98</code> は二画面ファイラーです。F1でヘルプ、F5でコピー、F6で移動、
               F8で削除、F9でアプリ起動、F10で終了できます。
               <code>RBASIC</code> は BASIC の対話モード（<code>SYSTEM</code> で DOS に戻る）です。
@@ -355,18 +354,17 @@
           <div class="lang-en">
             <h2>Starting the emulator</h2>
             <p>
-              A start overlay appears when you open the page. If no disk image is
-              specified via URL, you get four choices: "Start As-Is" (start with no
-              image loaded, then drag & drop one afterward) or "Start with
-              FreeDOS(98)" (try it immediately with the bundled boot floppy), or
-              "Start with MS-DOS 2.0", or "Start with MS-DOS 4.0 + RetroBasic"
-              (the MIT-licensed PC-98 ports). If a
-              disk is specified via URL, a single "Click to Start" button is shown
-              instead. If saved images exist in the library, a "Boot from Saved
-              Disk" button also appears.
-              Only these buttons start the emulator; clicking empty overlay space does nothing.
+              Tap "Start KGUI32" at the top of the start overlay to boot the standard
+              32-bit desktop from HDD. Open "KGUI32 boot options" to select Cirrus, FD or
+              expanded memory. "Start KDESK (compatibility)" opens the classic desktop.
+              You can also start FreeDOS(98), MS-DOS 2.0, or the emulator without a disk.
             </p>
-            <img src="./help/overlay-en.png" alt="Start overlay showing Start As-Is / Start with FreeDOS(98) choices" />
+            <p>
+              If you specify a disk in the URL, select "Click to Start". If you insert
+              your own disk, select "Boot with the Selected Disks". Select "Boot from Saved
+              Disk" to use an image from your library.
+            </p>
+            <img src="./help/overlay-en.png" alt="Start overlay with the KGUI32 and KDESK boot choices" />
             <div class="note-box">
               "Start with FreeDOS(98)" boots into a DOS command line. For what to type and
               which commands are available, see
@@ -382,7 +380,7 @@
             </div>
             <div class="note-box">
               <a href="./?fd1=./msdos4/msdos4-retrobasic-98623b3c3241.xdf&amp;run=1&amp;lang=en">Boot MS-DOS 4.0 + RetroBasic</a>
-              to reach <code>A&gt;</code>. <code>VER</code> reports 4.00;
+              to open KDESK on the published site. Press F10 to return to <code>A&gt;</code>. <code>VER</code> reports 4.00;
               <code>FD98</code> starts the two-pane filer: F1 shows help, F5 copies,
               F6 moves, F8 deletes, F9 launches apps, and F10 exits.
               <code>RBASIC</code> starts interactive BASIC (<code>SYSTEM</code> returns to DOS).

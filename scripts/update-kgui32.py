@@ -219,7 +219,7 @@ def main():
                     'hdd':app_hdd,'directory':'APPS','relocated':list(RELOCATED),
                     'hdd_boot_supported':False}
     (destination/'manifest.json').write_text(json.dumps({
-        'enabled':True,'experimental':True,'image':name,'sha256':sha,
+        'enabled':True,'image':name,'sha256':sha,
         'source_commit':commit,'source_dirty':dirty,
         'base_image_sha256':base['sha256'],'omitted_base_fixtures':['DATA32.BIN'],'files':entries,'extended_memory_mb':16,
         'gui_bits':32,'dedicated_gui_context':True,'application_slots':2,

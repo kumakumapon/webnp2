@@ -67,11 +67,14 @@ interface Dict {
   startBtnFreeDos(): string;
   startBtnMsDos2(): string;
   startBtnMsDos4(): string;
+  startBtnKdesk(): string;
   startBtnK386(): string;
   startBtnK386HighColor(): string;
   startBtnKgui32(): string;
+  kgui32BootOptions(): string;
   startBtnKgui32HighColor(): string;
   startBtnKgui32Fd(): string;
+  startBtnKgui32FdHighColor(): string;
   startBtnKgui32Expanded(): string;
   startBtnKgui32ExpandedHighColor(): string;
   toolbarReset(): string;
@@ -565,13 +568,16 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnFreeDos: () => 'FreeDOS(98) で起動',
     startBtnMsDos2: () => 'MS-DOS 2.0 で起動',
     startBtnMsDos4: () => 'MS-DOS 4.0 + RetroBasic で起動',
+    startBtnKdesk: () => 'KDESK（互換用）で起動',
     startBtnK386: () => 'KDESK/386（実験版）で起動',
     startBtnK386HighColor: () => 'KDESK/386（800×600・65,536色）で起動',
-    startBtnKgui32: () => 'KGUI32（独立32bit GUI・実験版）で起動',
-    startBtnKgui32HighColor: () => 'KGUI32（800×600・65,536色・実験版）で起動',
-    startBtnKgui32Fd: () => 'KGUI32（FD互換起動・実験版）で起動',
-    startBtnKgui32Expanded: () => 'KGUI32（32MiB・アプリ4枠・実験版）で起動',
-    startBtnKgui32ExpandedHighColor: () => 'KGUI32（32MiB・アプリ4枠・65,536色）で起動',
+    startBtnKgui32: () => 'KGUI32 で起動',
+    kgui32BootOptions: () => 'KGUI32 の起動オプション',
+    startBtnKgui32HighColor: () => 'ハイカラー（Cirrus）',
+    startBtnKgui32Fd: () => 'FD 起動（PEGC）',
+    startBtnKgui32FdHighColor: () => 'FD 起動（Cirrus）',
+    startBtnKgui32Expanded: () => '拡張メモリ 32 MiB（PEGC）',
+    startBtnKgui32ExpandedHighColor: () => '拡張メモリ 32 MiB（Cirrus）',
     toolbarReset: () => '初期状態に戻す',
     toolbarFullscreen: () => 'フルスクリーン',
     toolbarMachineReset: () => 'マシンリセット',
@@ -986,13 +992,16 @@ const STRINGS: Record<Lang, Dict> = {
     startBtnFreeDos: () => 'Start with FreeDOS(98)',
     startBtnMsDos2: () => 'Start with MS-DOS 2.0',
     startBtnMsDos4: () => 'Start with MS-DOS 4.0 + RetroBasic',
+    startBtnKdesk: () => 'Start KDESK (compatibility)',
     startBtnK386: () => 'Start KDESK/386 (experimental)',
     startBtnK386HighColor: () => 'Start KDESK/386 (800×600, 65,536 colors)',
-    startBtnKgui32: () => 'Start KGUI32 (independent 32bit GUI, experimental)',
-    startBtnKgui32HighColor: () => 'Start KGUI32 (800×600, 65,536 colors, experimental)',
-    startBtnKgui32Fd: () => 'Start KGUI32 (FD compatibility, experimental)',
-    startBtnKgui32Expanded: () => 'Start KGUI32 (32 MiB, four apps, experimental)',
-    startBtnKgui32ExpandedHighColor: () => 'Start KGUI32 (32 MiB, four apps, 65,536 colors)',
+    startBtnKgui32: () => 'Start KGUI32',
+    kgui32BootOptions: () => 'KGUI32 boot options',
+    startBtnKgui32HighColor: () => 'High color (Cirrus)',
+    startBtnKgui32Fd: () => 'Boot from FD (PEGC)',
+    startBtnKgui32FdHighColor: () => 'Boot from FD (Cirrus)',
+    startBtnKgui32Expanded: () => 'Expanded memory 32 MiB (PEGC)',
+    startBtnKgui32ExpandedHighColor: () => 'Expanded memory 32 MiB (Cirrus)',
     toolbarReset: () => 'Reset to Original',
     toolbarFullscreen: () => 'Fullscreen',
     toolbarMachineReset: () => 'Reset Machine',

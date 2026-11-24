@@ -1,14 +1,14 @@
 # KGUI32 HDD保存基盤
 
-KGUI32の標準起動リンクは[HDDアプリ配置版](kgui32-hdd-apps.md)のFD＋HDDを指定します。
+公開版のKGUI32は[専用HDD](hdd-boot.md)から起動し、A:\WORKを使用します。
 この文書は保存APIと、従来の完全FD＋空のWork HDDによる回帰検証構成も説明します。
 Editorの保存と共通Open/Save Asは、ゲスト側で認識したHDDのWORKを使います。
 通常は **B:\WORK**、空きは初期状態で41,426,944バイトです。
 既存KDESKの標準イメージ、ユーザーが保存済みのディスクは置き換えません。
 
-## 起動と保存
+## FD＋Work用HDDの起動と保存
 
-1. 起動画面でKGUI32（PEGCまたはCirrus）を選びます。メモリは16 MiBです。
+1. 以下のURLでFDとWork用HDDを指定して、拡張メモリ16 MiBで起動します。
 2. Welcome → Editorを開き、Ctrl+Sで `NOTE.TXT` などを保存します。
 3. 共通ダイアログの `B:\WORK / HDD` と空き容量を確認します。
    `temp` は文書をクラスタ単位で切り上げた一時コピーの必要量です。

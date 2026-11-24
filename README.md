@@ -18,8 +18,9 @@ See [docs/DESIGN.md](docs/DESIGN.md) for design details.
 
 - **Live site**: <https://kumakumapon.github.io/webnp2/>
 - **MS-DOS 2.0 PC-98 auto-boot demo**: <https://kumakumapon.github.io/webnp2/?fd1=./msdos2/msdos2-pc98-06c61f748971.xdf&run=1>
-- **MS-DOS 4.0 + RetroBasic boot menu**: <https://kumakumapon.github.io/webnp2/?lang=en>
-  (choose **Start with MS-DOS 4.0 + RetroBasic** to use the current generated image)
+- **KGUI32 and KDESK boot menu**: <https://kumakumapon.github.io/webnp2/?lang=en>
+  **Start KGUI32** opens the standard 32-bit desktop from HDD with PEGC.
+  **KGUI32 boot options** offers Cirrus, FD and expanded memory. **Start KDESK (compatibility)** opens the classic desktop.
 - **FreeDOS(98) auto-boot demo**: <https://kumakumapon.github.io/webnp2/?freedos=1&run=1>
   (boots straight to the DOS prompt with no clicks; audio unmutes on your first click)
 
@@ -92,15 +93,11 @@ https://.../?hdd=<HDD image URL>&fd1=<FD1 image URL>&fd2=<FD2 image URL>&run=1&c
 | `alat` | Initial low-water mark of the AudioWorklet ring buffer, in ms | Lower is lower-latency but more prone to dropouts. Defaults to one core chunk (~23ms). Raised automatically when dropouts are detected |
 | `perf` | `1` shows a performance overlay (FPS / main-thread busy / audio supply) | For diagnosing slowdowns |
 
-If no `hdd`/`fd1`/`fd2`/`freedos` parameters are given, the start overlay offers
-three choices: "Start As-Is" (no image loaded — drag and drop an HDD/FD image
-onto the screen afterward) or "Start with FreeDOS(98)" (boots the bundled
-FreeDOS(98) floppy described below), or "Start with MS-DOS 2.0" (opens the
-bundled PC-98 port through the `fd1` auto-boot URL). If the Disk Library is not empty, a fourth
-"Boot from Saved Disk" button is also shown. If any disk is specified via URL
-parameters, the overlay instead shows the single traditional "Click to Start"
-button. Only the displayed buttons start the emulator; clicking empty overlay
-space does nothing, preventing accidental boots.
+On the published site, if no `hdd`/`fd1`/`fd2`/`freedos` parameter is given,
+the start overlay lists "Start KGUI32" first. It also offers KDESK (compatibility),
+FreeDOS(98), MS-DOS 2.0, and starting without a disk. "Boot from Saved Disk" also
+appears when the library contains images. If the URL specifies a disk, select
+"Click to Start". Add `run=1` to start automatically.
 
 **Important: any URL passed via `hdd`/`fd1`/`fd2` must be served from an origin
 with CORS (`Access-Control-Allow-Origin`) enabled.** Images are fetched with
@@ -322,7 +319,7 @@ separate saved disks. Full source/limits are in
 
 ### Bundled MS-DOS 4.0 + RetroBasic boot floppy
 
-Select **Start with MS-DOS 4.0 + RetroBasic** on the start overlay. The bundled
+Select **Start KDESK (compatibility)** on the published start overlay. The bundled
 1232 KiB FAT12 disk starts KDESK automatically. Press F10 for `A>`; `VER`
 reports **4.00**. Run `RBASIC` for
 interactive BASIC, or `RBASIC PRIMES.BAS`, `RBASIC GRAPHICS.BAS`, or
