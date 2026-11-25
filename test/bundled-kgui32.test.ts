@@ -131,8 +131,8 @@ describe('independent native PM32 GUI image',()=>{
   const disk=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
   const chart=fatReadFile(disk,'COLORS.BMP');
   const chartInfo=new DataView(chart.buffer,chart.byteOffset,chart.byteLength);
-  expect(manifest.fd_color_chart).toEqual({name:'COLORS.BMP',width:128,height:96});
-  expect([chartInfo.getInt32(18,true),chartInfo.getInt32(22,true),chartInfo.getUint16(28,true)]).toEqual([128,96,8]);
+  expect(manifest.fd_color_chart).toEqual({name:'COLORS.BMP',width:128,height:80});
+  expect([chartInfo.getInt32(18,true),chartInfo.getInt32(22,true),chartInfo.getUint16(28,true)]).toEqual([128,80,8]);
   expect(new Set(chart.subarray(chartInfo.getUint32(10,true))).size).toBe(256);
   const sample=fatReadFile(disk,'SAMPLE.BMP');expect(sample[0]).toBe(66);expect(sample[1]).toBe(77);
   const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(495);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
@@ -143,7 +143,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.process_api).toMatchObject({version:1,feature:512,helper:'K32PROC.EXE',gui_independent:true,parent_owns_children:true,generation_checked:true,message_bytes:64,pipe_bytes:512,stream_chunk_bytes:256,retains_original_on_failure:true});
   expect(manifest.image_transport).toMatchObject({request_bytes:3144,status_header_bytes:72,control_reply_bytes:72,successful_upload_roundtrip_bytes:3216,metrics_record:'KGXFER01'});
   expect(manifest.process_api).toMatchObject({shell_pipeline_commands:3,background_jobs:1,separate_console_stderr:true,independent_ipc:'receiver-admits-live-peer'});
-  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE','K32MIX.COM']);
+  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE','K32MIX.COM','KRESCHK.COM','K32MEM.EXE','K32CPU.COM']);
   expect(manifest.fd_omitted_aliases).toEqual(['EDIT98.EXE']);
   for(const [image,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
    const d=openDiskImage(readFileSync('public/kgui32/'+image),image);
