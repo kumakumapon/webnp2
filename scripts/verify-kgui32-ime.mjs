@@ -88,6 +88,13 @@ async function interfaceSuite(){
  await h.key('F8');s=await h.until(s=>s.editors[0]&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'English interface restored');assert.equal(s.editors[0].hash,fnv(sjis('Save画像')));assert(texts(s).some(t=>Buffer.from(t,'latin1').includes(sjis('Save画像'))),'document data is never translated');
  await clearDocument();await convert('fukkyuu','ふっきゅう');await h.key('ENTER');await doc('復旧');
  await h.key('F8');await h.until(s=>s.canvases[0]?.buttons.some(b=>b.id===603&&b.text===sjis('保存').toString('latin1')),'Japanese editor commands');
+ await h.key('CTRL+O');
+ await h.until(s=>s.editors[0]?.mode===2,'Confirm opening with an unsaved document');
+ await h.control(0,801);
+ const pickerLabels = [[701, '開く'], [702, '取消'], [703, 'ドライブ'], [704, '上']];
+ await h.until(s=>pickerLabels.every(([id,label])=>s.canvases[0]?.buttons.some(b=>b.id===id&&b.text===sjis(label).toString('latin1'))),'Japanese shared picker buttons');
+ await h.key('ESC');await h.until(s=>s.editors[0]?.mode===0&&s.canvases[0]?.controls.includes(603),'Return to the Japanese editor');
+ await doc('復旧');
  await h.key('F2');await h.click(292,266);s=await h.until(s=>s.editors[0]&&s.canvases[1]?.buttons.some(b=>b.id===19&&b.text===sjis('保存').toString('latin1')),'new Images instance adopts Japanese');
  const document=s.editors[0];await h.key('F8');s=await h.until(s=>s.editors[0]&&s.canvases[1]?.buttons.some(b=>b.id===19&&b.text==='Save')&&s.canvases[0]?.buttons.some(b=>b.id===601&&b.text==='New'),'both applications return to English');invariant(document,s.editors[0]);
  assert.equal(sha(await h.disk('hdd')),sha(original));await h.end(1);await h.end(0);await h.exit(vector);await h.unchangedFd();await h.closeContext();

@@ -21,10 +21,10 @@ async function tap(x, y) {
   assert.ok(box);
   await h.page().touchscreen.tap(box.x + x * box.width / gui.width, box.y + y * box.height / gui.height);
 }
-async function windowRect(id) {
+async function windowRect(id, expectedWindow) {
   const s = await h.guiUntil(app => app.frames, "Desktop window geometry");
   const handle = await h.page().waitForFunction(sampleGuiSurface, {
-    address: s.address, cookie: s.cookie, capacity: 2, id,
+    address: s.address, cookie: s.cookie, capacity: 2, id, expectedWindow,
   }, { timeout: 15_000 });
   try { return (await handle.jsonValue()).window; }
   finally { await handle.dispose(); }
@@ -223,7 +223,7 @@ try {
   vector = await h.bootHdd(saved);
   await find('calc');
   await owned('KGCALC.EXE');
-  assert.deepEqual(await windowRect(0), moved);
+  assert.deepEqual(await windowRect(0, moved), moved);
   await h.click(moved.x + 232, moved.y + 48);
   await h.until(s => s.cpu.views[0].state === 0, 'Calculator ended');
   await files();

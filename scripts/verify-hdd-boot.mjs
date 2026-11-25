@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {toolsHarness,sha,fnv} from './kgui32-tools-harness.mjs';
-import {inspectHdd,assertHddProtected} from './kgui32-hdd-fat.mjs';
+import {inspectHdd,assertHddProtected,assertOnlyRecentHistoryChanged} from './kgui32-hdd-fat.mjs';
 import {withAppFile,probe} from './v86-hdd-fixtures.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/hdd-boot',video='pegc',suite='boot']=process.argv.slice(2);
 assert(['boot','v86','rejection'].includes(suite));
@@ -26,9 +26,10 @@ async function boot(){
  await h.key('HOME');for(let i=0;i<12;i++)await h.key('DEL');await h.type('BOOTDOC.TXT');await h.key('ENTER');s=await h.until(s=>s.editors[0]?.mode===0&&!s.editors[0].dirty&&s.editors[0].hash===fnv(document),'Native HDD save');capture('HDD A: Editor saved',s);
  await h.key('F2');await h.click(268,230);s=await h.until(s=>s.apps[1]?.magic===0x3246474b&&s.apps[1].frames>0,'HDD Files peer');assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);
  const saved=await h.disk('hdd');assert.equal(assertHddProtected(original,saved).files.get('WORK/BOOTDOC.TXT').toString(),document);await h.unchangedFd();await h.shot('hdd-boot-files-editor.png');await h.exit(vector);assertHddProtected(original,await h.disk('hdd'));await h.closeContext();h.pass('Shipping HDD boots without either FD; real CPL3 APPS, verified A: Work save and complete GUI/DOS/XMS/handle/vector cleanup');
- vector=await h.bootHdd(saved);await h.launchEditor();location(await h.inspect());await h.open(0,'BOOTDOC.TXT');s=await h.until(s=>s.editors[0]?.hash===fnv(document),'HDD document survives cold boot');capture('Cold boot HDD readback',s);await same(saved);await h.shot('hdd-boot-cold.png');await h.exit(vector);await same(saved);
+ vector=await h.bootHdd(saved);await h.launchEditor();location(await h.inspect());await h.open(0,'BOOTDOC.TXT');s=await h.until(s=>s.editors[0]?.hash===fnv(document),'HDD document survives cold boot');capture('Cold boot HDD readback',s);await same(saved);await h.shot('hdd-boot-cold.png');await h.exit(vector);
+ const afterDesktop=await h.disk('hdd');assertOnlyRecentHistoryChanged(saved,afterDesktop);await h.unchangedFd();
  // Run the original native block-driver probe in real DOS after GUI teardown.
- await textUntil(/DOS fallback: type KDESK/,'Real DOS after HDD GUI');const before=await h.page().evaluate(()=>window.np2debug.np2.readMemoryBase64(0x1b*4,4).base64);await h.type('HDDTEST B\r');const text=await textUntil(/BOUNDS PASS/,'Native HDD transport bounds, 64K crossing, verify and partial failure');assert(text.includes('HDD DRIVE=A BPS=1024 SPC=4 CLUSTERS=10116'));assert.equal(await h.page().evaluate(()=>window.np2debug.np2.readMemoryBase64(0x1b*4,4).base64),before);await same(saved);await h.page().screenshot({path:join(output,'hdd-native-bounds.png')});await writeFile(join(output,'saved.thd'),saved);await h.closeContext();
+ await textUntil(/DOS fallback: type KDESK/,'Real DOS after HDD GUI');const before=await h.page().evaluate(()=>window.np2debug.np2.readMemoryBase64(0x1b*4,4).base64);await h.type('HDDTEST B\r');const text=await textUntil(/BOUNDS PASS/,'Native HDD transport bounds, 64K crossing, verify and partial failure');assert(text.includes('HDD DRIVE=A BPS=1024 SPC=4 CLUSTERS=10116'));assert.equal(await h.page().evaluate(()=>window.np2debug.np2.readMemoryBase64(0x1b*4,4).base64),before);await same(afterDesktop);await h.page().screenshot({path:join(output,'hdd-native-bounds.png')});await writeFile(join(output,'saved.thd'),saved);await h.closeContext();
  h.pass('Cold boot retains Work and immutable system/APPS files; actual built-in KHD98 driver passes native bounds/crossing/write-verify/partial-I/O tests and restores INT1B without media changes');
 }
 
@@ -40,7 +41,7 @@ async function v86(){
  await h.run(0,'DOSCMD.COM /C VER');s=await h.until(s=>s.cpu.views[0].state===0&&s.cpu.views[0].screen.includes('MS-DOS Version 4.00'),'Original COMMAND on A: HDD');assert.equal(s.cpu.views[0].exit,0);await same(bytes);
  await h.run(0,'HDDRUN.EXE HOLD');s=await h.until(s=>probe(s)?.stage===5&&s.cpu.views[0].state===2,'A: held HDD file');good(s,3);assert(s.resources.usage[0].handles>=6);await end();await h.until(s=>s.resources.usage[0].handles===0&&s.resources.usage[0].memoryKiB===0,'Forced HDD handle cleanup');
  await h.run(0,'HDDRUN.EXE X');s=await h.until(s=>probe(s)?.stage===5&&s.cpu.views[0].state===2,'HDD fault owner');good(s,3);const tick=s.apps[1].seconds;await h.key('Q');s=await h.until(s=>s.cpu.views[0].state===4,'Actual V86 page fault');assert.equal(s.cpu.views[0].fault,14);assert.equal(s.resources.usage[0].handles,0);await h.until(s=>s.apps[1].seconds!==tick,'PM32 peer survives HDD fault');capture('HDD V86 fault reclaimed',s);await end();
- await h.run(0,'VDOS.EXE FD');s=await h.until(s=>s.cpu.views[0].state===0&&probe(s)?.stage===9,'Fresh boot-root process');good(s,5);await same(bytes);await h.shot('hdd-boot-v86.png');await h.exit(vector);await same(bytes);await h.closeContext();h.pass('Actual A: HDD V86 long reads/seek, private CWD, write denial, owned DTA, inherited handles, long-environment EXEC, original COMMAND, PM32 progress and force/fault/fresh-root cleanup preserve the complete disk');
+ await h.run(0,'VDOS.EXE FD');s=await h.until(s=>s.cpu.views[0].state===0&&probe(s)?.stage===9,'Fresh boot-root process');good(s,5);await same(bytes);await h.shot('hdd-boot-v86.png');await h.exit(vector);assertOnlyRecentHistoryChanged(bytes,await h.disk('hdd'));await h.unchangedFd();await h.closeContext();h.pass('Actual A: HDD V86 long reads/seek, private CWD, write denial, owned DTA, inherited handles, long-environment EXEC, original COMMAND, PM32 progress and force/fault/fresh-root cleanup preserve the disk outside the saved GUI history');
 }
 
 async function rejection(){
