@@ -1,8 +1,9 @@
 // Runs in Chromium. Resolve current GUI pages through the resident driver's CR3
 // and verify that their physical pages belong to the same GUI allocation.
 /** @param {{address: number, cookie: number, manager: number, capacity: number, id: number,
+ * expectedWindow?: Partial<{x: number, y: number, w: number, h: number}>,
  * previous?: {generation: number, token: number, handle: number, revision: number, front: number, bytes: number}}} input */
-export function sampleGuiSurface({ address, cookie, manager, capacity, id, previous }) {
+export function sampleGuiSurface({ address, cookie, manager, capacity, id, previous, expectedWindow }) {
   const np2 = window.np2debug?.np2;
   const heap = window.Module?.HEAPU8;
   if (!np2 || !heap) return null;
@@ -42,6 +43,7 @@ export function sampleGuiSurface({ address, cookie, manager, capacity, id, previ
   if (u(192) !== 0x3153474b || u(132) !== capacity || id < 0 || id >= capacity) return null;
   const offset = id < 2 ? 84 + id * 24 : 144 + (id - 2) * 24;
   const windowRect = {x:u(offset), y:u(offset + 4), w:u(offset + 8), h:u(offset + 12)};
+  if (expectedWindow && !Object.entries(expectedWindow).every(([key, value]) => windowRect[key] === value)) return null;
   if (!previous) return {window: windowRect};
 
   const mux = read(manager, 264);

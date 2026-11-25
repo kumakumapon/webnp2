@@ -60,9 +60,10 @@ async function kuma(x) {
   await tap(x, 75);
   await caption(menu);
 }
-async function windowRect(id) {
+async function waitForWindow(id, expectedWindow) {
   const s = await h.guiUntil(a => a.frames, 'desktop');
-  const result = await h.page().waitForFunction(sampleGuiSurface, {address: s.address, cookie: s.cookie, capacity: 2, id}, {timeout: 15000});
+  const result = await h.page().waitForFunction(sampleGuiSurface,
+    {address: s.address, cookie: s.cookie, capacity: 2, id, expectedWindow}, {timeout: 30000});
   try { return (await result.jsonValue()).window; }
   finally { await result.dispose(); }
 }
@@ -190,11 +191,13 @@ async function clipboardAndPins() {
   await h.key('CTRL+K');
   await h.key('ENTER');
   await owned('KGCLOCK.EXE');
-  const rect = await windowRect(0);
+  const clock = await text('PC-98 / DOS wall clock');
+  const {width, height} = clock.canvases[0];
+  const rect = await waitForWindow(0, {w: width + 16, h: height + 104});
   await h.chord('GRPH', 'LEFT');
-  assert.equal((await windowRect(0)).x, 8);
+  await waitForWindow(0, {x: 8});
   await h.chord('GRPH', 'DOWN');
-  assert.deepEqual(await windowRect(0), rect);
+  await waitForWindow(0, rect);
   await h.chord('GRPH', 'F4', 180);
   await gone(0);
   h.pass('Images share exact RGB565 pixels and Undo; pin and Alt window commands work with guest keys');
