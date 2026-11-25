@@ -138,7 +138,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.process_api).toMatchObject({version:1,feature:512,helper:'K32PROC.EXE',gui_independent:true,parent_owns_children:true,generation_checked:true,message_bytes:64,pipe_bytes:512,stream_chunk_bytes:256,retains_original_on_failure:true});
   expect(manifest.image_transport).toMatchObject({request_bytes:3144,status_header_bytes:72,control_reply_bytes:72,successful_upload_roundtrip_bytes:3216,metrics_record:'KGXFER01'});
   expect(manifest.process_api).toMatchObject({shell_pipeline_commands:3,background_jobs:1,separate_console_stderr:true,independent_ipc:'receiver-admits-live-peer'});
-  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE']);
+  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE','K32MIX.COM']);
   expect(manifest.fd_omitted_aliases).toEqual(['EDIT98.EXE']);
   for(const [image,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
    const d=openDiskImage(readFileSync('public/kgui32/'+image),image);

@@ -231,11 +231,12 @@
   },
   "hdd-workspace": {
     "matrix": {"video": ["pegc", "cirrus"]},
-    "timeout": 45,
+    "timeout": 50,
     "base": "/webnp2/",
     "commands": [
       {"argv": ["scripts/verify-kgui32-hdd-workspace.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-workspace", "{video}"]},
-      {"argv": ["scripts/verify-kgui32-standard.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-standard", "{video}"]}
+      {"argv": ["scripts/verify-kgui32-standard.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-standard", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-workspace-shell.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-workspace-shell", "{video}"]}
     ]
   },
   "ime": {

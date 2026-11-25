@@ -27,7 +27,7 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
  async function name(value){await h.input(0,50,16,value);}
  async function save(id=0){await h.focus(id);await h.key('CTRL+S');return until(s=>accepted(s,id)&&!image(s,id)[14]&&!image(s,id)[13]&&!modal(s,id),'save complete '+id);}
  async function workOpen(value){await h.focus(0);let s=await waitImage();if(!(image(s)[15]&8)){await h.key('CTRL+W');await until(s=>image(s)?.[15]&8,'Work selected');}await name(value);await h.control(0,111);return until(s=>accepted(s)&&!image(s)[13]&&!image(s)[14],'Work open '+value);}
- async function finish(vector,before){const bytes=await h.disk('hdd');assertHddProtected(before,bytes);await h.exit(vector);await h.unchangedFd();await h.closeContext();return bytes;}
+ async function finish(vector,before){const bytes=await h.disk('hdd');assertHddProtected(before,bytes);await h.exit(vector,{discardImages:true});await h.unchangedFd();await h.closeContext();return bytes;}
  const inverse=sample.map(v=>v^65535),flipped=inverse.slice();
  for(let y=0;y<48;y++)for(let x=0;x<64;x++)flipped[y*64+x]=inverse[y*64+63-x];
  if(suite==='save'){
