@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {assertOnlyWindowLayoutChanged} from './kgui32-hdd-fat.mjs';
 import {toolsHarness,sha} from './kgui32-tools-harness.mjs';
 import {inspectTerminal} from './kgui32-terminal-inspect.mjs';
 import {cgGlyph} from './kgui32-shiftjis.mjs';
@@ -54,8 +55,11 @@ async function initial(id=0){
  await glyph(7,0,0x93fa,0x41,0,id);await glyph(7,1,0x93fa,0x81,1,id);await glyph(8,0,86,0xf1,0,id);
  h.pass('Real V86 DOS output, split INT21/INT29 SJIS, half-width kana, both private planes, exact CG-ROM pixels and PC-98 colours/effects');
 }
-async function finishBoot(vector,bytes=original,floppy=false){
- assert.equal(sha(await h.disk(floppy?'fd1':'hdd')),sha(bytes),'whole media unchanged');const s=await h.exit(vector);assert.equal(s.gui.stackGuard,1,'resident protected-stack sentinel intact');await h.unchangedFd();await h.closeContext();
+async function finishBoot(vector,bytes=original,floppy=false,moved=false){
+ const exported=await h.disk(floppy?'fd1':'hdd');
+ if(moved)assertOnlyWindowLayoutChanged(bytes,exported);
+ else assert.equal(sha(exported),sha(bytes),'whole media unchanged');
+ const s=await h.exit(vector);assert.equal(s.gui.stackGuard,1,'resident protected-stack sentinel intact');await h.unchangedFd();await h.closeContext();
 }
 async function paintSuite(){
  const vector=await h.bootHdd();await start();await initial();
@@ -72,7 +76,7 @@ async function paintSuite(){
  // Cursor is on row 2; use split INT29 row 3 for a pixel check after movement.
  await glyph(3,0,0x93fa,0xe1);h.pass('Right-half clipping and actual glyph pixels after mouse resize/move');
  const first=(await inspect()).cpu.views[0];await start(1);await command('a',v=>v.attributes[160]===0x41,'second terminal changes its own attributes',1);await h.focus(0);s=await until(s=>stable(s)&&stable(s,1),'two independent terminal snapshots');assert.equal(s.cpu.views[0].generation,first.generation);assert.equal(t(s).codes[160],0xfb26);assert.equal(t(s,1).codes[160],0xfc26);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);await glyph(3,0,0x93fa,0xe1);
- await finishBoot(vector);h.pass('Independent V86 terminal planes/generations, HDD-only shipping boot, stack guards and complete cleanup with whole-media invariance');
+ await finishBoot(vector,original,false,true);h.pass('Independent V86 terminal planes, HDD boot, protected disk data and complete cleanup with saved window layout');
 }
 async function buffered(){
  await command('i',v=>v.row===19&&v.column===6,'buffered DOS input');await h.page().evaluate(()=>window.np2debug.np2.pasteText('日本'));await until(s=>stable(s)&&t(s).codes[19*80+8]===0xdc2b,'committed SJIS reaches focused DOS input');await h.key('BS');await h.page().evaluate(()=>window.np2debug.np2.pasteText('ｶ\r'));

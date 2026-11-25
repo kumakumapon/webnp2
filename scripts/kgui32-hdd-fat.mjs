@@ -34,6 +34,17 @@ export function assertHddProtected(before,after){
  for(const name of b.entries.keys())assert(a.entries.has(name)||name==='WORK'||name.startsWith('WORK/'),'workspace additions only');
  if(a.entries.has('WORK'))assert.equal(b.entries.get('WORK')?.cluster,a.entries.get('WORK')?.cluster);return b;
 }
+export function assertOnlyWindowLayoutChanged(before, after) {
+ const original=inspectHdd(before),current=assertHddProtected(before,after);
+ const path='WORK/KGUILAY.DAT';
+ assert.equal(current.files.get(path)?.subarray(0,4).toString(),'KLY1');
+ for(const [name,record] of original.entries)if(name!==path){
+  assert.deepEqual(current.entries.get(name)?.raw,record.raw,name+' metadata');
+  assert.deepEqual(current.files.get(name),original.files.get(name),name+' contents');
+  assert.deepEqual(current.chains.get(name),original.chains.get(name),name+' allocation');
+ }
+ for(const name of current.entries.keys())assert.ok(name===path||original.entries.has(name),name+' unexpected');
+}
 function link(image,s,c,value){for(let i=0;i<2;i++)image.writeUInt16LE(value,s.fat+i*s.fatSectors*s.bps+c*2);}
 function directoryOffset(s,index){const c=s.chains.get('WORK')[Math.floor(index*32/s.clusterBytes)];assert(c);return s.data+(c-2)*s.clusterBytes+index*32%s.clusterBytes;}
 export function withHddFile(original,name,bytes,attr=32){

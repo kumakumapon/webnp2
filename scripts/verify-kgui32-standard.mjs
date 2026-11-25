@@ -97,7 +97,6 @@ try{
  await choose('SOURCE.BIN');await input(404,'BOX\\COPY.BIN');await waitText('Name already exists');
  await choose('GUARD.TXT');await input(406,'GUARD2.TXT');await waitText('TMP or BAK needs recovery');
  await choose('SOURCE.BIN');await input(405,'BOX\\MOVED.BIN');await waitText('Moved');
- await recycle('BOX','Only empty folders can be recycled');
  await choose('BOX');await button(408);
  await choose('MOVED.BIN');await input(406,'FINAL.BIN');await waitText('Renamed');
  await recycle('FINAL.BIN','In Trash');

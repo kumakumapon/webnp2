@@ -1,6 +1,7 @@
 // Actions-only acceptance: real single-finger Canvas taps, never RAM writes.
 import assert from 'node:assert/strict';
-import {sha,fnv} from './practical32-harness.mjs';
+import {fnv} from './practical32-harness.mjs';
+import {assertOnlyWindowLayoutChanged} from './kgui32-hdd-fat.mjs';
 import {shellInput} from './process32-tests.mjs';
 const ITEM=24576,BACK=24608,NEXT=24610;
 export async function menuTests(p,video){
@@ -129,6 +130,6 @@ export async function menuTests(p,video){
  await until(s=>samples(s)[8]===2&&samples(s)[7]===0xffffff7e,'visible Cancel reaps foreground child');
  await endByTap(0);
  p.pass('Single-finger EOF and Cancel reach the active protected shell through its terminal');
- const touch=await h.page().evaluate(()=>window.menuTouchProof);assert(touch.starts>40&&touch.ends>40);assert.equal(touch.right,0);assert.equal(sha(await h.disk('hdd')),sha(p.original));
- await p.cleanup(vector);p.pass('Actual browser touch events, zero right clicks, unchanged HDD/FD and complete CPU/XMS/handle reclamation',touch);
+ const touch=await h.page().evaluate(()=>window.menuTouchProof);assert(touch.starts>40&&touch.ends>40);assert.equal(touch.right,0);assertOnlyWindowLayoutChanged(p.original,await h.disk('hdd'));
+ await p.cleanup(vector);p.pass('Actual browser touch events, zero right clicks, only the intended HDD layout change, unchanged FD and complete CPU/XMS/handle reclamation',touch);
 }
