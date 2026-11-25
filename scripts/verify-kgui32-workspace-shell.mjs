@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {toolsHarness, fnv} from './kgui32-tools-harness.mjs';
-import {assertHddProtected, withHddFile, withHddFolder} from './kgui32-hdd-fat.mjs';
+import {assertHddProtected, inspectHdd, withHddFile, withHddFolder} from './kgui32-hdd-fat.mjs';
 import {sampleGuiSurface} from './kgui32-live-surface.mjs';
 
 const [base = 'http://127.0.0.1:4173/webnp2/', output = 'test-results/kgui32-workspace-shell', video = 'pegc'] =
@@ -128,9 +128,14 @@ async function nestedFiles() {
   await h.chord('GRPH', 'F4', 180);
   await gone(0);
   await kuma(61);
-  const pin = await caption(null, 246, 96, 64, 28);
-  await h.key('CTRL+P');
-  await caption(pin, 246, 96, 64, 28);
+  await tap(274, 110);
+  let history = [];
+  for (let i = 0; i < 10; i++) {
+    history = documentsOnDisk(inspectHdd(await h.disk('hdd')));
+    if (history.some(doc => doc.path === 'DOCS\\NESTED.TXT' && doc.pin === 1)) break;
+    await h.page().waitForTimeout(250);
+  }
+  assert(history.some(doc => doc.path === 'DOCS\\NESTED.TXT' && doc.pin === 1), 'The pin reaches the HDD before reopening');
   await tap(92, 110);
   await owned('KGEDIT.EXE');
   await document(nestedText);
@@ -141,11 +146,12 @@ async function fontAndReboot() {
   await h.until(s => s.gui.app.active === 3, 'Settings has keyboard focus');
   await h.key('p');
   await h.until(s => s.canvases[1]?.controls.includes(528), 'Preferences opened with the keyboard');
-  await h.chord('SHIFT', 'TAB');
+  await h.key('TAB');
+  await h.key('TAB');
   await h.key('ENTER');
   await h.until(s => s.canvases[1]?.buttons.some(b => b.id === 528 && b.text === 'Text: Large'), 'Large text selected');
-  await h.chord('SHIFT', 'TAB');
-  await h.chord('SHIFT', 'TAB');
+  await h.key('TAB');
+  await h.key('TAB');
   await h.key('ENTER');
   await h.until(s => s.canvases[0]?.largeText?.includes(nestedText), '16 x 32 document text');
   await h.key('ESC');
@@ -264,6 +270,16 @@ async function pairedDialog() {
   h.pass('The shared picker browses A: and verified B: and lights each disk activity indicator');
 }
 
+function documentsOnDisk(fat) {
+  const history = fat.files.get('WORK/KGUIHIST.DAT');
+  if (!history) return [];
+  assert.equal(history.readUInt32LE(0), 1);
+  return Array.from({length: history.readUInt32LE(8)}, (_, i) => {
+    const offset = 60 + i * 52;
+    return {path: history.toString('ascii', offset + 12, offset + 52).split('\0')[0], pin: history.readUInt32LE(offset + 8)};
+  });
+}
+
 try {
   const initial = await readFile(new URL('../public/kgui32/'+h.manifest.standalone_hdd.image, import.meta.url));
   let fixture = withHddFolder(withHddFolder(initial, 'DOCS'), 'STAGE.TMP');
@@ -280,13 +296,8 @@ try {
   assert.equal(saved.files.get('WORK/DOCS/NESTED.TXT').toString(), rebootText);
   assert.equal(saved.files.get('WORK/KGUIPREF.DAT').readUInt32LE(20), 1);
   assert.ok(saved.files.get('WORK/KGUIPINS.DAT').readUInt32LE(4));
-  const history = saved.files.get('WORK/KGUIHIST.DAT');
-  assert.equal(history.readUInt32LE(0), 1);
-  assert.ok(history.readUInt32LE(4) > 1);
-  const documents = Array.from({length: history.readUInt32LE(8)}, (_, i) => {
-    const offset = 60 + i * 52;
-    return {path: history.toString('ascii', offset + 12, offset + 52).split('\0')[0], pin: history.readUInt32LE(offset + 8)};
-  });
+  assert.ok(saved.files.get('WORK/KGUIHIST.DAT').readUInt32LE(4) > 1);
+  const documents = documentsOnDisk(saved);
   assert.deepEqual(documents.find(doc => doc.path === 'DOCS\\NESTED.TXT'), {path: 'DOCS\\NESTED.TXT', pin: 1});
   await h.unchangedFd();
   await h.exit(vector);

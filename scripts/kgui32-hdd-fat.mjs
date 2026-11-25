@@ -71,18 +71,20 @@ export function withHddFile(original,name,bytes,attr=32){
  inspectHdd(image);return image;
 }
 export function withHddFolder(original,name){
- const image=Buffer.from(original),s=inspectHdd(image),[base,ext='']=name.split('.');
+ const image=Buffer.from(original),s=inspectHdd(image),slash=name.lastIndexOf('/');
+ const directory=slash<0?'WORK':'WORK/'+name.slice(0,slash);
+ const [base,ext='']=name.slice(slash+1).split('.');
  assert.match(base,/^[A-Z0-9_]{1,8}$/);assert.match(ext,/^[A-Z0-9_]{0,3}$/);
  let cluster=2;while(cluster<=s.clusters+1&&s.next(cluster))cluster++;
  assert(cluster<=s.clusters+1);link(image,s,cluster,0xffff);
- let index=2;while(image[directoryOffset(s,index)])index++;
- const at=directoryOffset(s,index);
+ let index=2;while(image[directoryOffset(s,index,directory)])index++;
+ const at=directoryOffset(s,index,directory);
  image.fill(0,at,at+32);
  image.write(base.padEnd(8)+ext.padEnd(3),at,'ascii');image[at+11]=16;
  image.writeUInt16LE(0x21,at+24);image.writeUInt16LE(cluster,at+26);
  const start=s.data+(cluster-2)*s.clusterBytes;
  image.fill(0,start,start+s.clusterBytes);
- for(const [i,entry,target] of [[0,'.',cluster],[32,'..',s.entries.get('WORK').cluster]]){
+ for(const [i,entry,target] of [[0,'.',cluster],[32,'..',s.entries.get(directory).cluster]]){
   image.write(entry.padEnd(11),start+i,'ascii');image[start+i+11]=16;
   image.writeUInt16LE(target,start+i+26);
  }

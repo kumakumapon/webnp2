@@ -64,7 +64,7 @@ RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGSET.EXE', 'KGFILES.EXE
 
 # Keep the original K386 diagnostics and the duplicate DOS editor executable
 # on their own disks. The complete GUI floppy still includes EDIT.EXE.
-FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE', 'K32MIX.COM')
+FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE', 'K32MIX.COM', 'KRESCHK.COM', 'K32MEM.EXE', 'K32CPU.COM')
 FD_OMITTED_ALIASES = ('EDIT98.EXE',)
 FD_OMITTED = FD_OMITTED_DIAGNOSTICS + FD_OMITTED_ALIASES
 FD_KDESK_GUIDE = (
@@ -268,8 +268,9 @@ def main():
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
         'shortened_base_guides':['K386.TXT'],
         'shortened_fd_guides':['KDESK.TXT'],
-        'fd_color_chart':{'name':'COLORS.BMP','width':128,'height':96},
-        'shared_kdesk_image':{'file':'WORK/KGCLIP.BMP','verified_hdd':True,'max_width':128,'max_height':128},
+        'fd_color_chart':{'name':'COLORS.BMP','width':128,'height':80},
+        'shared_kdesk_image':{'file':'WORK/KGCLIP.BMP','verified_hdd':True,'max_width':256,'max_height':192,'pixel_format':'RGB565 in BMP24'},
+        'shared_kdesk_text':{'file':'WORK/KGTEXT.TXT','verified_hdd':True,'encoding':'shift-jis','max_bytes':1024},
         'practical_sdk':{'version':1,'abi':258,'resource_descriptor':'K32RES01','private_bytes':4194304,'stack_min_bytes':4096,'stack_max_bytes':262144,'guard_pages':1,'diagnostic':'PRACT32.EXE','diagnostic_stack_bytes':65536,'min_heap_bytes':1048576},
         'common_io':{'version':1,'feature':256,'helper':'K32IO.EXE','max_bytes':1048576,'chunk_bytes':4096,'gui_independent':True,'revision_checked':True,'explicit_recovery':True,'retains_original_on_failure':True},
         'image_transport':{'version':1,'request_bytes':3144,'status_header_bytes':72,'control_reply_bytes':72,'successful_upload_roundtrip_bytes':3216,'metrics_record':'KGXFER01','copy_width_bytes':4,'owner_metadata_updates':1},
