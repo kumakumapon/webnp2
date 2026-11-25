@@ -37,10 +37,16 @@ try{
  pass('actual CPL3 multiline document, selection, clipboard and undo/redo');
  await key('F2');await until(s=>s.gui.app.active===0,'launcher');await click(130,266);s=await until(s=>s.editors[1]?.frames>0&&!s.editors[1].error,'peer editor');await key('CTRL+V');s=await until(s=>s.editors[1]?.hash===fnv('alpha\nbravo'),'cross process paste');assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);assert.equal(s.editors[0].hash,fnv('X'));assert.ok(s.editors[0].heartbeat>1);
  pass('clipboard copies between independently mapped editors without altering source');
- await key('CTRL+E');await type('!');s=await until(s=>s.editors[1]?.hash===fnv('alpha\nbravo!'),'editing keys do not end task');const gen=s.cpu.views[1].generation;
- await key('F10');await until(s=>s.editors[1]?.mode===2&&s.editors[0]?.mode===2,'desktop exit confirmation');await key('ESC');await until(s=>s.editors[1]?.mode===0,'cancel desktop exit');assert.equal((await inspect()).cpu.views[1].generation,gen);
- // Return to source and cancel its pending request, then test its title X.
- await click(330,height-16);await key('ESC');await until(s=>s.editors[0]?.mode===0,'cancel source request');await click(596,56);await until(s=>s.editors[0]?.mode===2&&s.canvases[0]?.controls.includes(801),'title close confirmation');if(video==='cirrus'){await drag(600,454,600,302);await until(s=>s.canvases[0]?.height===168&&s.canvases[0]?.controls.includes(801),'modal resized to minimum');}await key('ESC');await until(s=>s.editors[0]?.mode===0&&s.canvases[0]?.controls.includes(601),'cancel title close');if(video==='cirrus'){await drag(600,302,600,454);await until(s=>s.canvases[0]?.height===320&&s.canvases[0]?.controls.includes(601),'document layout restored');}await type('Y');await until(s=>s.editors[0]?.hash===fnv('XY'),'text retained after close cancellation');
+ await key('CTRL+E');await type('!');s=await until(s=>s.editors[1]?.hash===fnv('alpha\nbravo!'),'editing keys do not end task');
+ const generations=s.cpu.views.map(v=>v.generation);
+ await key('F10');
+ s=await until(s=>s.editors[1]?.mode===2,'desktop exit confirmation on the active editor');
+ assert.equal(s.editors[0].mode,0);
+ await key('ESC');
+ s=await until(s=>s.editors.every(editor=>editor?.mode===0),'cancel desktop exit without closing either editor');
+ assert.deepEqual(s.cpu.views.map(v=>v.generation),generations);
+ assert.deepEqual(s.editors.map(editor=>editor.hash),[fnv('X'),fnv('alpha\nbravo!')]);
+ await click(330,height-16);await click(596,56);await until(s=>s.editors[0]?.mode===2&&s.canvases[0]?.controls.includes(801),'title close confirmation');if(video==='cirrus'){await drag(600,454,600,302);await until(s=>s.canvases[0]?.height===168&&s.canvases[0]?.controls.includes(801),'modal resized to minimum');}await key('ESC');await until(s=>s.editors[0]?.mode===0&&s.canvases[0]?.controls.includes(601),'cancel title close');if(video==='cirrus'){await drag(600,302,600,454);await until(s=>s.canvases[0]?.height===320&&s.canvases[0]?.controls.includes(601),'document layout restored');}await type('Y');await until(s=>s.editors[0]?.hash===fnv('XY'),'text retained after close cancellation');
  pass('Ctrl+E remains an editing key; title X and F10 negotiate and allow cancellation');
  await key('CTRL+N');await until(s=>s.editors[0]?.mode===2,'new confirmation');await key('d');await until(s=>s.editors[0]?.bytes===0&&!s.editors[0].dirty,'new after discard');
  await key('CTRL+O');await until(s=>s.editors[0]?.mode===1,'common picker');await type('EDITTEST.TXT');await key('TAB');await key('ENTER');s=await until(s=>s.editors[0]?.mode===0&&s.editors[0]?.hash===fnv('EDITOR FIXTURE\nSecond line\n'),'actual file contents');assert.equal(s.editors[0].dirty,0);assert.equal(s.cpu.diagnostics[0].pm32.openFiles,0);
