@@ -14,8 +14,12 @@ webnp2の公開版では、KGUI32を標準のデスクトップとして配布�
 HDD起動時のEditorの保存先はA:\WORKです。拡張メモリの詳細は[実行枠・メモリ拡張](kgui32-expanded.md)を参照してください。
 詳しくは[HDD単独起動](hdd-boot.md)と[HDD保存基盤](kgui32-hdd-workspace.md)。
 
+- **Kuma** からシステム情報、設定、DOS、アプリ検索、ウィンドウ切替を開けます。Alt+Tab（PC-98のGRPH+Tab）または一覧のタップで切り替えます。専用HDDではアプリごとの位置・サイズとスナップ状態を復元します。
 - タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
-- WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2またはCtrl+Kで戻ります。
+- Filesの **Drives** からWork・A:・認識済みの対応HDDを選びます。Workではフォルダをコピー、移動、ごみ箱から復元できます。
+- Settingsの **Desktop preferences** でコントラスト、日英、IMEの既定値を保存できます。EditorとImagesの開く・名前を付けて保存は共通画面です。
+- KGUI32のFDに収録する `KDESK.TXT` は互換起動と主要操作の早見表です。完全版のガイドはHDDとKDESK起動FDに収録しています。
+- WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2で戻ります。Ctrl+Kはアプリ検索を開きます。
 - **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。
 - DOSウィンドウのRun（Ctrl+L）でコマンドを入力しEnter。実行中のルートは先にEnd。
   例: `COUNT32.EXE 1`、`VIEW32.EXE VIEWDATA.TXT`。Escで入力を取り消し。

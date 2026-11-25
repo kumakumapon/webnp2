@@ -116,10 +116,17 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.dos_terminal_modes).toMatchObject({version:2,helper:'KV98VID.EXE',diagnostic:'KVTERM.COM',columns:[40,80],rows:[20,25],gaiji_glyphs:188,private_vram_bytes:262144,graphics_pages:2,independent_access_display_pages:true,graphics_colors:16,semigraphics:true,snapshot_chunk_bytes:848,read_only:true});
   expect(manifest.dos_terminal).toMatchObject({version:2,columns:80,rows:25,character_plane:'pc98-tvram-u16',attribute_plane:'pc98-u16',snapshot_bytes:8032,transport_chunk_bytes:992,shift_jis_output:true,pc98_attributes:true,blink:true,diagnostic:'TERM98.COM'});
   expect(manifest.shortened_base_guides).toEqual(['K386.TXT']);
+  expect(manifest.shortened_fd_guides).toEqual(['KDESK.TXT']);
   for(const image of [manifest.image,manifest.application_distribution.image,manifest.standalone_hdd.image]){
    const disk=openDiskImage(readFileSync('public/kgui32/'+image),image);
    expect(fatReadFile(disk,'TERM98.COM').length).toBeGreaterThan(100);
    const guide=fatReadFile(disk,'K386.TXT');expect(guide.length).toBeLessThan(4096);expect(new TextDecoder().decode(guide)).toContain('TERM98.COM');
+   const kdesk=fatReadFile(disk,'KDESK.TXT');
+   if(image===manifest.standalone_hdd.image)expect(kdesk.length).toBeGreaterThan(4096);
+   else {
+    expect(kdesk.length).toBeLessThanOrEqual(1024);
+    expect(new TextDecoder().decode(kdesk)).toContain('then type KDESK');
+   }
   }
   const disk=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
   const sample=fatReadFile(disk,'SAMPLE.BMP');expect(sample[0]).toBe(66);expect(sample[1]).toBe(77);

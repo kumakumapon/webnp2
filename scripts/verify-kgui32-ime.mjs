@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {toolsHarness,fnv,sha} from './kgui32-tools-harness.mjs';
-import {withHddFile,inspectHdd,assertHddProtected} from './kgui32-hdd-fat.mjs';
+import {withHddFile,inspectHdd,assertHddProtected,assertOnlyWindowLayoutChanged} from './kgui32-hdd-fat.mjs';
 import {assertProtected,inspectFat} from './kgui32-workspace-fat.mjs';
 import {withFdWorkFile} from './kgui32-tools-fixtures.mjs';
 import {cgGlyph,sjisUnits} from './kgui32-shiftjis.mjs';
@@ -52,8 +52,8 @@ async function inputSuite(){
  h.pass('Find and Replace fields compose Japanese directly, replace atomically and Undo restores the original document');
  await h.type('konnichiha');const private0=(await pre('こんにちは')).imes[0];await h.launchEditor(1);const second=await idle(1);assert.equal(second.imes[1].scheme,0);await h.key('F4');await convert('gakkou','がっこう',1);await h.key('ENTER');await doc('がっこう',1);
  await h.focus(0);s=await pre('こんにちは');assert.equal(s.imes[0].hash,private0.hash);assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);const tick=s.editors[1].heartbeat;await h.dragToMaximum(0);await pre('こんにちは');await h.until(s=>s.editors[1]?.heartbeat>tick,'Peer progresses during IME');assert((await h.inspect()).canvases[0].count<=40);
- await h.key('ESC');await idle();await h.end(1);await h.end(0);assert.equal(sha(await h.disk('hdd')),sha(original));await h.exit(vector);await h.unchangedFd();await h.closeContext();
- h.pass('Two independent Editor IMEs preserve preedit over focus/resize, peer progress and complete resource cleanup with whole-media invariance');
+ await h.key('ESC');await idle();await h.end(1);await h.end(0);assertOnlyWindowLayoutChanged(original,await h.disk('hdd'));await h.exit(vector);await h.unchangedFd();await h.closeContext();
+ h.pass('Two independent Editor IMEs preserve preedit over focus/resize, peer progress and complete resource cleanup; only window layout is written');
 }
 async function lifecycleSuite(){
  const wide=Buffer.alloc(65536,120),fixture=withHddFile(withHddFile(original,'IME.TXT',Buffer.from('BASE\r\n')),'WIDE.TXT',wide);
