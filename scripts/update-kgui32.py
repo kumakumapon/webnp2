@@ -207,13 +207,15 @@ def main():
     autoexec = b'@ECHO OFF\r\nECHO KGUI32 independent desktop\r\nK386.EXE\r\nK32IO.EXE\r\nK32HOST.EXE\r\nKV98VID.EXE\r\nK32PROC.EXE\r\nKGUILDR.EXE\r\nECHO DOS fallback: type KDESK\r\n'
     helper = module('kgui32_image', source/'ports/pc98/image.py')
     excluded = {'IO.SYS','MSDOS.SYS','COMMAND.COM','AUTOEXEC.BAT','DOSLIC.TXT'}
-    fd_files = {**files, 'KDESK.TXT': FD_KDESK_GUIDE}
+    # Preserve all 256 swatches at a smaller size on capacity-limited floppies.
+    fd_files = {**files, 'KDESK.TXT': FD_KDESK_GUIDE,
+                'COLORS.BMP': (source/'tools/window/build/COLORS-FD.BMP').read_bytes()}
     image, entries = helper.make_image(original[:1024], files['IO.SYS'],
         [(name,data) for name,data in fd_files.items() if name not in excluded and name not in FD_OMITTED],
         kernel=files['MSDOS.SYS'],command=files['COMMAND.COM'],autoexec=autoexec)
     entries.append(add_workspace(image))
     if fd_free(image) < 8192:
-        raise ValueError('The complete KGUI32 FD must leave at least 8 KiB free in Work')
+        raise ValueError(f'The complete KGUI32 FD needs 8 KiB free in Work, has {fd_free(image)} bytes')
     sha = hashlib.sha256(image).hexdigest()
     destination = root/'public/kgui32'
     destination.mkdir(exist_ok=True)
@@ -266,6 +268,8 @@ def main():
                         'shift_jis_output':True,'pc98_attributes':True,'blink':True,'diagnostic':'TERM98.COM'},
         'shortened_base_guides':['K386.TXT'],
         'shortened_fd_guides':['KDESK.TXT'],
+        'fd_color_chart':{'name':'COLORS.BMP','width':128,'height':96},
+        'shared_kdesk_image':{'file':'WORK/KGCLIP.BMP','verified_hdd':True,'max_width':128,'max_height':128},
         'practical_sdk':{'version':1,'abi':258,'resource_descriptor':'K32RES01','private_bytes':4194304,'stack_min_bytes':4096,'stack_max_bytes':262144,'guard_pages':1,'diagnostic':'PRACT32.EXE','diagnostic_stack_bytes':65536,'min_heap_bytes':1048576},
         'common_io':{'version':1,'feature':256,'helper':'K32IO.EXE','max_bytes':1048576,'chunk_bytes':4096,'gui_independent':True,'revision_checked':True,'explicit_recovery':True,'retains_original_on_failure':True},
         'image_transport':{'version':1,'request_bytes':3144,'status_header_bytes':72,'control_reply_bytes':72,'successful_upload_roundtrip_bytes':3216,'metrics_record':'KGXFER01','copy_width_bytes':4,'owner_metadata_updates':1},

@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
-import {inspectHdd,assertHddProtected,withHddFile} from './kgui32-hdd-fat.mjs';
+import {inspectHdd,assertHddProtected,assertOnlyRecentHistoryChanged,withHddFile} from './kgui32-hdd-fat.mjs';
 import {inspectFat,assertProtected} from './kgui32-workspace-fat.mjs';
 const [base='http://127.0.0.1:4183/',output='test-results/files-editor',video='pegc',only='all']=process.argv.slice(2);
 assert(['pegc','cirrus'].includes(video));assert(['all','roundtrip','rejected','fallback'].includes(only));
@@ -129,7 +129,7 @@ async function rejected(){
   const generation=(await inspect()).cpu.views[1].generation;await focus(1);await key('CTRL+L');await type('KGEDIT.EXE '+args+'\r');
   s=await until(s=>s.cpu.views[1].generation>generation&&s.editors[1]?.frames>0&&s.canvases[1]?.texts.includes(message),'startup rejects '+args);assert.equal(s.editors[1].bytes,0);assert.equal(s.editors[1].dirty,0);assert.equal(s.cpu.diagnostics[1].pm32.openFiles,0);await end(1);
  }
- await exit(old);assert.equal(sha(await disk('hdd')),sha(bytes));assert.equal(sha(await disk('fd1')),sha(original));await ctx.close();pass('large selection refuses launch; binary, missing, path and namespace startup requests cannot create a dirty document or alter disks');
+ await exit(old);assertOnlyRecentHistoryChanged(bytes,await disk('hdd'));assert.equal(sha(await disk('fd1')),sha(original));await ctx.close();pass('large selection refuses launch; binary, missing, path and namespace startup requests cannot create a dirty document or modify existing disk contents');
 }
 async function fallback(){
  const legacy=await readFile(new URL('../public/kgui32/'+legacyImage,import.meta.url)),root=inspectFat(legacy).files.get('EDITTEST.TXT');assert(root);

@@ -42,14 +42,14 @@ async function tap(x, y) {
   assert.ok(box);
   await h.page().touchscreen.tap(box.x + x * box.width / gui.width, box.y + y * box.height / gui.height);
 }
-async function caption(previous = null) {
-  const result = await h.page().waitForFunction(previous => {
+async function caption(previous = null, x = 16, y = 39, width = 132, height = 16) {
+  const result = await h.page().waitForFunction(({previous, x, y, width, height}) => {
     const crop = window.document.createElement('canvas');
-    crop.width = 132; crop.height = 16;
-    crop.getContext('2d').drawImage(window.document.querySelector('#canvas'), 16, 39, 132, 16, 0, 0, 132, 16);
+    crop.width = width; crop.height = height;
+    crop.getContext('2d').drawImage(window.document.querySelector('#canvas'), x, y, width, height, 0, 0, width, height);
     const now = crop.toDataURL();
     return now !== previous && now;
-  }, previous, {timeout: 20_000});
+  }, {previous, x, y, width, height}, {timeout: 20_000});
   try { return await result.jsonValue(); }
   finally { await result.dispose(); }
 }
@@ -73,7 +73,7 @@ const nestedText = 'Saved in Docs';
 const rebootText = 'Saved at restart';
 const leftover = Buffer.from('A fragment from the interrupted folder copy\r\n');
 
-async function restoreTmp() {
+async function restoreTmp(fixture) {
   await launch('files', 'KGFILES.EXE');
   await button(104);
   await button(106);
@@ -81,6 +81,13 @@ async function restoreTmp() {
   await text('TMP folders / may be incomplete');
   await chooseRow('STAGE.TMP');
   await button(407);
+  await text('Preview STAGE.TMP');
+  await text('CHUNK.TXT');
+  await text('Read-only preview');
+  const before = assertHddProtected(fixture, await h.disk('hdd'));
+  assert.deepEqual(before.files.get('WORK/STAGE.TMP/CHUNK.TXT'), leftover);
+  assert.equal(before.entries.has('WORK/SALVAGED'), false);
+  await h.key('r');
   const modal = await text('Recover incomplete TMP folder');
   await h.input(0, 32, Math.floor((modal.canvases[0].height - 152)/2) + 42, 'SALVAGED', 0);
   await button(410);
@@ -121,6 +128,9 @@ async function nestedFiles() {
   await h.chord('GRPH', 'F4', 180);
   await gone(0);
   await kuma(61);
+  const pin = await caption(null, 246, 96, 64, 28);
+  await h.key('CTRL+P');
+  await caption(pin, 246, 96, 64, 28);
   await tap(92, 110);
   await owned('KGEDIT.EXE');
   await document(nestedText);
@@ -165,6 +175,26 @@ async function fontAndReboot() {
   await h.key('CTRL+K');
   await h.key('ENTER');
   await owned('KGCLOCK.EXE');
+  await h.until(s => s.canvases[0]?.largeText.some(value => /^\d\d:\d\d:\d\d$/.test(value)), 'Clock uses large digits after restart');
+  await h.chord('GRPH', 'F4', 180);
+  await gone(0);
+  const closed = await caption();
+  await h.chord('SHIFT', 'CTRL+K', 180);
+  const menu = await caption(closed);
+  await h.key('r');
+  await caption(menu);
+  await h.key('ENTER');
+  await owned('KGEDIT.EXE');
+  await document(rebootText);
+  await h.key('CTRL+O');
+  await h.until(s => s.canvases[0]?.largeText.includes('DOCS'), 'Shared picker lists folders with large glyphs');
+  await h.key('CTRL+F');
+  await h.type('DOCS');
+  await h.key('DOWN');
+  await h.key('ENTER');
+  await text('Open / A:\\WORK\\DOCS');
+  await h.until(s => s.canvases[0]?.largeText.includes('NESTED.TXT'), 'Keyboard opens folder in large picker');
+  await h.key('ESC');
   await h.chord('GRPH', 'F4', 180);
   await gone(0);
   h.pass('Large text applies live and restart honours Cancel and Save, then reloads the pinned app');
@@ -203,14 +233,27 @@ async function clipboardAndPins() {
   h.pass('Images share exact RGB565 pixels and Undo; pin and Alt window commands work with guest keys');
 }
 
+async function lamp(x, active) {
+  const handle = await h.page().waitForFunction(({x, active}) => {
+    const scratch = document.createElement('canvas');
+    scratch.width = scratch.height = 1;
+    const pixels = scratch.getContext('2d');
+    pixels.drawImage(document.querySelector('#canvas'), x, 14, 1, 1, 0, 0, 1, 1);
+    return (pixels.getImageData(0, 0, 1, 1).data[0] >= 150) === active;
+  }, {x, active}, {polling: 50, timeout: 15000});
+  await handle.dispose();
+}
+
 async function pairedDialog() {
   const vector = await h.boot();
   await launch('editor', 'KGEDIT.EXE');
   await h.key('CTRL+O');
   await text('Open / B:\\WORK');
-  await button(703);
+  await lamp(218, false);
+  await Promise.all([lamp(218, true), button(703)]);
   await text('Open / A: root');
-  await button(703);
+  await lamp(244, false);
+  await Promise.all([lamp(244, true), button(703)]);
   await text('Open / B: root');
   await navigate('APPS');
   await text('Open / B:\\APPS');
@@ -218,7 +261,7 @@ async function pairedDialog() {
   await h.end(0);
   await h.unchangedFd();
   await h.exit(vector);
-  h.pass('The shared picker browses the verified B: volume during paired FD and HDD boot');
+  h.pass('The shared picker browses A: and verified B: and lights each disk activity indicator');
 }
 
 try {
@@ -226,7 +269,7 @@ try {
   let fixture = withHddFolder(withHddFolder(initial, 'DOCS'), 'STAGE.TMP');
   fixture = withHddFile(withHddFile(fixture, 'DOCS/READ.TXT', Buffer.from(originalText)), 'STAGE.TMP/CHUNK.TXT', leftover);
   await h.bootHdd(fixture);
-  await restoreTmp();
+  await restoreTmp(fixture);
   await clipboardAndPins();
   await nestedFiles();
   const vector = await fontAndReboot();
@@ -237,6 +280,14 @@ try {
   assert.equal(saved.files.get('WORK/DOCS/NESTED.TXT').toString(), rebootText);
   assert.equal(saved.files.get('WORK/KGUIPREF.DAT').readUInt32LE(20), 1);
   assert.ok(saved.files.get('WORK/KGUIPINS.DAT').readUInt32LE(4));
+  const history = saved.files.get('WORK/KGUIHIST.DAT');
+  assert.equal(history.readUInt32LE(0), 1);
+  assert.ok(history.readUInt32LE(4) > 1);
+  const documents = Array.from({length: history.readUInt32LE(8)}, (_, i) => {
+    const offset = 60 + i * 52;
+    return {path: history.toString('ascii', offset + 12, offset + 52).split('\0')[0], pin: history.readUInt32LE(offset + 8)};
+  });
+  assert.deepEqual(documents.find(doc => doc.path === 'DOCS\\NESTED.TXT'), {path: 'DOCS\\NESTED.TXT', pin: 1});
   await h.unchangedFd();
   await h.exit(vector);
   await h.closeContext();

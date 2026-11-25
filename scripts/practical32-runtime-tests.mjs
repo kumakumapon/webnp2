@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {inspectHdd,withHddFile} from './kgui32-hdd-fat.mjs';
+import {inspectHdd,withHddFile,assertOnlyRecentHistoryChanged} from './kgui32-hdd-fat.mjs';
 import {sha} from './practical32-harness.mjs';
 import {inspectMemoryRunner} from './k38632-memory-inspect.mjs';
 export async function runtimeTests(p){
@@ -15,9 +15,10 @@ export async function runtimeTests(p){
  const peer=s.expanded.slots[1].usage.runs;await until(s=>s.expanded.slots[1].usage.runs>peer,'peer resumes after isolated fault');await p.end(0);await p.run(0,'PRACT32.EXE bounds');s=await until(s=>s.expanded.slots[0].state===0&&samples(s)[1]===4,'actual CPL3 negative I/O requests');assert.equal(s.expanded.slots[0].pm.exitCode,0);assert.equal(samples(s)[14],13);assert.equal(samples(s)[15],0);
  p.pass('Real #PF containment and complete reclamation; 13 genuine CPL3 invalid pointer/permission/size/version/name/token/unknown-call checks',{fault,boundarySamples:samples(s)});
  assert.equal(sha(await h.disk('hdd')),sha(p.original));await p.cleanup(vector,true);
+ const standaloneDisk=await h.disk('hdd');assertOnlyRecentHistoryChanged(p.original,standaloneDisk);
  await h.type('K32RUN PRACT32.EXE bounds\r');let standalone;
  for(let deadline=Date.now()+120000;Date.now()<deadline;){standalone=await inspectMemoryRunner(h.page(),null,'K32RUN01');if(standalone?.state===3&&standalone.freed===1)break;await h.page().waitForTimeout(100);}
- assert(standalone,'standalone CPU producer');assert.equal(standalone.state,3);assert.equal(standalone.exitCode,0);assert.equal(standalone.abi,258);assert.equal(standalone.features,271);assert.equal(standalone.final.cs,59);assert.equal(standalone.heapPages,0);assert.equal(standalone.openFiles,0);assert.equal(standalone.freeAfter,standalone.freeBefore);assert.equal(standalone.largestAfter,standalone.largestBefore);assert.equal(standalone.allocations,standalone.frees);assert.equal(standalone.returnedCR0,standalone.savedCR0);assert.equal(standalone.returnedCR3,standalone.savedCR3);assert.equal(standalone.userPtClear,true);assert.equal(sha(await h.disk('hdd')),sha(p.original));p.pass('The same resource ABI and file permissions execute through real-DOS K32RUN with no GUI, real CPL3 frames and exact XMS/CPU restoration',standalone);await h.closeContext();
+ assert(standalone,'standalone CPU producer');assert.equal(standalone.state,3);assert.equal(standalone.exitCode,0);assert.equal(standalone.abi,258);assert.equal(standalone.features,271);assert.equal(standalone.final.cs,59);assert.equal(standalone.heapPages,0);assert.equal(standalone.openFiles,0);assert.equal(standalone.freeAfter,standalone.freeBefore);assert.equal(standalone.largestAfter,standalone.largestBefore);assert.equal(standalone.allocations,standalone.frees);assert.equal(standalone.returnedCR0,standalone.savedCR0);assert.equal(standalone.returnedCR3,standalone.savedCR3);assert.equal(standalone.userPtClear,true);assert.equal(sha(await h.disk('hdd')),sha(standaloneDisk));p.pass('The same resource ABI and file permissions execute through real-DOS K32RUN with no GUI, real CPL3 frames and exact XMS/CPU restoration',standalone);await h.closeContext();
  // Only pre-boot disk fixtures are modified. No emulator RAM is written.
  const source=Buffer.from(inspectHdd(p.original).files.get('APPS/PRACT32.EXE'));assert(source);const disabled=Buffer.from(source);disabled.writeUInt32LE(15,92);
  const impossible=Buffer.from(source),descriptor=impossible.readUInt32LE(84)-24;assert.equal(impossible.toString('ascii',descriptor,descriptor+8),'K32RES01');impossible.writeUInt32LE(4194304,descriptor+16);
