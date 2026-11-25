@@ -14,11 +14,12 @@ webnp2の公開版では、KGUI32を標準のデスクトップとして配布�
 HDD起動時のEditorの保存先はA:\WORKです。拡張メモリの詳細は[実行枠・メモリ拡張](kgui32-expanded.md)を参照してください。
 詳しくは[HDD単独起動](hdd-boot.md)と[HDD保存基盤](kgui32-hdd-workspace.md)。
 
-- **Kuma** からシステム情報、設定、DOS、アプリ検索、ウィンドウ切替を開けます。Alt+Tab（PC-98のGRPH+Tab）または一覧のタップで切り替えます。専用HDDではアプリごとの位置・サイズとスナップ状態を復元します。
-- タイトルバーをドラッグして移動。Tabでフォーカス切り替え。
-- Filesの **Drives** からWork・A:・認識済みの対応HDDを選びます。Workではフォルダをコピー、移動、ごみ箱から復元できます。
-- Settingsの **Desktop preferences** でコントラスト、日英、IMEの既定値を保存できます。EditorとImagesの開く・名前を付けて保存は共通画面です。
-- KGUI32のFDに収録する `KDESK.TXT` は互換起動と主要操作の早見表です。完全版のガイドはHDDとKDESK起動FDに収録しています。
+- **Kuma** からシステム情報、設定、DOS、アプリ検索、最近使ったアプリ／文書、ウィンドウ切替、再起動を開けます。履歴は起動中に保持します。アプリは「固定」または Ctrl+P で検索結果の先頭に移せます。対応HDDに固定したアプリとウィンドウ配置を保存します。
+- Alt+Tab（PC-98のGRPH+Tab）と一覧のタップで切り替えます。Alt+矢印で左右への配置、最大化・復元ができ、Alt+F4で閉じます。再起動時は未保存のアプリを順に確認します。
+- Filesの **Drives** からWork・A:・認識済みの対応HDDを選びます。Workの **TMP** から中断されたフォルダを別名で復旧できます。
+- EditorとImagesは共通ダイアログでドライブやフォルダを移動でき、Work内のサブフォルダに保存できます。ImagesのCtrl+C／Ctrl+Vは、同じKGUI32セッションのウィンドウ間で最大128×128の画像を共有します。
+- Settingsの **Desktop preferences** でコントラスト、日英、IMEの既定値、文字サイズを保存できます。大きい文字はランチャー項目とEditor本文に適用します。
+- KGUI32のFDに収録する `KDESK.TXT` は互換起動と主要操作の早見表です。完全版は起動HDDとKDESK起動FDに収録しています。
 - WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2で戻ります。Ctrl+Kはアプリ検索を開きます。
 - **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。
 - DOSウィンドウのRun（Ctrl+L）でコマンドを入力しEnter。実行中のルートは先にEnd。

@@ -64,7 +64,7 @@ RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGSET.EXE', 'KGFILES.EXE
 
 # Keep the original K386 diagnostics and the duplicate DOS editor executable
 # on their own disks. The complete GUI floppy still includes EDIT.EXE.
-FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE')
+FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE', 'K32MIX.COM')
 FD_OMITTED_ALIASES = ('EDIT98.EXE',)
 FD_OMITTED = FD_OMITTED_DIAGNOSTICS + FD_OMITTED_ALIASES
 FD_KDESK_GUIDE = (
@@ -196,7 +196,9 @@ def main():
     files['TERM98.COM'] = (source/'tools/k386/build/TERM98.COM').read_bytes()
     dictionary = (source/'tools/kgui32/build/KGIME.DIC').read_bytes()
     files['KGIME.DIC'] = dictionary
-    files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only preview\r\n'.encode('ascii') for i in range(1800))
+    # Keep the long preview above 64 KiB and leave space on the complete FD.
+    files['BROWSE.TXT'] = b''.join(f'BROWSER LINE {i:04d} - read-only {"entry" if i < 1024 else "item"}\r\n'.encode('ascii')
+                                  for i in range(1800))
     files['LINES.TXT'] = b'\n'*9000+b'FINAL LINE\n'
     files['EMPTY.TXT'] = b''
     files['EDITTEST.TXT'] = b'EDITOR FIXTURE\r\nSecond line\r\n'
@@ -278,13 +280,17 @@ def main():
                'learning':False,'dictionary':{'name':'KGIME.DIC','bytes':len(dictionary),
                    'readings':struct.unpack_from('<I',dictionary,16)[0],
                    'sha256':hashlib.sha256(dictionary).hexdigest(),'license':'MIT (original KGUI32)'}},
-        'desktop_shell':{'version':1,'kuma_menu':True,'search_shortcut':'Ctrl+K','switch_shortcut':'GRPH+Tab',
-                         'layout_file':'KGUILAY.DAT','layout_on_verified_hdd':True},
-        'files_manager':{'version':2,'drive_roots_read_only':True,'tree_items':192,'tree_bytes':8388608,
-                         'work_depth':3,'staged_folders':True,'reversible_folder_trash':True},
-        'desktop_preferences':{'version':1,'file':'KGUIPREF.DAT','languages':['en','ja'],
+        'desktop_shell':{'version':2,'kuma_menu':True,'search_shortcut':'Ctrl+K','switch_shortcut':'GRPH+Tab',
+                         'layout_file':'KGUILAY.DAT','layout_on_verified_hdd':True,
+                         'recent_items':'session apps and TXT/BMP','pins_file':'KGUIPINS.DAT',
+                         'restart_checks_unsaved':True,'window_keys':['Alt+arrows','Alt+F4']},
+        'files_manager':{'version':3,'drive_roots_read_only':True,'tree_items':192,'tree_bytes':8388608,
+                         'work_depth':3,'staged_folders':True,'reversible_folder_trash':True,'tmp_folder_recovery':'unused sibling'},
+        'desktop_preferences':{'version':2,'file':'KGUIPREF.DAT','languages':['en','ja'],
                                'themes':['classic','high-contrast'],'ime':['off','romaji','jis-kana'],
-                               'shared_picker':['TXT','BMP']},
+                               'shared_picker':['TXT','BMP'],'picker_drive_navigation':True,
+                               'text_cells':[[8,16],[16,32]]},
+        'image_clipboard':{'format':'RGB565','max_width':128,'max_height':128,'scope':'desktop session','atomic':True},
         'standalone_hdd':boot_hdd,'hdd_boot_supported':True,
         'application_distribution':distribution, 'workspace_hdd':hdd,'writable_workspace':'auto: verified HDD / WORK',
         'workspace_fd_fallback':'A:\\WORK','workspace_max_bytes':65536,'workspace_extension':'TXT','workspace_extensions':['TXT','BMP'],'graphical_client_abi':1,'graphical_clients':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGSET.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE'],'widget_sdk':4,'window_menu':{'version':1,'activation':'titlebar-left-tap','right_click_required':False,'placement':['maximize','restore','left','right'],'shell_touch_commands':['enter','escape','cancel','eof'],'keyboard':['F1','Up','Down','Enter','Esc'],'max_items':24,'item_height':36,'paged':True,'modal_commands_disabled':True,'apps':['KGCALC.EXE','KGCLOCK.EXE','KGCAL.EXE','KGFILES.EXE','KGEDIT.EXE','KGIMAGE.EXE','KGWORDS.EXE']},'utility_apps':{'calendar':{'executable':'KGCAL.EXE','date_source':'DOS','years':[1980,2099]},'calculator_memory':['add','subtract','recall','clear'],'clock_stopwatch':{'resolution_seconds':1,'max_seconds':359999,'source':'DOS wall clock'}},'directory_api':1,'root_browser_read_only':True,'compatibility':'independent PM32 desktop with two mixed clients or four at 32 MiB; verified HDD workspace with explicit FD fallback, bounded Shift-JIS editor saves and read-only DOS drive roots',

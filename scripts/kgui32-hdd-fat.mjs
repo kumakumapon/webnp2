@@ -46,16 +46,37 @@ export function assertOnlyWindowLayoutChanged(before, after) {
  for(const name of current.entries.keys())assert.ok(name===path||original.entries.has(name),name+' unexpected');
 }
 function link(image,s,c,value){for(let i=0;i<2;i++)image.writeUInt16LE(value,s.fat+i*s.fatSectors*s.bps+c*2);}
-function directoryOffset(s,index){const c=s.chains.get('WORK')[Math.floor(index*32/s.clusterBytes)];assert(c);return s.data+(c-2)*s.clusterBytes+index*32%s.clusterBytes;}
+function directoryOffset(s,index,directory='WORK'){const c=s.chains.get(directory)[Math.floor(index*32/s.clusterBytes)];assert(c);return s.data+(c-2)*s.clusterBytes+index*32%s.clusterBytes;}
 export function withHddFile(original,name,bytes,attr=32){
- const image=Buffer.from(original),s=inspectHdd(image),parts=name.split('.');assert(parts.length===2&&parts[0].length<=8&&parts[1].length<=3);
- let index=2;while(image[directoryOffset(s,index)])index++;const at=directoryOffset(s,index),free=[];
+ const image=Buffer.from(original),s=inspectHdd(image);
+ const slash=name.lastIndexOf('/'),directory=slash<0?'WORK':'WORK/'+name.slice(0,slash),parts=name.slice(slash+1).split('.');
+ assert(parts.length===2&&parts[0].length<=8&&parts[1].length<=3);
+ let index=2;while(image[directoryOffset(s,index,directory)])index++;const at=directoryOffset(s,index,directory),free=[];
  for(let c=2;c<=s.clusters+1&&free.length<Math.ceil(bytes.length/s.clusterBytes);c++)if(!s.next(c))free.push(c);
  assert.equal(free.length,Math.ceil(bytes.length/s.clusterBytes));for(let i=0;i<free.length;i++){
   link(image,s,free[i],free[i+1]??0xffff);bytes.copy(image,s.data+(free[i]-2)*s.clusterBytes,i*s.clusterBytes,(i+1)*s.clusterBytes);
  }
  image.fill(0,at,at+32);image.write(parts[0].padEnd(8)+parts[1].padEnd(3),at,'ascii');image[at+11]=attr;image.writeUInt16LE(0x21,at+24);image.writeUInt16LE(free[0]??0,at+26);image.writeUInt32LE(bytes.length,at+28);
  inspectHdd(image);return image;
+}
+export function withHddFolder(original,name){
+ const image=Buffer.from(original),s=inspectHdd(image),[base,ext='']=name.split('.');
+ assert.match(base,/^[A-Z0-9_]{1,8}$/);assert.match(ext,/^[A-Z0-9_]{0,3}$/);
+ let cluster=2;while(cluster<=s.clusters+1&&s.next(cluster))cluster++;
+ assert(cluster<=s.clusters+1);link(image,s,cluster,0xffff);
+ let index=2;while(image[directoryOffset(s,index)])index++;
+ const at=directoryOffset(s,index);
+ image.fill(0,at,at+32);
+ image.write(base.padEnd(8)+ext.padEnd(3),at,'ascii');image[at+11]=16;
+ image.writeUInt16LE(0x21,at+24);image.writeUInt16LE(cluster,at+26);
+ const start=s.data+(cluster-2)*s.clusterBytes;
+ image.fill(0,start,start+s.clusterBytes);
+ for(const [i,entry,target] of [[0,'.',cluster],[32,'..',s.entries.get('WORK').cluster]]){
+  image.write(entry.padEnd(11),start+i,'ascii');image[start+i+11]=16;
+  image.writeUInt16LE(target,start+i+26);
+ }
+ inspectHdd(image);
+ return image;
 }
 export function fullHdd(original,{directoryFull=false}={}){
  let image=withHddFile(original,'NOTE.TXT',Buffer.from('original on HDD\n'));

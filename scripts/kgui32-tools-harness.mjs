@@ -39,7 +39,7 @@ export async function toolsHarness(base,output,video,options={}){
   }
   await key('ENTER');
  }
- async function chord(modifier,value){await page.evaluate(({modifier,value})=>window.np2debug.np2.runKeySequence([{type:'down',keys:modifier},{type:'wait',ms:200},{type:'press',keys:value,holdMs:60},{type:'wait',ms:700},{type:'up',keys:modifier}]),{modifier,value});}
+ async function chord(modifier,value,holdMs=60){await page.evaluate(({modifier,value,holdMs})=>window.np2debug.np2.runKeySequence([{type:'down',keys:modifier},{type:'wait',ms:200},{type:'press',keys:value,holdMs},{type:'wait',ms:700},{type:'up',keys:modifier}]),{modifier,value,holdMs});}
  async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return guiUntil(app=>app.mx===x&&app.my===y,'pointer');}
  async function button(d){const hb=(await guiUntil(app=>app.frames,'mouse input ready')).app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await guiUntil(app=>app.heartbeat>=hb+3,'mouse '+d);}
  async function click(x,y){await point(x,y);await button(1);await button(0);}
@@ -86,7 +86,21 @@ export async function toolsHarness(base,output,video,options={}){
  async function end(id){await focus(id);const s=await inspect(),o=origin(s,id);await click(o.x+230,o.y+48);return until(s=>s.cpu.views[id].state===0,'End '+id);}
  async function run(id,command){await focus(id);const generation=(await inspect()).cpu.views[id].generation;await enterCommand(command);return until(s=>s.cpu.views[id].generation>generation,'Run '+command);}
  async function disk(slot){if(slot==='fd1')return Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');const wait=page.waitForEvent('download');await page.evaluate(()=>window.np2debug.np2.exportDisk('hdd'));return readFile(await(await wait).path());}
- async function exit(vector){await key('F10');const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and complete cleanup');assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));assert.equal(await page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64),vector);assert.deepEqual(errors,[]);return s;}
+ async function exit(vector, {discardImages=false}={}){
+  await key('F10');
+  const closingImage=s=>{
+   const id=(s.gui.app?.active??0)-2;
+   return s.bridge.tokens[id]&&s.canvases[id]?.texts.includes('Unsaved image');
+  };
+  if(discardImages)for(;;){
+   const s=await until(s=>guiCleanupPublished(s.gui)||closingImage(s),'Image close confirmation or cleanup');
+   if(guiCleanupPublished(s.gui))break;
+   const id=s.gui.app.active-2;
+   const token=s.bridge.tokens[id];
+   await key('d');
+   await until(s=>s.bridge.tokens[id]!==token||guiCleanupPublished(s.gui),'Explicit image discard');
+  }
+  const s=await until(s=>guiCleanupPublished(s.gui)&&s.gui.state===3,'DOS and complete cleanup');assert.equal(s.bridge.ready,0);assert.equal(s.bridge.arena,0);assert.equal(s.bridge.currentVector,s.bridge.oldVector);assert.equal(s.gui.cpu.freeBefore,s.gui.cpu.freeAfter);assert.equal(s.gui.cpu.largestBefore,s.gui.cpu.largestAfter);assert.equal(s.gui.cpu.handle,0);assert.equal(s.gui.cpu.tablesCleared,1);assert.equal(s.gui.dosBefore,s.gui.dosAfter);assert(s.cpu.views.every(v=>v.state===0));assert.equal(await page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64),vector);assert.deepEqual(errors,[]);return s;}
  async function unchangedFd(){if(fdBefore===null){const mounted=await page.evaluate(()=>window.np2debug.np2.getMountedImages());assert(!mounted.some(m=>m.slot==='fd1'||m.slot==='fd2'),'No FD is attached to the HDD-only boot');}else assert.equal(sha(await disk('fd1')),sha(fdBefore));}
  async function shot(name){for(let i=0;i<2;i++){const s=await inspect();await point(s.gui.app.mx===10?12:10,s.gui.height-48);await until(t=>t.gui.app.frames>s.gui.app.frames&&t.gui.app.heartbeat>=s.gui.app.heartbeat+2,'compose');}await page.screenshot({path:join(output,name)});}
  async function dragToMaximum(id){await focus(id);const s=await inspect(),o=origin(s,id),c=s.canvases[id];await point(o.x+c.width+8,o.y+c.height+96);await button(1);await point(s.gui.width-8,s.gui.height-48);await button(0);return until(t=>t.canvases[id]?.width>c.width||t.canvases[id]?.height>c.height,'Expanded Editor');}

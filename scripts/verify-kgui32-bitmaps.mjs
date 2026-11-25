@@ -32,7 +32,7 @@ async function run(id,command){
  await h.enterCommand(command);return until(s=>s.expanded.slots[id].generation!==generation,'Run '+command);
 }
 async function launcher(){await h.key('F2');await h.click(292,266);return until(s=>accepted(s),'launcher Images');}
-async function finished(vector,before,floppy=false){assert.equal(sha(await h.disk(floppy?'fd1':'hdd')),sha(before));await h.exit(vector);const s=await h.until(s=>s.gui.completed===1,'complete cleanup');assert.equal(s.gui.stackGuard,1);assert.equal(s.gui.owned,0);await h.unchangedFd();await h.closeContext();}
+async function finished(vector,before,floppy=false){assert.equal(sha(await h.disk(floppy?'fd1':'hdd')),sha(before));await h.exit(vector,{discardImages:true});const s=await h.until(s=>s.gui.completed===1,'complete cleanup');assert.equal(s.gui.stackGuard,1);assert.equal(s.gui.owned,0);await h.unchangedFd();await h.closeContext();}
 // Indexed PEGC uses the desktop's 6x6x6 cube, then the core's RGB565 SDL
 // surface. Account for both quantizations before the final DAC LSB tolerance.
 function rgba(value){if(video==='pegc'){const q=[value>>11,value>>5&63,value&31].map((v,i)=>Math.floor((Math.floor(v*255/(i===1?63:31))+25)/51)*51);value=(q[0]>>3)<<11|(q[1]>>2)<<5|(q[2]>>3);}const r=value>>11,g=value>>5&63,b=value&31;return [r<<3|r>>2,g<<2|g>>4,b<<3|b>>2,255];}
