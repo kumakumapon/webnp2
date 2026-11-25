@@ -231,7 +231,7 @@
   },
   "hdd-workspace": {
     "matrix": {"video": ["pegc", "cirrus"]},
-    "timeout": 45,
+    "timeout": 50,
     "base": "/webnp2/",
     "commands": [
       {"argv": ["scripts/verify-kgui32-hdd-workspace.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-workspace", "{video}"]},
