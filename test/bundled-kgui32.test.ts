@@ -129,6 +129,11 @@ describe('independent native PM32 GUI image',()=>{
    }
   }
   const disk=openDiskImage(readFileSync('public/kgui32/'+manifest.image),manifest.image);
+  const chart=fatReadFile(disk,'COLORS.BMP');
+  const chartInfo=new DataView(chart.buffer,chart.byteOffset,chart.byteLength);
+  expect(manifest.fd_color_chart).toEqual({name:'COLORS.BMP',width:128,height:96});
+  expect([chartInfo.getInt32(18,true),chartInfo.getInt32(22,true),chartInfo.getUint16(28,true)]).toEqual([128,96,8]);
+  expect(new Set(chart.subarray(chartInfo.getUint32(10,true))).size).toBe(256);
   const sample=fatReadFile(disk,'SAMPLE.BMP');expect(sample[0]).toBe(66);expect(sample[1]).toBe(77);
   const packed=Buffer.from(fatReadFile(disk,'KGIMAGE.EXE'));expect(packed.readUInt32LE(92)).toBe(495);const elf=packed.subarray(packed.readUInt32LE(84)),ph=elf.readUInt32LE(28);expect(elf.readUInt32LE(ph+28)).toBe(16);expect(elf.readUInt32LE(ph+8)%4096).toBe(0);
   expect(manifest.application_distribution.legacy_fd_free_bytes).toBeGreaterThanOrEqual(8192);
