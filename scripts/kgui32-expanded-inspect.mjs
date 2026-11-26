@@ -1,8 +1,8 @@
 import {inspectGUI} from './kgui32-inspect.mjs';
 // Read actual resident producers, CPU frames and page tables. No RAM writes.
-export async function inspectExpanded(page,{compact=false}={}){
+export async function inspectExpanded(page,{compact=false,clients=false}={}){
  const gui=await inspectGUI(page,{pageTables:!compact});if(!gui)return null;
- return page.evaluate(({gui,compact})=>{
+ return page.evaluate(({gui,compact,clients})=>{
   const n=window.np2debug?.np2;if(!n)return null;
   const read=(p,l)=>atob(n.readMemoryBase64(p,l).base64),w=(s,o)=>s.charCodeAt(o)|s.charCodeAt(o+1)<<8,d=(s,o)=>(w(s,o)|w(s,o+2)<<16)>>>0;
   let at=window.kguiExpandedManager;
@@ -20,8 +20,8 @@ export async function inspectExpanded(page,{compact=false}={}){
     pde0:tables?d(tables,0):null,pde2:tables?d(tables,8):null,ptes:tables?Array.from({length:1024},(_,i)=>d(tables,8192+i*4)):null,
     pm:kind?{state:d(p,12),error:d(p,16),exitCode:d(p,628),cr2:d(p,72),faultError:d(p,76),abi:d(p,768),features:d(p,772),heapBase:d(p,780),heapLimit:d(p,784),allocations:d(p,796),frees:d(p,800),waitPolls:d(p,812),handle:w(p,40),locked:w(p,42),reason:d(p,68),heap:d(p,788),openFiles:d(p,820),samples:Array.from({length:d(p,944)},(_,i)=>d(p,880+i*4)),frame:{eip:d(p,376),cs:d(p,380),eflags:d(p,384),esp:d(p,388),ss:d(p,392)},freed:d(p,156),unmapped:d(p,464),tablesCleared:d(p,948)}:null});
   }
-  if(compact)return {gui,address:at,capacity,profile:w(m,260),slots,events:[],bridge:null};
-  const events=Array.from({length:w(r,18)},(_,i)=>{const o=140+((w(r,16)+16-w(r,18)+i)%16)*32;return {session:w(r,o+20),generation:d(r,o+4),type:w(r,o+22),fault:w(r,o+26)};});
+  if(compact&&!clients)return {gui,address:at,capacity,profile:w(m,260),slots,events:[],bridge:null};
+  const events=r?Array.from({length:w(r,18)},(_,i)=>{const o=140+((w(r,16)+16-w(r,18)+i)%16)*32;return {session:w(r,o+20),generation:d(r,o+4),type:w(r,o+22),fault:w(r,o+26)};}):[];
   let address=window.kguiClientBridgeAddress,producer=address?read(address,84):null,bridge=null;
   if(!producer||producer.slice(0,8)!=='KGCLNT01'||d(producer,8)!==1||d(producer,12)!==84||d(producer,16)!==gui.owner){
    const scan=read(0x10000,0x90000);let b=-1;producer=null;
@@ -29,5 +29,5 @@ export async function inspectExpanded(page,{compact=false}={}){
   }
   if(producer){const arena=d(producer,20),ready=d(producer,32);bridge={arena,ready,clients:ready?Array.from({length:capacity},(_,id)=>{const c=read(arena*16+id*4096+3200,76);return {generation:d(c,0),token:d(c,4),revision:d(c,8),width:d(c,12),height:d(c,16),title:c.slice(44,76).split('\0')[0]};}):[]};}
   return {gui,address:at,capacity,profile:w(m,260),slots,events,bridge};
- },{gui,compact});
+ },{gui,compact,clients});
 }

@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectGUI} from './kgui32-inspect.mjs';
+import {inspectExpanded} from './kgui32-expanded-inspect.mjs';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 export const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -43,22 +44,37 @@ export async function toolsHarness(base,output,video,options={}){
  async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return guiUntil(app=>app.mx===x&&app.my===y,'pointer');}
  async function button(d){const hb=(await guiUntil(app=>app.frames,'mouse input ready')).app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await guiUntil(app=>app.heartbeat>=hb+3,'mouse '+d);}
  async function click(x,y){await point(x,y);await button(1);await button(0);}
- async function focus(id){
-  let s=await inspect();
-  if(s.gui.app.active===id+2)return s;
-  const program=s.resources.usage[id]?.program;
-  const peers=s.resources.usage.flatMap((task,slot) =>
-   s.bridge.tokens[slot]&&task?.program===program?[slot]:[]);
-  const grouped=!!program&&!!s.bridge.tokens[id]&&peers.includes(id)&&peers.length>1;
-  const leader=grouped?peers[0]:id,capacity=s.bridge.tokens.length;
-  const step=capacity===4?Math.floor((s.gui.width-300)/4):146;
-  for(let attempt=0;attempt<(grouped?peers.length:1);attempt++){
-   const before=s.gui.app.active;
-   await click(330+step*leader,s.gui.height-16);
-   s=await until(s=>s.gui.app.active!==before,'taskbar changes focus');
-   if(s.gui.app.active===id+2)return s;
+ async function focusTaskbar(id){
+  let gui=await guiUntil(app=>app.frames,'focus ready');
+  if(gui.app.active===id+2)return;
+  let layout;
+  for(const end=Date.now()+120000;Date.now()<end&&!layout;){
+   layout=await inspectExpanded(page,{compact:true,clients:true});
+   if(!layout)await page.waitForTimeout(40);
+  }
+  assert(layout,'taskbar layout available');
+  function client(slot){
+   const entry=layout.bridge?.clients[slot.id];
+   return entry?.token&&entry.generation===slot.generation;
+  }
+  const target=layout.slots[id];
+  const peers=target?.usage.program&&client(target)
+   ?layout.slots.filter(slot=>client(slot)&&slot.usage.program===target.usage.program)
+   :[];
+  const leader=peers[0]?.id??id,step=layout.capacity===2?146:Math.floor((gui.width-300)/4);
+  for(let attempt=0;attempt<Math.max(peers.length,1);attempt++){
+   const previous=gui.app.active;
+   await click(330+step*leader,gui.height-16);
+   gui=await guiUntil(app=>app.active!==previous,'taskbar changes focus');
+   if(gui.app.active===id+2)return;
   }
   throw Error('Could not focus slot '+id);
+ }
+ async function focus(id){
+  const s=await inspect();
+  if(s?.gui.app?.active===id+2)return s;
+  await focusTaskbar(id);
+  return until(s=>s.gui.app.active===id+2,'active '+id);
  }
  function origin(s,id){const c=s.canvases[id];return {x:id?s.gui.width-c.width-32:16,y:id?Math.max(40,s.gui.height-c.height-144):40};}
  async function control(id,code){await focus(id);const s=await until(s=>s.canvases[id]?.buttons.some(b=>b.id===code),'control '+code),b=s.canvases[id].buttons.find(b=>b.id===code),o=origin(s,id);await click(o.x+8+b.x+Math.floor(b.w/2),o.y+70+b.y+Math.floor(b.h/2));}
@@ -123,5 +139,5 @@ export async function toolsHarness(base,output,video,options={}){
  function pass(name){results.push(name);console.log('PASS',name);}
  async function finish(){await writeFile(join(output,'verification.json'),JSON.stringify({video,source:manifest.source_commit,results},null,2)+'\n');}
  async function fail(e){const raw=await page?.evaluate(()=>({registers:window.np2debug.np2.dbgReadRegs(),conventionalBase:0x10000,conventional:window.np2debug.np2.readMemoryBase64(0x10000,0x90000).base64})).catch(()=>null);await writeFile(join(output,'failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last),results,raw},null,2)+'\n');await page?.screenshot({path:join(output,'failure.png')}).catch(()=>{});}
- return {manifest,distribution,fd,hdd,legacy,inspect,until,guiUntil,key,type,enterCommand,chord,click,point,button,focus,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
+ return {manifest,distribution,fd,hdd,legacy,inspect,until,guiUntil,key,type,enterCommand,chord,click,point,button,focus,focusTaskbar,origin,control,input,boot,bootHdd,launchEditor,setText,open,save,end,run,disk,exit,unchangedFd,shot,dragToMaximum,pass,finish,fail,closeContext:()=>ctx.close(),close:()=>browser.close(),page:()=>page,output};
 }
