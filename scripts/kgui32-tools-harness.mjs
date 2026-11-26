@@ -43,7 +43,23 @@ export async function toolsHarness(base,output,video,options={}){
  async function point(x,y){await page.evaluate(p=>window.np2debug.np2.mouseMoveTo(p.x,p.y),{x,y});return guiUntil(app=>app.mx===x&&app.my===y,'pointer');}
  async function button(d){const hb=(await guiUntil(app=>app.frames,'mouse input ready')).app.heartbeat;await page.evaluate(d=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,d]),d);await guiUntil(app=>app.heartbeat>=hb+3,'mouse '+d);}
  async function click(x,y){await point(x,y);await button(1);await button(0);}
- async function focus(id){let s=await inspect();if(s.gui.app.active!==id+2)await click(330+146*id,s.gui.height-16);return until(s=>s.gui.app.active===id+2,'active '+id);}
+ async function focus(id){
+  let s=await inspect();
+  if(s.gui.app.active===id+2)return s;
+  const program=s.resources.usage[id]?.program;
+  const peers=s.resources.usage.flatMap((task,slot) =>
+   s.bridge.tokens[slot]&&task?.program===program?[slot]:[]);
+  const grouped=!!program&&!!s.bridge.tokens[id]&&peers.includes(id)&&peers.length>1;
+  const leader=grouped?peers[0]:id,capacity=s.bridge.tokens.length;
+  const step=capacity===4?Math.floor((s.gui.width-300)/4):146;
+  for(let attempt=0;attempt<(grouped?peers.length:1);attempt++){
+   const before=s.gui.app.active;
+   await click(330+step*leader,s.gui.height-16);
+   s=await until(s=>s.gui.app.active!==before,'taskbar changes focus');
+   if(s.gui.app.active===id+2)return s;
+  }
+  throw Error('Could not focus slot '+id);
+ }
  function origin(s,id){const c=s.canvases[id];return {x:id?s.gui.width-c.width-32:16,y:id?Math.max(40,s.gui.height-c.height-144):40};}
  async function control(id,code){await focus(id);const s=await until(s=>s.canvases[id]?.buttons.some(b=>b.id===code),'control '+code),b=s.canvases[id].buttons.find(b=>b.id===code),o=origin(s,id);await click(o.x+8+b.x+Math.floor(b.w/2),o.y+70+b.y+Math.floor(b.h/2));}
  async function input(id,x,y,value,oldLength=12){

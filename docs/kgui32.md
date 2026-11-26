@@ -20,8 +20,11 @@ HDD起動時のEditorの保存先はA:\WORKです。拡張メモリの詳細は[
 - EditorとImagesは共通ダイアログでドライブやフォルダを移動でき、Work内のサブフォルダに保存できます。ImagesのCtrl+C／Ctrl+Vは、同じKGUI32セッションのウィンドウ間で最大128×128の画像を共有します。
 - Settingsの **Desktop preferences** でコントラスト、日英、IMEの既定値、文字サイズを保存できます。大きい文字はFiles、Calculatorの結果、Calendar、Imagesのファイル名、ユーザー辞書にも適用します。Calculator・Clock・Calendar・ユーザー辞書の操作は Tab／Shift+Tab とEnterに対応します。上部バーのFD・HDDは、ファイルブローカー経由の操作を表示します。
 - ImagesとKDESKの画像ウィンドウは、Ctrl+B／Ctrl+Jまたはメニューの操作で、対応HDDの `WORK/KGCLIP.BMP` を共有します。最大256×192のRGB565相当の色を保持します。KGUI32のEditorは Ctrl+Shift+B／Ctrl+Shift+J、KDESKのText Editorは Ctrl+B／Ctrl+Jで、`WORK/KGTEXT.TXT` に最大1,024バイトのShift-JIS文字列を共有します。
+- **Desktop preferences → Desktop and startup** で壁紙、JIS／USの記号配列、相対マウス速度、日付・時刻形式、起動時のアプリを選べます。設定はWorkに保存されます。スマホのタップ位置はマウス速度にかかわらず画面座標に対応します。
+- 上部バーにフォーカス中のEditor／ユーザー辞書のIME状態、XMSの空き容量、webnp2の音量（ミュート時0%、通常時100%）を表示します。同じアプリは下部バーのボタン1個にまとまり、タップするたびにウィンドウが切り替わります。
+- 保存・コピーの結果は画面下に通知します。Filesのコピー・TXT復旧プレビューとImagesの大きいBMP読込・保存は、中止ボタンまたはEscで取り消せます。PEGCとCirrusのCIは、HDD起動・描画・入力応答の計測値を `performance.json` に出力します。
 - KGUI32のFDに収録する `KDESK.TXT` は互換起動と主要操作の早見表です。完全版は起動HDDとKDESK起動FDに収録しています。
-- FDの作業領域を確保するため、`KRESCHK.COM`・`K32MEM.EXE`・`K32CPU.COM`・`K386TEST.COM`・`XARRAY.EXE` は起動HDDとK386配布版に収録しています。
+- FDの作業領域を確保するため、`KRESCHK.COM`・`K32MEM.EXE`・`K32CPU.COM`・`K386TEST.COM`・`XARRAY.EXE` は起動HDDとK386配布版に収録しています。ローダー診断用の `BADABI.EXE` と `BADENT.EXE` も同じ媒体で利用できます。
 - 大きい文字はDOS端末のテキスト表示とアプリメニューにも反映します。DOS端末ではCtrl+Tabで操作ボタンに入り、Tab／Shift+TabとEnterで操作します。Escで端末の入力に戻ります。
 - WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2で戻ります。Ctrl+Kはアプリ検索を開きます。
 - **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。

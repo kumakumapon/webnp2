@@ -22,7 +22,6 @@ import {
   coreMailboxSpace,
   coreMailboxPut,
   coreMailboxPending,
-  coreMouseMove,
   coreMousePending,
   coreMouseButton,
   coreDbgSetPaused,
@@ -44,6 +43,7 @@ import {
   deleteHostFile as deleteHostFileFromFs,
   requireHostDrv as requireHostDrvGuard,
 } from '../core/module.ts';
+import { moveAbsoluteGuestMouse } from '../core/kgui-host-status.ts';
 import * as db from '../storage/db.ts';
 import { fetchDiskBytes } from './disk-fetch.ts';
 import { NAMED_KEYS, charToKey } from './keymap.ts';
@@ -1475,7 +1475,7 @@ export class WebNP2 extends TypedEmitter<WebNP2EventMap> {
       const stepDy = Math.trunc(dy / remaining);
       dx -= stepDx;
       dy -= stepDy;
-      coreMouseMove(stepDx, stepDy);
+      moveAbsoluteGuestMouse(stepDx, stepDy);
       const waitStart = Date.now();
       while (coreMousePending() !== 0 && Date.now() - waitStart < 300) {
         await this.sleep(10);

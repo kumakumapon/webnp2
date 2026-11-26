@@ -46,7 +46,38 @@ export async function imageSaveTests({suite,h,until,image,accepted,run,launcher,
   pass('Actual BMP save, Undo retained across commit, explicit replace/cancel, two-owner conflict, exact FAT bytes and exported-image cold boot');
   const wide=Uint16Array.from({length:256*192},(_,i)=>i*137&65535),wideBytes=bmp(wide,256,192),wideFixture=withHddFile(original,'MAX.BMP',wideBytes);
   assert.equal(wideBytes.length,147510);next=await h.bootHdd(wideFixture);await start(0,'KGIMAGE.EXE work MAX.BMP');await until(s=>accepted(s)&&image(s)[8]===hash(wide),'maximum BMP loaded');
-  const edited=wide.map(v=>v^65535);await change(0,'i',edited);await save();const result=await h.disk('hdd');assert.deepEqual(assertHddProtected(wideFixture,result).files.get('WORK/MAX.BMP'),bmp(edited,256,192));assert.equal(inspectHdd(result).chains.get('WORK/MAX.BMP').length,37);await finish(next,wideFixture);
+  const edited=wide.map(v=>v^65535);await change(0,'i',edited);
+  const beforeCancel=inspectHdd(await h.disk('hdd'));
+  const bounds=(await waitImage()).bitmaps[0].window;
+  await h.point(bounds.x+70,bounds.y+112);
+  const {arena}=(await h.inspect()).bridge;
+  // Arm observation before sending Save. A host round trip after observing
+  // a short progress frame can outlast its last cancellable write.
+  await h.page().evaluate(async arena=>{
+   const {np2}=globalThis.np2debug,send=()=>np2.sendKeys('CTRL+S');
+   const release=()=>globalThis.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]);
+   const saved=send(),deadline=performance.now()+15000;
+   try {
+    while(performance.now()<deadline){
+     const b=atob(np2.readMemoryBase64(arena*16,3144).base64);
+     const word=i=>(b.charCodeAt(i)|b.charCodeAt(i+1)<<8|b.charCodeAt(i+2)<<16|b.charCodeAt(i+3)<<24)>>>0;
+     const active=Array.from({length:Math.min(40,word(36))},(_,i)=>72+i*76).some(i=>word(i)===3&&word(i+24)===2600);
+     if(active){
+      globalThis.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]);
+      await new Promise(resolve=>setTimeout(resolve,100));
+      return;
+     }
+     await new Promise(resolve=>requestAnimationFrame(resolve));
+    }
+    throw Error('Cancellable BMP save progress did not appear');
+   } finally {release();await saved;}
+  },arena);
+  await until(s=>accepted(s)&&image(s)[13]===125&&image(s)[14]===1,'cancel before commit keeps the edited pixels');
+  const cancelled=assertHddProtected(wideFixture,await h.disk('hdd'));
+  assert.deepEqual(cancelled.files.get('WORK/MAX.BMP'),wideBytes);
+  assert(!cancelled.entries.has('WORK/MAX.TMP')&&!cancelled.entries.has('WORK/MAX.BAK'));
+  assert.equal(cancelled.free,beforeCancel.free,'cancel releases the staged allocation');
+  await save();const result=await h.disk('hdd');assert.deepEqual(assertHddProtected(wideFixture,result).files.get('WORK/MAX.BMP'),bmp(edited,256,192));assert.equal(inspectHdd(result).chains.get('WORK/MAX.BMP').length,37);await finish(next,wideFixture);
   pass('Maximum 147510-byte BMP is loaded, edited, atomically replaced and read from independently validated FAT16 allocation');
  }else{
   let fixture=withHddFile(original,'NOTE.BMP',bmp(sample));fixture=withHddFile(fixture,'NOTE.TMP',bmp(inverse));fixture=withHddFile(fixture,'NOTE.BAK',bmp(sample));
