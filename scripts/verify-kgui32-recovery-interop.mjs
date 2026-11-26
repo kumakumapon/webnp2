@@ -7,10 +7,15 @@ const [base = 'http://127.0.0.1:4173/webnp2/', output = 'test-results/kgui32-rec
 const h = await toolsHarness(base, output, video);
 const text = value => h.until(s => s.canvases[0]?.texts.some(label => label.includes(value)), value);
 const button = id => h.control(0, id);
+const crumb = (id, label) => h.until(s => s.canvases[0]?.buttons.some(b => b.id === id && b.text === label), label + ' breadcrumb');
 const gone = () => h.until(s => !s.cpu.views[0].state, 'application closed');
 const expectedText = 'Original document\n';
 const oldPath = 'DOCS\\OLD.TXT', newPath = 'DEST\\GROUP\\NEW.TXT';
-const stagedText = Buffer.from('Fragment in a nested folder\r\n');
+const stagedText = Buffer.concat([
+  Buffer.from('Fragment in a nested folder\r\n' + 'Incomplete staged document line\r\n'.repeat(160)),
+  Buffer.from([0x93, 0xfa, 0x96, 0x7b, 13, 10]),
+  Buffer.from('FARPOINT beyond the first block\r\n'),
+]);
 
 async function launch(query, program) {
   await h.key('CTRL+K');
@@ -55,18 +60,44 @@ function redBmp() {
 async function validatePreview(fixture, bitmap) {
   await manage();
   const before = await h.disk('hdd');
+  const visibleSystem = s => s.canvases[0]?.draws.some(draw => draw.y >= 66 && draw.text.startsWith('SETUP.SYS '));
+  assert(!visibleSystem(await text('Work / Copy and Move use Work paths')), 'System entries are hidden by default');
+  await h.key('CTRL+D');
+  const filterLabel = label => h.until(s => s.canvases[0]?.buttons.some(b => b.id === 467 &&
+    new TextDecoder('shift_jis').decode(Buffer.from(b.text, 'latin1')) === label), label);
+  await h.key('F8');
+  await filterLabel('システム表示');
+  await button(467);
+  await filterLabel('システム非表示');
+  await h.key('F8');
+  await filterLabel('Hide system files');
+  await h.key('ESC');
+  await h.until(visibleSystem, 'System entry appears after the filter changes');
+  await choose('SETUP.SYS');
+  await button(407);
+  await text('Read-only or protected item');
   await button(417);
   await text('TMP folders / may be incomplete');
   await choose('STAGE.TMP');
   await button(407);
-  await text('Preview STAGE.TMP');
+  await crumb(430, 'STAGE.TMP');
   await choose('SUB');
   await h.key('ENTER');
-  await text('STAGE.TMP\\SUB');
+  await crumb(431, 'SUB');
   await choose('PART.TXT');
   await button(408);
   await text('Fragment in a nested folder');
   await text('Read-only preview');
+  await button(408);
+  await text('Incomplete staged document line');
+  await h.key('CTRL+F');
+  await h.until(s => s.canvases[0]?.controls.includes(420), 'Read-only Find input');
+  await h.type('FARPOINT');
+  await text('FARPOINT');
+  await h.key('ENTER');
+  await text('Match found');
+  await text('FARPOINT beyond the first block');
+  await h.key('ESC');
   await h.key('ESC');
   await choose('PART.BMP');
   await button(408);
@@ -82,8 +113,8 @@ async function validatePreview(fixture, bitmap) {
   }, {x: origin.x + 8 + Math.floor(shown.canvases[0].width / 2), y: origin.y + 70 + 48}, {timeout: 30000});
   await pixel.dispose();
   await h.key('ESC');
-  await button(401);
-  await text('Preview STAGE.TMP');
+  await button(430);
+  await h.until(s => s.canvases[0]?.controls.includes(430) && !s.canvases[0].controls.includes(431), 'Breadcrumb returns directly to the stage root');
   assert((await h.disk('hdd')).equals(before), 'Browsing and previews leave every original disk byte intact');
   await operation(407, 'SALVAGE', 'TMP folder recovered');
   const recovered = assertHddProtected(fixture, await h.disk('hdd'));
@@ -91,7 +122,7 @@ async function validatePreview(fixture, bitmap) {
   assert.deepEqual(recovered.files.get('WORK/SALVAGE/SUB/PART.TXT'), stagedText);
   assert.deepEqual(recovered.files.get('WORK/SALVAGE/SUB/PART.BMP'), bitmap);
   await closeManager();
-  h.pass('Nested TMP text and RGB565 bitmap preview is read-only, and explicit recovery preserves the original bytes');
+  h.pass('Direct navigation, system filtering and full nested TMP text and BMP previews preserve the disk, with literal search beyond 4 KiB');
 }
 async function recent() {
   const crop = () => h.page().evaluate(() => {
@@ -155,7 +186,7 @@ async function validateHistory(fixture) {
   await manage();
   await choose('DOCS');
   await button(408);
-  await text('A:\\WORK\\DOCS');
+  await crumb(431, 'DOCS');
   await choose('OLD.TXT');
   await operation(406, 'NEW.TXT', 'Renamed');
   await historyUntil(fixture, history => !history.has(oldPath) && history.get('DOCS\\NEW.TXT') === 1);
@@ -188,6 +219,12 @@ async function validateLargeControls() {
   await gone();
   await launch('calculator', 'KGCALC.EXE');
   await h.until(s => s.canvases[0]?.largeText.includes('0'), 'Calculator result uses large glyphs');
+  await h.key('F1');
+  await h.until(s => s.canvases[0]?.largeText.includes('App menu') && s.canvases[0]?.buttons.some(b => b.id === 24576 && b.h === 64), 'App menu exposes large rows');
+  await h.chord('SHIFT', 'TAB');
+  await h.until(s => s.canvases[0]?.buttons.some(b => b.text === 'Close'), 'Shift+Tab reaches the last menu page');
+  await h.key('ESC');
+  await h.until(s => s.canvases[0]?.largeText.includes('0'), 'Calculator after closing the app menu');
   await h.key('TAB');
   await h.key('ENTER');
   await h.until(s => s.canvases[0]?.largeText.includes('8'), 'Tab and Enter operate the focused calculator key');
@@ -221,6 +258,7 @@ try {
   const bitmap = redBmp();
   fixture = withHddFile(fixture, 'STAGE.TMP/SUB/PART.BMP', bitmap);
   fixture = withHddFile(fixture, 'STAGE.TMP/SUB/PART.TXT', stagedText);
+  fixture = withHddFile(fixture, 'SETUP.SYS', Buffer.from('Protected\r\n'), 6);
   fixture = withHddFile(fixture, 'DOCS/OLD.TXT', Buffer.from(expectedText));
   const vector = await h.bootHdd(fixture);
   await validatePreview(fixture, bitmap);

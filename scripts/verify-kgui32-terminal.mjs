@@ -7,7 +7,7 @@ import {toolsHarness,sha} from './kgui32-tools-harness.mjs';
 import {inspectTerminal} from './kgui32-terminal-inspect.mjs';
 import {cgGlyph} from './kgui32-shiftjis.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/terminal',video='pegc',suite='paint']=process.argv.slice(2);
-assert(['paint','lifecycle'].includes(suite));
+assert(['paint','lifecycle','access'].includes(suite));
 const h=await toolsHarness(base,output,video),m=h.manifest;
 assert.equal(m.dos_terminal.snapshot_bytes,8032);assert.equal(m.dos_terminal.diagnostic,'TERM98.COM');
 const bmp=await readFile(new URL('../public/core/font.bmp',import.meta.url)),root=new URL('../public/kgui32/',import.meta.url),original=await readFile(new URL(m.standalone_hdd.image,root));
@@ -29,8 +29,13 @@ async function start(id=0,name='TERM98.COM'){
 async function rect(row,col,width=8,id=0){
  const s=await until(s=>stable(s,id),'published terminal'),w=t(s,id).window,x=w.x+8+(col-w.sx)*8,y=w.y+70+(row-w.sy)*16;
  assert(col>=w.sx&&col+width/8<=w.sx+Math.floor((w.w-16)/8)&&row>=w.sy&&row<w.sy+Math.floor((w.h-104)/16),'visible native cell');
- return h.page().evaluate(({x,y,width})=>{const source=document.querySelector('#canvas'),c=document.createElement('canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return Array.from(g.getImageData(x,y,width,16).data);},{x,y,width});
+ return pixelRect(x,y,width,16);
 }
+function pixelRect(x,y,width,height){return h.page().evaluate(({x,y,width,height})=>{
+ const c=document.createElement('canvas');c.width=width;c.height=height;
+ const g=c.getContext('2d');g.drawImage(document.querySelector('#canvas'),x,y,width,height,0,0,width,height);
+ return Array.from(g.getImageData(0,0,width,height).data);
+},{x,y,width,height});}
 function expected(code,attr,half=0,phase=1){
  const bits=code===32?Buffer.alloc(32):cgGlyph(bmp,code).bits,rgb=[attr&64?255:0,attr&128?255:0,attr&32?255:0],out=[];
  for(let y=0;y<16;y++){let line=(attr&1)&&(!(attr&2)||phase)?bits[half*16+y]:0;if(attr&4)line^=255;if((attr&8)&&y===15)line=255;if(attr&16)line|=8;
@@ -97,4 +102,46 @@ async function lifecycleSuite(){
  const fdVector=await h.boot(null,h.legacy);await start();await initial();await buffered();await command('q',v=>v.state===0,'FD DOS exit');await finishBoot(fdVector,h.legacy,true);
  h.pass('Complete FD compatibility boot includes diagnostic and font path; whole FD, vectors, conventional/XMS memory and stack guards are preserved');
 }
-try{if(suite==='paint')await paintSuite();else await lifecycleSuite();await h.finish();}catch(e){await writeFile(join(output,'terminal-failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last)},null,2)+'\n');await h.fail(e);throw e;}finally{await h.close();}
+async function accessSuite(){
+ const vector=await h.bootHdd();
+ await h.key('F9');
+ await h.control(0,522);
+ await h.control(0,524);
+ await h.control(0,528);
+ await h.control(0,526);
+ await h.until(s=>s.canvases[0]?.largeText.includes('Desktop preferences'),'Settings applied large text and high contrast');
+ await h.control(0,527);
+ await h.control(0,519);
+ await h.until(s=>!s.cpu.views[0].state,'Settings closed');
+ const s=await run(),w=t(s).window;
+ const glyph=expected(0x93fa,0xe1),large=[];
+ for(let y=0;y<32;y++)for(let x=0;x<16;x++){
+  const at=(Math.floor(y/2)*8+Math.floor(x/2))*4;
+  large.push(...glyph.slice(at,at+4));
+ }
+ let actual;
+ for(let end=Date.now()+20000;Date.now()<end;){
+  actual=await pixelRect(w.x+8,w.y+70+2*32,16,32);
+  if(samePixels(actual,large))break;
+  await h.page().waitForTimeout(120);
+ }
+ assert(samePixels(actual,large),'Large terminal mode doubles the actual Shift-JIS CG-ROM pixels');
+ const title=await pixelRect(w.x+72,w.y+9,80,16),luminance=[];
+ const linear=v=>{v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;};
+ for(let i=0;i<title.length;i+=4)luminance.push(0.2126*linear(title[i])+0.7152*linear(title[i+1])+0.0722*linear(title[i+2]));
+ assert((Math.max(...luminance)+0.05)/(Math.min(...luminance)+0.05)>=4.5,'Captured terminal title foreground and background meet 4.5:1');
+ await h.chord('CTRL','TAB',180);
+ await h.chord('SHIFT','TAB',180);
+ await h.key('ENTER');
+ await until(s=>stable(s)&&t(s).window.sy===4,'Ctrl+Tab and Shift+Tab focus Down and Enter scrolls four rows');
+ await stop();
+ await h.exit(vector);
+ await h.unchangedFd();
+ h.pass('High-contrast terminal title, doubled DOS glyph and reverse keyboard focus verified in guest pixels and state');
+}
+try{
+ if(suite==='paint'){await paintSuite();await accessSuite();}
+ else if(suite==='access')await accessSuite();
+ else await lifecycleSuite();
+ await h.finish();
+}catch(e){await writeFile(join(output,'terminal-failure.json'),JSON.stringify({error:String(e),last:await inspect().catch(()=>last)},null,2)+'\n');await h.fail(e);throw e;}finally{await h.close();}

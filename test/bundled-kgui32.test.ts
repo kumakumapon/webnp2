@@ -66,6 +66,7 @@ describe('independent native PM32 GUI image',()=>{
   const editor=fatReadFile(openDiskImage(image,manifest.image),'KGEDIT.EXE');expect(new TextDecoder().decode(editor.slice(72,80))).toBe('K32EXE01');expect(editor[92]).toBe(231);
   const files=Buffer.from(fatReadFile(openDiskImage(image,manifest.image),'KGFILES.EXE'));expect(files.readUInt32LE(92)).toBe(487);
   expect(manifest.work_management).toMatchObject({version:1,path_components:3,copy_max_bytes:1048576,trash_hidden:true,trash_empty_folders:true,overwrites:false});
+  expect(manifest.files_manager).toMatchObject({breadcrumbs:true,drive_panel:true,system_files_visible_by_default:false,tmp_text_preview_bytes:1048576,tmp_text_search:true});
   expect(manifest.settings).toMatchObject({executable:'KGSET.EXE',shortcut:'F9',boot_files:['CONFIG.SYS','AUTOEXEC.BAT'],apply_after_reboot:true});
   expect(manifest.memo).toEqual({executable:'KGEDIT.EXE',shortcut:'F4',work_file:'NOTE.TXT'});
   expect(manifest.runtime_profiles).toEqual({default:{extended_memory_mb:16,application_slots:2},expanded:{extended_memory_mb:32,application_slots:4},manager_version:2,manager_bytes:264,pm32_private_bytes:4194304,high_memory_driver:'KXMS32.SYS',capture_driver:'KXHIGH.SYS',physical_ceiling:33554432});expect(manifest.dedicated_gui_context).toBe(true);expect(manifest.application_slots).toBe(2);expect(manifest.gui_bits).toBe(32);expect(manifest.dos_files_read_only).toBe(false);expect(manifest.workspace_save_api).toBe(1);expect(manifest.workspace_information_api).toBe(1);expect(manifest.writable_workspace).toBe('auto: verified HDD / WORK');expect(manifest.workspace_fd_fallback).toBe('A:\\WORK');expect(manifest.root_browser_read_only).toBe(true);
@@ -143,7 +144,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(manifest.process_api).toMatchObject({version:1,feature:512,helper:'K32PROC.EXE',gui_independent:true,parent_owns_children:true,generation_checked:true,message_bytes:64,pipe_bytes:512,stream_chunk_bytes:256,retains_original_on_failure:true});
   expect(manifest.image_transport).toMatchObject({request_bytes:3144,status_header_bytes:72,control_reply_bytes:72,successful_upload_roundtrip_bytes:3216,metrics_record:'KGXFER01'});
   expect(manifest.process_api).toMatchObject({shell_pipeline_commands:3,background_jobs:1,separate_console_stderr:true,independent_ipc:'receiver-admits-live-peer'});
-  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE','K32MIX.COM','KRESCHK.COM','K32MEM.EXE','K32CPU.COM']);
+  expect(manifest.fd_omitted_diagnostics).toEqual(['MEM32.EXE','XARRAY32.EXE','K32MIX.COM','KRESCHK.COM','K32MEM.EXE','K32CPU.COM','K386TEST.COM','XARRAY.EXE']);
   expect(manifest.fd_omitted_aliases).toEqual(['EDIT98.EXE']);
   for(const [image,prefix] of [[manifest.image,''],[manifest.standalone_hdd.image,'APPS/']]){
    const d=openDiskImage(readFileSync('public/kgui32/'+image),image);
@@ -160,6 +161,7 @@ describe('independent native PM32 GUI image',()=>{
   expect(fatList(fd,'/').some(e=>excluded.includes(e.name))).toBe(false);
   expect(fatReadFile(fd,'EDIT.EXE')).toEqual(fatReadFile(hd,'EDIT98.EXE'));
   expect(fatReadFile(hd,'MEM32.EXE').length).toBeGreaterThan(65536);
+  for(const name of ['K386TEST.COM','XARRAY.EXE'])expect(fatReadFile(hd,name).length).toBeGreaterThan(100);
  });
  it('pairs a new marked FAT16 workspace with the unchanged FD fallback',()=>{
   if(!manifest.enabled)return;

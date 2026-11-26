@@ -29,6 +29,13 @@ async function windowRect(id, expectedWindow) {
   try { return (await handle.jsonValue()).window; }
   finally { await handle.dispose(); }
 }
+async function tapControl(id) {
+  const state = await h.until(s => s.canvases[0]?.controls.includes(id), 'Touchable control ' + id);
+  const control = state.canvases[0].buttons.find(b => b.id === id);
+  const frame = await windowRect(0);
+  await tap(frame.x + 8 + control.x + control.w / 2, frame.y + 70 + control.y + control.h / 2);
+}
+const crumb = (id, label) => h.until(s => s.canvases[0]?.buttons.some(b => b.id === id && b.text === label), label + ' breadcrumb');
 async function find(name) {
   await h.key('CTRL+K');
   await h.type(name);
@@ -125,9 +132,12 @@ async function files() {
   await waitText('Drive root / read only');
   await choose('APPS');
   await button(408);
-  await waitText('A:\\APPS');
+  await crumb(431, 'APPS');
+  await button(430);
+  await h.until(s => s.canvases[0]?.controls.includes(430) && !s.canvases[0].controls.includes(431), 'Tap returns to the drive root');
   await button(416);
-  await waitText('A:\\WORK');
+  await button(440);
+  await crumb(430, 'A:\\WORK');
   await operation(403, 'BOX', 'Folder created');
   await choose('SOURCE.BIN');
   await operation(404, 'BOX\\COPY.BIN', 'Copied');
@@ -197,16 +207,19 @@ async function pairedDrives() {
   await owned('KGFILES.EXE');
   await button(106);
   await waitText('Drive root / read only');
-  await button(416);
-  await h.until(s => s.canvases[0]?.texts.includes('B:\\'), 'Verified paired HDD selected as B:');
-  await button(416);
-  await waitText('B:\\WORK');
-  await button(400);
-  await button(103);
+  await tapControl(416);
+  await tapControl(442);
+  await crumb(430, 'B:\\');
+  await h.page().setViewportSize({ width: 844, height: 390 });
+  await tapControl(416);
+  await tapControl(440);
+  await crumb(430, 'B:\\WORK');
+  await tapControl(400);
+  await tapControl(103);
   await h.until(s => s.cpu.views[0].state === 0, 'Files closed on paired media');
   await h.unchangedFd();
   await h.exit(vector);
-  h.pass('FD plus HDD boot switches the read-only drive view from A: to B: and then returns to B:\\WORK');
+  h.pass('Portrait and landscape taps select B: directly from the drive panel and return to B:\\WORK');
 }
 
 try {
