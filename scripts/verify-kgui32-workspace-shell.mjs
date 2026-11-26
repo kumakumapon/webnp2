@@ -81,7 +81,7 @@ async function restoreTmp(fixture) {
   await text('TMP folders / may be incomplete');
   await chooseRow('STAGE.TMP');
   await button(407);
-  await text('Preview STAGE.TMP');
+  await h.until(s => s.canvases[0]?.buttons.some(b => b.id === 430 && b.text === 'STAGE.TMP'), 'TMP root breadcrumb');
   await text('CHUNK.TXT');
   await text('Read-only preview');
   const before = assertHddProtected(fixture, await h.disk('hdd'));

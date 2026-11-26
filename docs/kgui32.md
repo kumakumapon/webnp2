@@ -16,12 +16,13 @@ HDD起動時のEditorの保存先はA:\WORKです。拡張メモリの詳細は[
 
 - **Kuma** からシステム情報、設定、DOS、アプリ検索、最近使ったアプリ／文書、ウィンドウ切替、再起動を開けます。対応HDDにアプリ履歴、Workの文書履歴、固定、ウィンドウ配置を保存します。「固定」または Ctrl+P で文書を4件まで固定できます。「除外」またはDeleteで履歴を個別に消し、文書は媒体に残します。FilesでWorkの文書や親フォルダを移動・改名すると、履歴のパスと固定を引き継ぎます。読取専用ドライブの文書履歴は起動中に保持します。
 - Alt+Tab（PC-98のGRPH+Tab）と一覧のタップで切り替えます。Alt+矢印で左右への配置、最大化・復元ができ、Alt+F4で閉じます。再起動時は未保存のアプリを順に確認します。
-- Filesの **Drives** からWork・A:・認識済みの対応HDDを選びます。Workの **TMP** ではサブフォルダを移動し、TXTの先頭4 KiBやBMPを読み取り専用で確認できます。**Recover** はTMPフォルダ全体を別名で復旧します。
+- Filesの **Drives** でドライブパネルを開き、Work・A:・認識済みの対応HDDを選びます。ここでシステムファイルの表示も切り替えられます。パンくずはタップまたはTabとEnterで移動できます。Workの **TMP** ではサブフォルダを移動し、最大1 MiBのShift-JIS TXTやBMPを読み取り専用で確認できます。TXTはPage Up／Downでページ送りし、Ctrl+Fまたは「検索」で文字列を探せます。**Recover** はTMPフォルダ全体を別名で復旧します。
 - EditorとImagesは共通ダイアログでドライブやフォルダを移動でき、Work内のサブフォルダに保存できます。ImagesのCtrl+C／Ctrl+Vは、同じKGUI32セッションのウィンドウ間で最大128×128の画像を共有します。
 - Settingsの **Desktop preferences** でコントラスト、日英、IMEの既定値、文字サイズを保存できます。大きい文字はFiles、Calculatorの結果、Calendar、Imagesのファイル名、ユーザー辞書にも適用します。Calculator・Clock・Calendar・ユーザー辞書の操作は Tab／Shift+Tab とEnterに対応します。上部バーのFD・HDDは、ファイルブローカー経由の操作を表示します。
 - ImagesとKDESKの画像ウィンドウは、Ctrl+B／Ctrl+Jまたはメニューの操作で、対応HDDの `WORK/KGCLIP.BMP` を共有します。最大256×192のRGB565相当の色を保持します。KGUI32のEditorは Ctrl+Shift+B／Ctrl+Shift+J、KDESKのText Editorは Ctrl+B／Ctrl+Jで、`WORK/KGTEXT.TXT` に最大1,024バイトのShift-JIS文字列を共有します。
 - KGUI32のFDに収録する `KDESK.TXT` は互換起動と主要操作の早見表です。完全版は起動HDDとKDESK起動FDに収録しています。
-- FDの作業領域を確保するため、診断ツール `KRESCHK.COM`・`K32MEM.EXE`・`K32CPU.COM` は起動HDDとK386配布版に収録しています。
+- FDの作業領域を確保するため、`KRESCHK.COM`・`K32MEM.EXE`・`K32CPU.COM`・`K386TEST.COM`・`XARRAY.EXE` は起動HDDとK386配布版に収録しています。
+- 大きい文字はDOS端末のテキスト表示とアプリメニューにも反映します。DOS端末ではCtrl+Tabで操作ボタンに入り、Tab／Shift+TabとEnterで操作します。Escで端末の入力に戻ります。
 - WelcomeのCalculator / Clock / DOS Shell / Filesで独立アプリを起動。F2で戻ります。Ctrl+Kはアプリ検索を開きます。
 - **New DOS 1 / 2** で空き枠にKSHを起動。既存ウィンドウは復元。
 - DOSウィンドウのRun（Ctrl+L）でコマンドを入力しEnter。実行中のルートは先にEnd。
