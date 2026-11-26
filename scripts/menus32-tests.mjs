@@ -18,14 +18,17 @@ export async function menuTests(p,video){
   await tap(r.x+8+d.x+Math.floor(d.w/2),r.y+70+d.y+Math.floor(d.h/2));
  }
  async function open(id){const s=await p.inspect(),r=s.bitmaps[id].window;await tap(r.x+36,r.y+16);return until(s=>draws(s,id).some(d=>d.op===3&&d.handle===BACK),'titlebar Menu '+id);}
- async function choose(id,index){
+ async function choose(id,item){
   await open(id);
   for(let page=0;page<12;page++){
-   const s=await p.inspect();if(draws(s,id).some(d=>d.handle===ITEM+index)){await control(id,ITEM+index);await until(s=>s.expanded.slots[id].state===0||!draws(s,id).some(d=>d.handle===BACK),'menu command acknowledged');return;}
-   const first=draws(s,id).find(d=>d.handle>=ITEM&&d.handle<ITEM+24)?.handle;assert(first!==undefined);
+   const s=await p.inspect(),entries=draws(s,id).filter(d=>d.op===3&&d.handle>=ITEM&&d.handle<ITEM+24);
+   const target=entries.find(d=>typeof item==='string'?d.text===item:d.handle===ITEM+item);
+   if(target){await control(id,target.handle);await until(s=>s.expanded.slots[id].state===0||!draws(s,id).some(d=>d.handle===BACK),'menu command acknowledged: '+item);return;}
+   if(!draws(s,id).some(d=>d.handle===NEXT))break;
+   const first=entries[0]?.handle;assert(first!==undefined);
    await control(id,NEXT);await until(s=>draws(s,id).some(d=>d.handle>=ITEM&&d.handle<ITEM+24&&d.handle!==first)&&!draws(s,id).some(d=>d.handle===first),'touch menu next page');
   }
-  throw Error('Menu index not reached '+index);
+  throw Error('Menu item not reached '+item);
  }
  async function welcome(x,y){const s=await p.inspect();await tap(60,s.gui.height-16);await until(s=>s.gui.app.active===0,'touch Welcome');await tap(x,y);}
  async function endByTap(id){
@@ -64,15 +67,15 @@ export async function menuTests(p,video){
  await choose(0,5);await until(s=>s.expanded.slots[0].state===0,'calculator menu close');
  await welcome(130,266);await until(s=>samples(s)[0]===0x3345474b&&samples(s)[2]>0,'touch Editor launcher');
  await p.appType(0,'menu memo');let s=await until(s=>samples(s)[4]===9&&samples(s)[5]===fnv('menu memo'),'all actual text bytes acknowledged');const hash=samples(s)[5];assert.equal(samples(s)[8],1);
- const r=s.bitmaps[0].window;await tap(r.x+17,r.y+118);await until(s=>samples(s)[6]===0&&samples(s)[7]===0,'touch selection start');await choose(0,7);await tap(r.x+49,r.y+118);await until(s=>samples(s)[6]===4&&samples(s)[7]===0&&samples(s)[5]===hash,'selection mode uses a tapped endpoint');await choose(0,7);
- await choose(0,6);await until(s=>samples(s)[6]!==samples(s)[7],'touch select all');
- await choose(0,8);await until(s=>!draws(s,0).some(d=>d.handle===BACK),'touch copy');
- await choose(0,14);await until(s=>draws(s,0).some(d=>d.text?.includes('CRLF')),'touch CRLF');
- await choose(0,4);await until(s=>samples(s)[9]===5,'touch find dialog');
+ const r=s.bitmaps[0].window;await tap(r.x+17,r.y+118);await until(s=>samples(s)[6]===0&&samples(s)[7]===0,'touch selection start');await choose(0,'Selection mode');await tap(r.x+49,r.y+118);await until(s=>samples(s)[6]===4&&samples(s)[7]===0&&samples(s)[5]===hash,'selection mode uses a tapped endpoint');await choose(0,'Selection mode');
+ await choose(0,'Select all');await until(s=>samples(s)[6]!==samples(s)[7],'touch select all');
+ await choose(0,'Copy');await until(s=>!draws(s,0).some(d=>d.handle===BACK),'touch copy');
+ await choose(0,'Use CRLF');await until(s=>draws(s,0).some(d=>d.text?.includes('CRLF')),'touch CRLF');
+ await choose(0,'Find');await until(s=>samples(s)[9]===5,'touch find dialog');
  await open(0);s=await until(s=>draws(s,0).some(d=>d.handle===BACK)&&!draws(s,0).some(d=>d.handle>=ITEM&&d.handle<ITEM+24),'modal menu has no executable commands');assert.equal(samples(s)[5],hash);
  await control(0,BACK);await until(s=>draws(s,0).some(d=>d.handle===843),'return to original find dialog');await control(0,843);await until(s=>samples(s)[9]===0,'cancel find');
- await choose(0,17);await until(s=>samples(s)[9]===2,'menu Close requires unsaved confirmation');assert.equal(samples(await p.inspect())[5],hash);await control(0,802);await until(s=>samples(s)[9]===0&&samples(s)[8]===1,'cancel close retains document');
- await choose(0,17);await until(s=>samples(s)[9]===2,'repeat explicit close');await control(0,801);await until(s=>s.expanded.slots[0].state===0,'explicit discard closes Editor');
+ await choose(0,'Close');await until(s=>samples(s)[9]===2,'menu Close requires unsaved confirmation');assert.equal(samples(await p.inspect())[5],hash);await control(0,802);await until(s=>samples(s)[9]===0&&samples(s)[8]===1,'cancel close retains document');
+ await choose(0,'Close');await until(s=>samples(s)[9]===2,'repeat explicit close');await control(0,801);await until(s=>s.expanded.slots[0].state===0,'explicit discard closes Editor');
  p.pass('Editor menu reaches selection/copy/EOL/find; modal sheet prevents commands; cancelled close preserves the exact dirty document');
  await welcome(292,230);await until(s=>samples(s)[0]===0x3246474b&&samples(s)[2]>0,'touch Files launcher');await choose(0,2);await until(s=>samples(s)[9]&32,'Files menu switches to Work');await choose(0,6);await until(s=>s.expanded.slots[0].state===0,'Files menu close');
  await welcome(292,266);await until(s=>samples(s)[0]===0x3149474b&&samples(s)[2]>0&&s.bitmaps[0].consistent,'touch Images launcher');s=await p.inspect();const imageHash=s.bitmaps[0].hash;
