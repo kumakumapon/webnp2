@@ -231,6 +231,14 @@
       {"argv": ["scripts/verify-kgui32-recovery-interop.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-recovery-interop", "{video}"]}
     ]
   },
+  "desktop-settings": {
+    "matrix": {"video": ["pegc", "cirrus"]},
+    "timeout": 30,
+    "base": "/webnp2/",
+    "commands": [
+      {"argv": ["scripts/verify-kgui32-desktop-settings.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-desktop-settings", "{video}"]}
+    ]
+  },
   "hdd-workspace": {
     "matrix": {"video": ["pegc", "cirrus"]},
     "timeout": 55,

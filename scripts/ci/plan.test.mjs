@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { listCases } from './plan.mjs';
-test('preserves all 102 original E2E matrix cases and every verifier command', () => {
+test('keeps 102 existing E2E cases and adds desktop settings on both video modes', () => {
   const cases = listCases();
-  assert.equal(cases.length, 102);
+  assert.equal(cases.length, 104);
   assert.deepEqual(cases.find(item => item.id === 'browser').directories, ['test-results/dos2']);
-  assert.equal(new Set(cases.map(item => item.id)).size, 102);
+  assert.equal(new Set(cases.map(item => item.id)).size, 104);
   for (const item of cases) {
     assert.ok(item.timeout > 0 && item.timeout <= 60);
     for (const { argv } of item.commands) {
@@ -18,6 +18,7 @@ test('preserves all 102 original E2E matrix cases and every verifier command', (
   assert.equal(cases.find(item => item.id === 'native-tools').commands[2].env.K386_LATENCY_GATE, '1');
   for (const video of ['pegc', 'cirrus']) {
     assert.equal(cases.filter(item => item.id.startsWith(`practical32-${video}-`)).length, 10);
+    assert.equal(cases.find(item => item.id === `desktop-settings-${video}`).commands.length, 1);
     const standalone = cases.find(item => item.id === `hdd-applications-${video}`);
     assert.equal(standalone.commands[1].env.KGUI32_STANDALONE_REPEATS, '5');
     assert.equal(cases.find(item => item.id === `kgui32-save-${video}`).commands.length, 3);

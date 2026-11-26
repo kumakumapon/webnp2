@@ -42,6 +42,7 @@ import {
   resolveAudioContext,
 } from './core/module.ts';
 import { getWorkletAudioContext, startWorkletAudio } from './core/audio.ts';
+import { moveAbsoluteGuestMouse, resumeRelativeGuestMouse, syncKguiHostStatus } from './core/kgui-host-status.ts';
 import { describeError, getLang, t, type StringKey } from './ui/strings.ts';
 import { parseAspectModeParam } from './ui/aspect.ts';
 import {
@@ -569,7 +570,7 @@ function queueTouchOp(op: () => Promise<void>): void {
 
 async function mouseTrackHome(epoch: number): Promise<void> {
   for (let i = 0; i < 30 && epoch === mouseTrackEpoch; i++) {
-    coreMouseMove(-64, -64);
+    moveAbsoluteGuestMouse(-64, -64);
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
   }
 }
@@ -588,7 +589,7 @@ function startMouseTrackTimer(): void {
       const clamp = (v: number) => Math.max(-64, Math.min(64, v));
       const mx = clamp(dx);
       const my = clamp(dy);
-      coreMouseMove(mx, my);
+      moveAbsoluteGuestMouse(mx, my);
       mouseTrackPos = { x: mouseTrackPos.x + mx, y: mouseTrackPos.y + my };
     }
   }, 60);
@@ -635,6 +636,7 @@ function onTrackpadMove(dx: number, dy: number): void {
   if (sendX === 0 && sendY === 0) return;
   trackpadResidX -= sendX;
   trackpadResidY -= sendY;
+  resumeRelativeGuestMouse();
   coreMouseMove(sendX, sendY);
 }
 
@@ -1443,9 +1445,10 @@ const diskLampLitAt = { fd1: 0, fd2: 0, hdd: 0 };
 function startDiskLampPolling(): void {
   if (diskLampTimer !== null) return;
   diskLampTimer = setInterval(() => {
+    const now = performance.now();
+    syncKguiHostStatus(now);
     const counters = coreDiskAccess();
     if (!counters) return;
-    const now = performance.now();
     if (lastDiskAccess) {
       if (counters.fdd[0] !== lastDiskAccess.fdd[0]) diskLampLitAt.fd1 = now;
       if (counters.fdd[1] !== lastDiskAccess.fdd[1]) diskLampLitAt.fd2 = now;
@@ -1953,6 +1956,7 @@ function init(): void {
       onKdeskMedia: () => openKdeskMedia(np2),
       onMouseToggle: () => {
         // キャプチャ開始はpointer lock要求になるため、クリックハンドラ内で同期的に呼ぶ。
+        resumeRelativeGuestMouse();
         const captured = coreMouseToggle();
         ui.setMouseCaptured(!!captured);
         setStatusT(captured ? 'statusMouseCaptured' : 'statusMouseReleased');

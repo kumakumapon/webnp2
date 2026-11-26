@@ -65,7 +65,7 @@ RELOCATED = ('KGCALC.EXE', 'KGCLOCK.EXE', 'KGCAL.EXE', 'KGSET.EXE', 'KGFILES.EXE
 # Keep the original K386 diagnostics and the duplicate DOS editor executable
 # on their own disks. The complete GUI floppy still includes EDIT.EXE.
 FD_OMITTED_DIAGNOSTICS = ('MEM32.EXE', 'XARRAY32.EXE', 'K32MIX.COM', 'KRESCHK.COM', 'K32MEM.EXE', 'K32CPU.COM',
-                          'K386TEST.COM', 'XARRAY.EXE')
+                          'K386TEST.COM', 'XARRAY.EXE', 'BADABI.EXE', 'BADENT.EXE')
 FD_OMITTED_ALIASES = ('EDIT98.EXE',)
 FD_OMITTED = FD_OMITTED_DIAGNOSTICS + FD_OMITTED_ALIASES
 FD_KDESK_GUIDE = (

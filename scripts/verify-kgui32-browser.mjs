@@ -89,7 +89,7 @@ try{
  await run(1,'KGFILES.EXE hold');await until(s=>s.files[1]?.entries===4&&(s.files[1].mode&16),'peer holds a live cursor after four entries');
  await click(330,height-16);await key('ESC');await until(s=>ready(s,0)&&!(s.files[0].mode&1),'first root before refresh');await key('TAB');await key('TAB');await key('ENTER');
  s=await until(s=>ready(s,0)&&s.files[0].entries===directory.length&&s.files[1]?.entries===4&&(s.files[1].mode&16),'complete first search while peer cursor remains live');assert.equal(s.files[0].metadataHash,metadataHash);
- snapshots.push({label:'interleaved live directory cursors',...s});await click(480,height-16);await key('SPACE');
+ snapshots.push({label:'interleaved live directory cursors',...s});await click(330,height-16);await key('SPACE');
  s=await until(s=>ready(s,0)&&ready(s,1),'two Files roots');for(const f of s.files){assert.equal(f.entries,directory.length);assert.equal(f.metadataHash,metadataHash);}
  await filter(1,'KGCLOCK.EXE');s=await until(s=>ready(s,1)&&s.files[1].matches===1&&s.files[1].nameHash===nameHash('KGCLOCK.EXE'),'second filter');assert.equal(s.files[0].hash,fnv(content));
  await key('TAB');await key('ENTER');await until(s=>(s.files[1]?.mode&4)!==0,'non-TXT dialog');await key('ENTER');

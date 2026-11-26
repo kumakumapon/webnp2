@@ -13,14 +13,14 @@ incremental checkJs on MCP and CI helpers, unit/tool tests, dependency audits an
 the bundled MCP stdio smoke test. A shared [build action](../.github/actions/build/action.yml)
 generates the native FD/HDD distribution and the HDD proof once per run, then
 builds production assets. The immutable `webnp2-build` artifact supplies every
-browser job. No media or production rebuild occurs in the 102 browser cases.
+browser job. No media or production rebuild occurs in the browser jobs.
 
-[Suite definitions](../scripts/ci/suites.json) retain the original 102 matrix
-cases, verifier commands, modes, repetitions and timeouts. The planner expands
+[Suite definitions](../scripts/ci/suites.json) define 104 cases, including
+desktop settings on PEGC and Cirrus. The planner expands
 them without shell evaluation. The process owner refuses to run outside Actions,
 bounds HTTP readiness and kills its preview/verifier process groups on exit.
 Artifacts include real guest diagnostics and use overwrite for failed-job reruns.
-There is no change to guest assertions or fault/retention checks.
+Verifiers exercise the real guest, including fault recovery and original-file retention.
 
 PR runs cancel superseded runs. Master, releases and Pages run to completion.
 Push validation targets master; other development branches are covered by PRs.
@@ -36,7 +36,7 @@ KDESK/386 and KGUI32 media source. The HDD proof has its separate explicit pin.
 Generated manifests preserve exact component commits, clean-source state and
 hashes; `dist/ci-build.json` records the web commit, native commit and Actions run.
 
-After native main CI passes, update the web pin, run all 102 E2E cases and merge.
+After native main CI passes, update the web pin, run the full E2E matrix and merge.
 Then advance the native emulator pin to the new web master commit and verify
 native DOS 2/4 boot again. Do not use a development-only SHA as a release pin.
 

@@ -68,15 +68,7 @@ export async function practicalHarness(base,output,video,options={}){
  const untilSlot=(f,label,timeout=120000)=>poll(()=>observeControl(),f,label,timeout);
  const untilIo=(f,label,timeout=120000)=>poll(()=>observeControl(true),f,label,timeout);
  const samples=(s,id=0)=>s.expanded.slots[id].pm?.samples??[];
- async function focus(id){
-  const gui=await h.guiUntil(app=>app.frames,'focus ready');
-  if(gui.app.active!==id+2){
-   const {expanded}=await untilSlot(()=>true,'taskbar slot layout');
-   const step=(gui.width-300)/4;
-   await h.click(expanded.capacity===2?330+146*id:Math.round(300+step*(id+.5)),gui.height-16);
-   await h.guiUntil(app=>app.active===id+2,'focus '+id);
-  }
- }
+ const focus=h.focusTaskbar;
  async function launch(kind,id=0){
   const s=await untilSlot(s=>s.gui.app?.frames,'launcher ready'),generation=s.expanded.slots[id].generation;
   await h.key('F2');await h.click(kind==='image'?292:kind==='words'?292:130,kind==='words'?164:266);
