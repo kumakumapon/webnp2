@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectClients} from './kgui32-client-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/kgui32-clients',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -34,7 +35,7 @@ const hash=b=>createHash('sha256').update(b).digest('hex');
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 function live(s,id,magic){const v=s.cpu.views[id],p=s.cpu.diagnostics[id].pm32,u=s.resources.usage[id],a=s.apps[id];return v.kind===1&&(v.state===1||v.state===2)&&p?.handle>0&&a?.magic===magic&&a.frames>0&&a.error===0&&s.cpu.diagnostics[id].frame.cs===59&&!(s.cpu.diagnostics[id].frame.eflags&0x20000)&&u.generation===v.generation&&s.bridge?.generation[id]===v.generation&&s.bridge.tokens[id]===a.token;}
 try{
- await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  let s=await until(s=>s.gui.ready&&s.gui.app?.frames>=1&&s.bridge?.ready,'desktop with native client service');
  assert.equal(s.bridge.currentVector,s.bridge.vector);assert.equal(hash(await disk()),manifest.sha256);
  await click(48+70,64+128);s=await until(s=>live(s,0,0x3243474b),'graphical calculator');

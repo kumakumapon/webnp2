@@ -8,6 +8,7 @@ import {inspectRing3Probe} from './k38632-inspect.mjs';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {counterPairReady,counterPairAdvanced} from './k386-counter-progress.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k38632']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -63,7 +64,7 @@ async function probe(previous){
  assert.ok(p,'New live Ring-3 record');verify(p);await prompt();probes.push(p);return p;
 }
 try{
- await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+ await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
  await key('F10');await wait('KDESK exited.');await prompt();
  const first=await probe(null);pass('actual CPL3/VM=0/PE+PG, user read-only code/RW data/guard/stack pages and DPL3 exit return');

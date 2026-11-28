@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {counterPairReady,counterPairAdvanced} from './k386-counter-progress.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-highcolor',image]=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -32,7 +33,7 @@ const find=async q=>{await key('CTRL+K');await wait('Find apps');await type(q);a
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
 const hash=b=>createHash('sha256').update(b).digest('hex');
 try{
- await page.goto(new URL(`?fd1=${image??'./k386/'+manifest.image}&run=1&mem=16&clk=8&worklet=0&video=cirrus`,base).href);
+ await page.goto(new URL(`?fd1=${image??'./k386/'+manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0&video=cirrus`,base).href);
  await wait('Ready');assert.ok((await page.evaluate(()=>window.np2debug.np2.getScreenText().text)).includes('Ready'),'Text inspection API matches actual TVRAM');await page.waitForFunction(()=>document.querySelector('#canvas').width===800&&document.querySelector('#canvas').height===600,null,{timeout:60000});
  const initial=hash(await disk());
  const info=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());assert.equal(info.width,800);assert.equal(info.height,600);assert.equal(info.deviceBpp,16);

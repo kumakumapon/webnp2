@@ -7,6 +7,7 @@ import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectNativeMZ} from './kdesk-mz-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/kdesk-polish',only]=process.argv.slice(2);
 assert.ok(!only||['msdos4','k386'].includes(only));
@@ -66,7 +67,7 @@ try{
    await writeFile(join(output,profile+'.json'),JSON.stringify({results,snapshots,image:m.image,sha256:m.sha256,errors},null,2)+'\n');
   };
   try{
-   await page.goto(new URL(`?fd1=./${profile}/${m.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+   await page.goto(new URL(`?fd1=./${profile}/${m.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
    await wait('Ready');await title('Launcher',3,5);snapshots.push({stage:'native-mz',...await inspectNativeMZ(page,profile==='k386')});
    await screenshot('desktop');
    const original=await pixels(24,32,389,261);

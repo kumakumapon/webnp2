@@ -7,6 +7,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { waitForAsyncPredicate } from './legacy-browser.mjs';
 import { chromium } from 'playwright';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-shell']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url),'utf8'));
@@ -53,7 +54,7 @@ const visibleText=(id,row=0)=>page.waitForFunction(({id,row})=>{
 
 try{
   await mkdir(output,{recursive:true});
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
   await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
   // Prepare a directory through real DOS, on this browser's disposable disk.
   // The distributed image itself remains immutable; VM operations are compared

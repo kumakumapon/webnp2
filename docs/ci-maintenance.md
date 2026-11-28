@@ -68,6 +68,17 @@ link checks. Other changes and manual runs retain the full browser matrix.
 The link check reads README contents from Git and media from the generated
 artifact, including the actual help page served by Pages.
 
+## Guest CPU clock
+
+Every browser verifier and CI measurement boots the guest with the CPU clock
+multiplier from [e2e-clock.mjs](../scripts/e2e-clock.mjs): `clk=32`, the
+emulator's maximum. Verifiers wait on guest-produced records instead of fixed
+host delays, so the faster guest only shortens those waits. Measured locally on
+the same distribution, `verify-kgui32-workspace-shell` (Cirrus) went from
+538 s at `clk=8` to 142 s, and `verify-k386-resources` from 111 s to 64 s, with
+the same assertions passing. Set `WEBNP2_E2E_CLK` (1–32) to reproduce a run at
+another multiplier, for example `WEBNP2_E2E_CLK=8` for the previous speed.
+
 Practical32 input and I/O waits sample compact runtime records. The maximum
 image replacement test arms a single-owner in-page observation before sending
 input and checks the old front bytes using current guest-owned PTEs. The full

@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectMemoryRunner} from './k38632-memory-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k38632-services']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -43,7 +44,7 @@ async function stableWait(r){
 }
 async function boot(mem){
  page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
- await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0`,base).href);
+ await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=${E2E_CLOCK}&worklet=0`,base).href);
  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);await key('F10');await wait('KDESK exited.');await prompt();
 }
 try{

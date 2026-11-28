@@ -6,6 +6,7 @@ import {chromium} from 'playwright';
 import {inspectK386,inspectPM32Records} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {counterPairReady,counterPairAdvanced} from './k386-counter-progress.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k38632-windows',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -39,7 +40,7 @@ async function proof(previousTag){
  assert.ok(r);assert.equal(r.error,0);assert.equal(r.dosBefore,r.dosAfter);assert.ok(r.counters.every(n=>n>0));assert.notEqual(r.pd[0],r.pd[1]);assert.notEqual(r.physical[0],r.physical[1]);assert.deepEqual(r.cs,[59,59]);assert.ok(r.flags.every(f=>!(f&0x20000)));assert.ok(r.v86Flags&0x20000);assert.ok(r.v86Counter>0);
  let raw;for(let i=0;i<100;i++){raw=await inspectPM32Records(page);if(raw)break;await page.waitForTimeout(25);}assert.ok(raw);assert.ok(raw.every(r=>r.irqs>=64&&r.resumes>=63&&r.syscalls===0));assert.equal(raw[0].freeBefore,raw[1].freeAfter);assert.equal(raw[0].largestBefore,raw[1].largestAfter);save('raw CPU proof',{proof:r,records:raw});return {proof:r,records:raw};
 }
-async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);}
+async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);}
 try{
  await boot(16);await key('F10');await wait('KDESK exited.');const first=await proof();await type('KDESK\r');await wait('Ready');
  pass('128 real PM32/V86 and PM32/PM32 CPU slices, distinct CR3/backing, correct user mode, host restoration and conventional-memory reclamation');

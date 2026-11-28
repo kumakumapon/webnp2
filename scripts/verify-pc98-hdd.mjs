@@ -4,6 +4,7 @@ import {chromium} from 'playwright';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4179/',output='test-results/hdd-proof',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/hdd-proof/manifest.json',import.meta.url)));
 assert.equal(manifest.enabled,true,'run prepare-pc98-hdd-ci.sh first');
@@ -37,7 +38,7 @@ async function record(){
 async function boot(hdd=original){
  const ctx=await browser.newContext();page=await ctx.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(hdd)await page.route('**/hdd-proof/'+manifest.hdd.image,route=>route.fulfill({body:hdd,contentType:'application/octet-stream'}));
- await page.goto(new URL(`?fd1=./hdd-proof/${manifest.fd.image}${hdd?'&hdd=./hdd-proof/'+manifest.hdd.image:''}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./hdd-proof/${manifest.fd.image}${hdd?'&hdd=./hdd-proof/'+manifest.hdd.image:''}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  await wait('PC98 HDD basic I/O proof');await prompt();return {ctx,errors};
 }
 function fat(bytes,alternate){

@@ -9,6 +9,7 @@ import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectKdeskPerformance} from './kdesk-performance.mjs';
 import {readKdeskRenderSnapshot,sameKdeskRenderSnapshot} from './kdesk-render-snapshot.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/render-load',phase='changed',video='pegc']=process.argv.slice(2);
 assert.ok(['baseline','changed'].includes(phase));
@@ -114,7 +115,7 @@ async function persist(){await writeFile(output+'/measurements.json',JSON.string
 try{
  for(const clockOpen of [false,true]){
   page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
   await wait('Ready');assert.equal(await diskHash(),manifest.sha256);
   const graphics=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());
   assert.equal(graphics.width,video==='cirrus'?800:640);assert.equal(graphics.height,video==='cirrus'?600:400);

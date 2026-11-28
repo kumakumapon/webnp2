@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/', output='test-results/k386'] = process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url),'utf8'));
@@ -48,7 +49,7 @@ try{
   await page.goto(new URL('?lang=ja',base).href);
   await page.waitForSelector('.start-btn-k386');
   assert.equal(await page.locator('.start-btn-k386').innerText(),'KDESK/386（実験版）で起動');
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
   await wait('Ready');assert.equal(digest(await disk()),manifest.sha256);
   assert.equal(await page.locator('.start-btn-k386').count(),0);
   await key('F10');await wait('KDESK exited.');await prompt();
