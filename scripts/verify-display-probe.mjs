@@ -4,6 +4,7 @@ import {chromium} from 'playwright';
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/display-probe',image]=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
 const diskPath=image??`./k386/${manifest.image}`;
@@ -24,7 +25,7 @@ try{
   const type=s=>page.evaluate(s=>window.np2debug.np2.typeText(s),s);
   const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
   try{
-   await page.goto(new URL(`?fd1=${diskPath}&run=1&mem=16&clk=8&worklet=0${accelerated?'&video=cirrus':''}`,base).href);
+   await page.goto(new URL(`?fd1=${diskPath}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${accelerated?'&video=cirrus':''}`,base).href);
    await wait('Ready');const before=hash(await disk());
    await key('F10');await wait('KDESK exited.');await type('KDISP\r');
    if(accelerated){

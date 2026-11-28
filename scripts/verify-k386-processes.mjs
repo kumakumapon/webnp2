@@ -5,6 +5,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-processes']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url),'utf8'));
 assert.equal(manifest.enabled,true);assert.equal(manifest.extended_memory_mb,16);
@@ -23,7 +24,7 @@ const save=(stage,s)=>{snapshots.push({stage,...s});};
 const done=label=>{results.push(label);console.log('PASS '+label);};
 try{
   await mkdir(output,{recursive:true});
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
   await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
   await run(0,'MEMORY.EXE A');await until(v=>v[0].screen.includes('DOS MEMORY PASS'),'First arena');
   await run(1,'MEMORY.EXE B');let s=await until(v=>v.every(x=>x.counter>100&&x.screen.includes('DOS MEMORY PASS')),'Two arenas');

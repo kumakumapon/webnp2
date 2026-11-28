@@ -15,7 +15,7 @@ generates the native FD/HDD distribution and the HDD proof once per run, then
 builds production assets. The immutable `webnp2-build` artifact supplies every
 browser job. No media or production rebuild occurs in the browser jobs.
 
-[Suite definitions](../scripts/ci/suites.json) define 104 cases, including
+[Suite definitions](../scripts/ci/suites.json) define 124 cases, including
 desktop settings on PEGC and Cirrus. The planner expands
 them without shell evaluation. The process owner refuses to run outside Actions,
 bounds HTTP readiness and kills its preview/verifier process groups on exit.
@@ -67,6 +67,38 @@ Markdown changes run the shared build, static checks, tests and committed boot
 link checks. Other changes and manual runs retain the full browser matrix.
 The link check reads README contents from Git and media from the generated
 artifact, including the actual help page served by Pages.
+
+## Guest CPU clock
+
+Every browser verifier and CI measurement boots the guest with the CPU clock
+multiplier from [e2e-clock.mjs](../scripts/e2e-clock.mjs), `clk=16` (previously
+a hard-coded `clk=8`). Verifiers wait on guest-produced records instead of fixed
+host delays, so a faster guest only shortens those waits. Measured locally on the
+same distribution, KGUI32 boot to the first desktop took 27.4 s at `clk=8`,
+20.0 s at 16 and 16.2 s at 32. Set `WEBNP2_E2E_CLK` (1–32) to reproduce a run
+at another multiplier, for example `WEBNP2_E2E_CLK=8` for the previous speed.
+
+`clk=32` was tried first. It made the longest verifier about 3.8 times faster,
+but two full runs failed three to five different cases each
+([MS-DOS #87](https://github.com/kumakumapon/MS-DOS/issues/87) and runs
+[46141686649](https://github.com/kumakumapon/webnp2/actions/runs/46141686649),
+[46146899850](https://github.com/kumakumapon/webnp2/actions/runs/46146899850)).
+Raise the default again only after those races are fixed.
+
+Three verifiers keep `WEBNP2_E2E_CLK=8` in `suites.json` because the faster
+guest exposed KGUI32 races reproduced in CI: the large-text DOS terminal repaint
+(`verify-kgui32-terminal`), the Files → Editor window registration
+(`verify-kgui32-japanese`) and the Images bitmap picker
+(`verify-kgui32-shell-files`). Remove each pin once the native fix in MS-DOS #87
+ships and the case passes at the default clock; `plan.test.mjs` lists them.
+
+## One verifier per long case
+
+`kgui32`, `hdd-applications` and `hdd-workspace` previously ran four, six and
+three verifiers one after another in a single job, which made them the critical
+path (up to 47 minutes). Each verifier is now its own case with a 30-minute
+timeout, so they run in parallel. The original case names identify the first
+verifier of each former group.
 
 Practical32 input and I/O waits sample compact runtime records. The maximum
 image replacement test arms a single-owner in-page observation before sending

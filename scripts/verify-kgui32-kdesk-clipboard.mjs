@@ -144,9 +144,10 @@ try {
   await h.until(s => s.canvases[0]?.texts.includes('Pasted from KDESK') && image(s)?.[8] === expected, 'KGUI32 reads every RGB565 pixel back from KDESK');
   await h.end(0);
   await openEditor();
-  const beforePaste = await h.inspect();
+  // The IME record is located by scanning XMS backing; wait until it is observable.
+  const beforePaste = await h.until(s => s.imes[0] && s.editors[0], 'Editor IME observed before paste');
   await h.chord('SHIFT', 'CTRL+J', 180);
-  const pasted = await h.until(s => s.editors[0]?.hash === fnv(lf(returned)) && s.editors[0]?.bytes === lf(returned).length, 'KGUI32 pastes returned Shift-JIS text with normalized line breaks');
+  const pasted = await h.until(s => s.imes[0] && s.editors[0]?.hash === fnv(lf(returned)) && s.editors[0]?.bytes === lf(returned).length, 'KGUI32 pastes returned Shift-JIS text with normalized line breaks');
   assert.equal(pasted.imes[0].scheme, beforePaste.imes[0].scheme);
   await h.key('CTRL+J');
   await h.until(s => s.imes[0] && s.imes[0].scheme !== pasted.imes[0].scheme && s.editors[0]?.hash === pasted.editors[0].hash, 'Unshifted Ctrl+J still cycles the IME');

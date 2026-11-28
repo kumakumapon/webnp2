@@ -6,6 +6,7 @@ import {chromium} from 'playwright';
 import {inspectGUI} from './kgui32-inspect.mjs';
 import {inspectK386} from './k386-inspect.mjs';
 import {verifyDesktopNotice} from './verify-kgui32-notice.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/kgui32',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -100,7 +101,7 @@ async function boot(mem){page=await browser.newPage({viewport:{width:1280,height
   const fdUrl=new URL(await fdLink.getAttribute('href'),page.url());
   assert.equal(fdUrl.searchParams.get('fd1'),'./kgui32/'+manifest.image);assert(!fdUrl.searchParams.has('hdd'));assert.equal(fdUrl.searchParams.get('mem'),'16');
   assert.equal(fdUrl.searchParams.get('video'),video==='cirrus'?'cirrus':null);await page.goto(fdUrl.href);}
- else await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ else await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=${mem}&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
 }
 async function command(mode){const previous=await inspectGUI(page);await page.evaluate(cookie=>{window.kgui32ExcludedCookie=cookie;delete window.kgui32Address;},previous?.cookie);await type('KGUILDR KGUI32.EXE '+mode+'\r');}
 try{

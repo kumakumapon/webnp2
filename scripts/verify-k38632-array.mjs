@@ -10,6 +10,7 @@ import {inspectResources} from './k386-resources.mjs';
 import {inspectXms} from './k386-xms.mjs';
 import {arrayWorkloads,arrayExpected,arrayRecord,legacyArrayResult,patternWord} from './k386-array-workloads.mjs';
 import {pm32CounterReady} from './k386-counter-progress.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k38632-array',video='pegc']=process.argv.slice(2);
 assert.ok(['pegc','cirrus'].includes(video));
@@ -46,7 +47,7 @@ function progressed(before,after,id){sameOwner(before,after,id);assert.ok(after.
 function privatePair(s){assert.notEqual(s.cpu.views[0].cr3,s.cpu.views[1].cr3);assert.notEqual(s.cpu.views[0].physical,s.cpu.views[1].physical);for(let id=0;id<2;id++){const p=pm(s,id);assert.ok(p.pmCR0&1);assert.ok(p.pmCR0>>>31);assert.equal(s.cpu.diagnostics[id].frame.cs,59);assert.equal(s.cpu.diagnostics[id].frame.eflags&0x20000,0);}}
 function held(s,id){const r=record(s,id);return s.cpu.views[id].state===2&&r?.scenario===6&&r.state===4&&pm(s,id).heapPages===512;}
 function checkHeld(s,id,expectedIdentity){const r=record(s,id);assert.equal(r.identity,expectedIdentity);assert.equal(r.sum,arrayExpected('fill',expectedIdentity).sum);assert.equal(r.work,6291456);assert.equal(r.first,patternWord(0,expectedIdentity));assert.equal(r.last,patternWord(2097152-4,expectedIdentity));assert.equal(r.allocations,1);assert.equal(r.frees,0);}
-async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(await diskHash(),manifest.sha256);
+async function boot(mem){page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=${mem}&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);await wait('Ready');assert.equal(await diskHash(),manifest.sha256);
  const graphics=await page.evaluate(()=>window.np2debug.np2.getGraphicsInfo());assert.equal(graphics.width,video==='cirrus'?800:640);assert.equal(graphics.height,video==='cirrus'?600:400);if(video==='cirrus')assert.equal(graphics.deviceBpp,16);displays.push({ramMiB:mem,...graphics});}
 async function persist(){await writeFile(output+'/verification.json',JSON.stringify({source:manifest.source_commit,sourceDirty:manifest.source_dirty,image:manifest.sha256,video,displays,ramMiB:16,clock:8,articHz:307200,results,measurements,snapshots,errors},null,2)+'\n');}
 try{

@@ -9,6 +9,7 @@ import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {inspectXms} from './k386-xms.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-xarray']=process.argv.slice(2);
 const ARTIC_HZ=307200;
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url)));
@@ -54,7 +55,7 @@ const scenarios=[
  {key:'5',name:'range',done:'range',expect:{hits:0,misses:1,writebacks:0}},
 ];
 try{
- await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+ await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
  await wait('Ready');assert.equal(hash(await disk()),manifest.sha256);
  await run(0,'XARRAY.EXE');
  let r=await until(r=>r.cpu.views[0].screen.includes('XARRAY READY'),'XARRAY ready',{xmsOptional:true});

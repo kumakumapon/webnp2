@@ -11,14 +11,14 @@ export async function processTests(p,video,suite){
  let s=await until(s=>{const a=raw(s);assert(!a[15],'PROCTEST failure line '+a[15]);assert.notEqual(s.expanded.slots[0].state,4);if(capacity===4&&a[1]===3&&a[10]){const peer=active(s).find(t=>t.token===a[10]&&t.state===2);if(peer){const slot=s.expanded.slots[peer.slot];if(peerProof?.token===peer.token&&slot.usage.runs>peerProof.runs&&raw(s,peer.slot)[2]>peerProof.counter)peerProof.progress=true;else if(!peerProof)peerProof={token:peer.token,slot:peer.slot,runs:slot.usage.runs,counter:raw(s,peer.slot)[2]};}}return a[0]===0x3250434b&&a[1]===6;},'real lifecycle/IPC/70001-byte binary pipe/backpressure/EOF/cancel/fault/capacity '+capacity,600000);
  const a=raw(s),owner=active(s).find(t=>t.token===a[2]);assert(owner);assert.equal(owner.slot,0);assert.equal(owner.generation,s.expanded.slots[0].generation);assert.equal(owner.physical,s.expanded.slots[0].physical);assert.equal(a[3],owner.generation);assert.equal(a[4],0);assert.equal(a[6],70001);assert.equal(a[7],fnv(Buffer.from(Array.from({length:70001},(_,i)=>(i*13+7)&255))));assert.equal(a[9],6);assert.equal(s.expanded.slots[0].pm.features,783);assert.equal(s.expanded.slots[0].pm.frame.cs,59);assert.equal(active(s).length,1);if(capacity===4)assert(peerProof?.progress,'count peer progresses while binary pipe blocks');reclaimed(s);
  p.pass('Real CPL3 '+capacity+'-slot process lifecycle, parent-owned 64-byte IPC, 70001 binary bytes, EOF/backpressure, exit37, isolated #PF142, cancellation130, six pointer/permission checks and exhaustion recovery',{stats:a,owner,peerProof,launches:proc(s).launches});
- const old={token:owner.token,generation:owner.generation,physical:owner.physical};await p.end(0);await until(s=>active(s).length===0,'root End reclaims process identity');
+ const old={token:owner.token,generation:owner.generation,physical:owner.physical};await p.end(0);await until(s=>proc(s)&&active(s).length===0,'root End reclaims process identity');
  // Parent End and a genuine parent guard fault must cancel/reap the held child.
  for(const mode of ['h','f']){
   await p.run(0,'PROCTEST.EXE '+capacity+' '+mode);
   s=await until(s=>{const a=raw(s);assert(!a[15],'PROCTEST orphan setup '+a[15]);return a[1]===20&&a[8]&&active(s).some(t=>t.token===a[8]&&t.state===2)||mode==='f'&&s.expanded.slots[0].state===4;},'parent '+mode+' has owned child',600000);
   const generation=s.expanded.slots[0].generation;assert.notEqual(generation,old.generation);
   if(mode==='h')await p.end(0);else{s=await until(s=>s.expanded.slots[0].state===4,'real parent guard fault');assert.equal(s.expanded.slots[0].pm.reason,14);await p.end(0);}
-  s=await until(s=>active(s).length===0&&s.expanded.slots.every(x=>x.state===0),'orphan tree and backing reclaimed');reclaimed(s);assert(s.expanded.slots.every(x=>!x.pm||!x.pm.handle));
+  s=await until(s=>proc(s)&&active(s).length===0&&s.expanded.slots.every(x=>x.state===0),'orphan tree and backing reclaimed');reclaimed(s);assert(s.expanded.slots.every(x=>!x.pm||!x.pm.handle));
  }
  assert.equal(sha(await h.disk('hdd')),sha(p.original));p.pass('Parent End and actual parent #PF cancel descendants; repeated generations reclaim every endpoint, queued message, pipe and XMS handle');await p.cleanup(vector,true);
  // Observe a real DOS client after the GUI's cleanup. No GUI pump is active.

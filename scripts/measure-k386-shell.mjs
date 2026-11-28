@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {mkdir, writeFile} from 'node:fs/promises';
 import {inspectK386} from './k386-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/shell-latency',video='']=process.argv.slice(2);
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
@@ -16,7 +17,7 @@ const until=async(test,label)=>{const start=performance.now();let r;
 const prompt=v=>v.state===2&&v.screen.slice(v.row*80,v.row*80+80).trim()==='A:\\>';
 try {
  const manifest=await (await fetch(new URL('k386/manifest.json',base))).json();
- await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  await page.waitForFunction(()=>{try{return window.np2debug.np2.getScreenText().text.includes('Ready');}catch{return false;}},null,{timeout:90000});
  await keys('CTRL+N');await until(r=>prompt(r.views[0]),'first prompt');
  await keys('CTRL+O');await until(r=>prompt(r.views[1]),'second prompt');

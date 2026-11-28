@@ -8,6 +8,7 @@ import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
 import {pm32CounterReady} from './k386-counter-progress.mjs';
 import {inspectTerminal} from './kgui32-terminal-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/',output='test-results/kgui32-sessions',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 await mkdir(output,{recursive:true});
@@ -35,7 +36,7 @@ async function settledPointer(x,y,id){await point(x,y);await until(s=>s.gui?.app
 async function pixels(points){return page.evaluate(points=>{const c=document.createElement('canvas'),source=document.querySelector('#canvas');c.width=source.width;c.height=source.height;const g=c.getContext('2d');g.drawImage(source,0,0);return points.map(([x,y])=>Array.from(g.getImageData(x,y,1,1).data));},points);}
 async function click(x,y){await point(x,y);await button(1);await button(0);}
 try{
- await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  let s=await until(s=>s.gui?.ready&&s.gui.app?.frames>=1,'GUI boot');
  assert.equal(hash(await disk()),manifest.sha256);
  const width=s.gui.width,height=s.gui.height;

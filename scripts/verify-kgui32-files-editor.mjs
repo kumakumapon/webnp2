@@ -9,6 +9,7 @@ import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
 import {inspectHdd,assertHddProtected,assertOnlyRecentHistoryChanged,withHddFile} from './kgui32-hdd-fat.mjs';
 import {inspectFat,assertProtected} from './kgui32-workspace-fat.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4183/',output='test-results/files-editor',video='pegc',only='all']=process.argv.slice(2);
 assert(['pegc','cirrus'].includes(video));assert(['all','roundtrip','rejected','fallback'].includes(only));
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
@@ -34,7 +35,7 @@ async function boot(bytes=hdd,fd=original){
  filters.fill('');ctx=await browser.newContext({viewport:{width:1280,height:1000}});page=await ctx.newPage();errors=[];page.on('pageerror',e=>errors.push(e.message));
  if(bytes)await page.route('**/kgui32/'+manifest.workspace_hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
  if(!fd.equals(original))await page.route('**/kgui32/'+manifest.image,r=>r.fulfill({body:fd,contentType:'application/octet-stream'}));
- await page.goto(new URL(`?fd1=./kgui32/${manifest.image}${bytes?'&hdd=./kgui32/'+manifest.workspace_hdd.image:''}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./kgui32/${manifest.image}${bytes?'&hdd=./kgui32/'+manifest.workspace_hdd.image:''}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return vector();
 }
 function location(s,id,drive,hddTarget=true){const e=s.editors[id];assert.equal(e.version,4);assert.equal(e.workspace>>>8,drive);assert.equal(e.workspace&3,hddTarget?1:2);assert.notEqual(s.cpu.views[id].cr3,s.gui.cpu.pd);assert.equal(s.cpu.diagnostics[id].frame.cs,59);assert.equal(s.cpu.diagnostics[id].frame.eflags&0x20000,0);}

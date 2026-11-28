@@ -8,6 +8,7 @@ import {inspectGUI} from './kgui32-inspect.mjs';
 import {inspectExpanded} from './kgui32-expanded-inspect.mjs';
 import {inspectWorkspace} from './kgui32-workspace-inspect.mjs';
 import {guiCleanupPublished} from './gui-cleanup-state.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 export const sha=b=>createHash('sha256').update(b).digest('hex');
 export const fnv=b=>{let h=2166136261;for(const c of Buffer.from(b))h=Math.imul(h^c,16777619)>>>0;return h;};
 export async function toolsHarness(base,output,video,options={}){
@@ -92,7 +93,7 @@ export async function toolsHarness(base,output,video,options={}){
   ctx=await browser.newContext({viewport:options.viewport??{width:1280,height:1000},hasTouch:!!options.touch});page=await ctx.newPage();errors=[];fdBefore=floppy;page.on('pageerror',e=>errors.push(e.message));
   if(bytes)await page.route('**/kgui32/'+distribution.hdd.image,r=>r.fulfill({body:bytes,contentType:'application/octet-stream'}));
   if(!floppy.equals(fd))await page.route('**/kgui32/'+distribution.image,r=>r.fulfill({body:floppy,contentType:'application/octet-stream'}));
-  await page.goto(new URL(`?fd1=./kgui32/${distribution.image}${bytes?'&hdd=./kgui32/'+distribution.hdd.image:''}&run=1&mem=${memory}&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+  await page.goto(new URL(`?fd1=./kgui32/${distribution.image}${bytes?'&hdd=./kgui32/'+distribution.hdd.image:''}&run=1&mem=${memory}&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
   await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');return page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
  }
  async function launchEditor(id=0){const before=await inspect(),generation=before.cpu.views[id].generation;await key('F2');await click(130,266);return until(s=>s.cpu.views[id].generation>generation&&[1,2].includes(s.cpu.views[id].state)&&s.bridge.generation[id]===s.cpu.views[id].generation&&s.bridge.tokens[id]>0&&s.editors[id]?.frames>0,'Editor '+id);}
@@ -106,7 +107,7 @@ export async function toolsHarness(base,output,video,options={}){
   const target=new URL(await choice.getAttribute('href'),base);
   assert.equal(target.searchParams.get('hdd'),'./kgui32/'+profile.image);
   assert(!target.searchParams.has('fd1')&&!target.searchParams.has('fd2'),'Shipping start choice boots HDD only');
-  target.searchParams.set('mem',String(memory));target.searchParams.set('clk','8');target.searchParams.set('worklet','0');
+  target.searchParams.set('mem',String(memory));target.searchParams.set('clk',String(E2E_CLOCK));target.searchParams.set('worklet','0');
   await page.goto(target.href);
   if(!ready)return null;
   await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'HDD-only desktop');

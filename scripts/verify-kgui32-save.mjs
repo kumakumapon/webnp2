@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {assertProtected,inspectFat,fullWorkspace,wideWorkspace} from './kgui32-workspace-fat.mjs';
 import {inspectClients} from './kgui32-client-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4176/',out='test-results/editor',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 const original=await readFile(new URL('../public/kgui32/'+manifest.image,import.meta.url));
@@ -24,7 +25,7 @@ async function click(x,y){await page.evaluate(({x,y})=>window.np2debug.np2.mouse
 async function drag(x,y,toX,toY){await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x,y});await until(s=>s.gui.app.mx===x&&s.gui.app.my===y,'resize grip');let before=(await inspect()).gui.app.heartbeat;await page.evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,1]));await until(s=>s.gui.app.heartbeat>=before+3,'resize down');await page.evaluate(({x,y})=>window.np2debug.np2.mouseMoveTo(x,y),{x:toX,y:toY});await until(s=>s.gui.app.mx===toX&&s.gui.app.my===toY,'resized pointer');before=(await inspect()).gui.app.heartbeat;await page.evaluate(()=>window.Module.ccall('webnp2_mouse_button',null,['number','number'],[0,0]));await until(s=>s.gui.app.heartbeat>=before+3,'resize released');}
 const criticalVector=async()=>page.evaluate(()=>window.np2debug.np2.readMemoryBase64(0x24*4,4).base64);
 const disk=async()=>Buffer.from((await page.evaluate(()=>window.np2debug.np2.exportDiskBase64('fd1'))).base64,'base64');
-const bootURL=()=>new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href;
+const bootURL=()=>new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href;
 const pass=s=>{results.push(s);console.log('PASS '+s);};
 async function launch(){await key('F2');await until(s=>s.gui.app?.active===0,'launcher');await click(130,266);return until(s=>s.editors.some(e=>e?.frames>0),'editor launched');}
 async function workspaceOpen(id,name){

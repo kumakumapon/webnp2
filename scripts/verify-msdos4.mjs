@@ -12,6 +12,7 @@ import { verifyJapaneseInput } from './verify-japanese-input.mjs';
 import { verifyKdeskMedia } from './verify-kdesk-media.mjs';
 import { verifyWindow } from './verify-window.mjs';
 import { verifyWindowPointer } from './verify-window-pointer.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const manifest = JSON.parse(await readFile(new URL('../public/msdos4/manifest.json', import.meta.url)));
 const base = process.argv[2] ?? 'http://127.0.0.1:4173/';
@@ -220,7 +221,7 @@ try {
   results.push(...await verifyEditor(page, { screenshot: output ? join(output, 'editor.png') : undefined }));
   // Input settings and error feedback are checked in English as well.
   await page.evaluate(() => window.np2debug.np2.persistNow({ force: true }));
-  await page.goto(new URL(`?fd1=./msdos4/${manifest.image}&run=1&lang=en&clk=8`, base).href, { waitUntil: 'networkidle2' });
+  await page.goto(new URL(`?fd1=./msdos4/${manifest.image}&run=1&lang=en&clk=${E2E_CLOCK}`, base).href, { waitUntil: 'networkidle2' });
   await exitAutostart(); await line('A>');
   results.push(...await verifyJapaneseInput(page, { screenshot: output ? join(output, 'ime.png') : undefined, afterReload: exitAutostart }));
 

@@ -6,6 +6,7 @@ import {join} from 'node:path';
 import {chromium} from 'playwright';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/k386-resources']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/k386/manifest.json',import.meta.url),'utf8'));
@@ -46,7 +47,7 @@ const run=async(id,path)=>{await key(id?'CTRL+O':'CTRL+N');await key('CTRL+L');a
 const prompt=()=>page.waitForFunction(()=>window.np2debug.np2.getScreenText().lines.some(line=>line.trim()==='A>'),null,{timeout:60000});
 try{
   await mkdir(output,{recursive:true});
-  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0`,base).href);
+  await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0`,base).href);
   await wait('Ready');
   await key('F10');await wait('KDESK exited.');await prompt();
   await type('KRESCHK\r');

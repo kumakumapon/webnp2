@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
 import {inspectBrowser} from './kgui32-browser-inspect.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4174/',output='test-results/kgui32-browser',video='pegc']=process.argv.slice(2);
 const manifest=JSON.parse(await readFile(new URL('../public/kgui32/manifest.json',import.meta.url)));
 const image=await readFile(new URL('../public/kgui32/'+manifest.image,import.meta.url));
@@ -40,7 +41,7 @@ async function run(id,path){await key('CTRL+L');await type(path+'\r');return unt
 const filters=['',''];
 async function filter(id,text){let s=await until(s=>ready(s,id),'Files before filter');if(s.files[id].mode&1){await key('ESC');await until(s=>ready(s,id)&&!(s.files[id].mode&1),'back to root');}for(let i=0;i<8&&s.files[id].focus!==0;i++){await key('TAB');s=await until(t=>t.files[id]?.focus===(s.files[id].focus+1)%8,'filter focus');}await key('HOME');for(let i=0;i<filters[id].length;i++)await key('DEL');await type(text);filters[id]=text;return until(s=>ready(s,id)&&s.files[id].focus===0&&s.canvases[id]?.filter===text&&s.files[id].matches===directory.filter(e=>e.name.toUpperCase().includes(text.toUpperCase())).length,'filter '+text);}
 try{
- await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./kgui32/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  let s=await until(s=>s.gui.ready&&s.gui.app?.frames&&s.bridge?.ready,'desktop');const width=s.gui.width,height=s.gui.height;
  await click(268,228);s=await until(s=>ready(s,0),'Files root');
  assert.equal(s.files[0].entries,directory.length);assert.equal(s.files[0].metadataHash,metadataHash);assert.equal(s.files[0].nameHash,nameHash(directory[0].name));

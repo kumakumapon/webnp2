@@ -6,6 +6,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {inspectK386} from './k386-inspect.mjs';
 import {inspectResources} from './k386-resources.mjs';
+import {E2E_CLOCK} from './e2e-clock.mjs';
 const [base='http://127.0.0.1:4173/webnp2/',output='test-results/native-tools',video='']=process.argv.slice(2);
 await mkdir(output,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM??'/usr/bin/chromium',args:process.env.WEBNP2_NO_SANDBOX==='1'?['--no-sandbox']:[]});
@@ -30,7 +31,7 @@ const find=async query=>{
 const pass=s=>{results.push(s);console.log('PASS '+s);};
 try {
  const manifest=await (await fetch(new URL('k386/manifest.json',base))).json();
- await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=8&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
+ await page.goto(new URL(`?fd1=./k386/${manifest.image}&run=1&mem=16&clk=${E2E_CLOCK}&worklet=0${video==='cirrus'?'&video=cirrus':''}`,base).href);
  await wait('Ready');
  const names=await page.evaluate(async()=> (await window.np2debug.np2.diskListFiles('fd1')).entries.map(f=>f.name));
  for(const stem of ['FD98','EDIT98','EDIT','CPANEL','KVIEW','KPAINT']) {
