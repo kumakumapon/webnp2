@@ -79,6 +79,13 @@ the same distribution, `verify-kgui32-workspace-shell` (Cirrus) went from
 the same assertions passing. Set `WEBNP2_E2E_CLK` (1–32) to reproduce a run at
 another multiplier, for example `WEBNP2_E2E_CLK=8` for the previous speed.
 
+Three verifiers keep `WEBNP2_E2E_CLK=8` in `suites.json` because the faster
+guest exposed KGUI32 races that the full clk=32 run reproduced: the large-text
+DOS terminal repaint (`verify-kgui32-terminal`), the Files → Editor window
+registration (`verify-kgui32-japanese`) and the Images bitmap picker
+(`verify-kgui32-shell-files`). Remove each pin once the native fix ships and
+the case passes at clk=32; `plan.test.mjs` lists the pinned scripts.
+
 Practical32 input and I/O waits sample compact runtime records. The maximum
 image replacement test arms a single-owner in-page observation before sending
 input and checks the old front bytes using current guest-owned PTEs. The full

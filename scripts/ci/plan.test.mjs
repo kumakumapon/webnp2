@@ -25,6 +25,18 @@ test('keeps 102 existing E2E cases and adds desktop settings on both video modes
     assert.equal(cases.find(item => item.id === `kgui32-${video}`).commands.length, 4);
   }
 });
+test('keeps the previous guest clock only where clk=32 exposed KGUI32 races', () => {
+  const pinned = listCases().flatMap(item => item.commands
+    .filter(command => command.env.WEBNP2_E2E_CLK !== undefined)
+    .map(command => [item.id, command.argv[0], command.env.WEBNP2_E2E_CLK]));
+  assert.ok(pinned.every(([, , clock]) => clock === '8'));
+  assert.deepEqual([...new Set(pinned.map(([, script]) => script))].sort(), [
+    'scripts/verify-kgui32-japanese.mjs',
+    'scripts/verify-kgui32-shell-files.mjs',
+    'scripts/verify-kgui32-terminal.mjs',
+  ]);
+  assert.equal(pinned.length, 2 + 4 + 4);
+});
 test('E2E runner refuses to start a local preview outside Actions', () => {
   const result = spawnSync(process.execPath, ['scripts/ci/e2e.mjs', 'browser'], {encoding:'utf8', env:{...process.env,GITHUB_ACTIONS:''}, timeout:3000});
   assert.equal(result.status, 1);

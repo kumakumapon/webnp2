@@ -226,7 +226,7 @@
       {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps", "{video}"]},
       {"argv": ["scripts/verify-kgui32-hdd-apps.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/hdd-apps/standalone-repeat", "{video}", "standalone"], "env": {"KGUI32_STANDALONE_REPEATS": "5"}},
       {"argv": ["scripts/verify-kgui32-start.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-start", "{video}"]},
-      {"argv": ["scripts/verify-kgui32-shell-files.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-shell-files", "{video}"]},
+      {"argv": ["scripts/verify-kgui32-shell-files.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-shell-files", "{video}"], "env": {"WEBNP2_E2E_CLK": "8"}},
       {"argv": ["scripts/verify-kgui32-kdesk-clipboard.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-kdesk-clipboard", "{video}"]},
       {"argv": ["scripts/verify-kgui32-recovery-interop.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/kgui32-recovery-interop", "{video}"]}
     ]
@@ -262,7 +262,7 @@
     "timeout": 45,
     "base": "/webnp2/",
     "commands": [
-      {"argv": ["scripts/verify-kgui32-japanese.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/japanese", "{video}", "{suite}"]}
+      {"argv": ["scripts/verify-kgui32-japanese.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/japanese", "{video}", "{suite}"], "env": {"WEBNP2_E2E_CLK": "8"}}
     ]
   },
   "recovery-editor": {
@@ -278,7 +278,7 @@
     "timeout": 45,
     "base": "/webnp2/",
     "commands": [
-      {"argv": ["scripts/verify-kgui32-terminal.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/terminal", "{video}", "{suite}"]}
+      {"argv": ["scripts/verify-kgui32-terminal.mjs", "http://127.0.0.1:4173/webnp2/", "test-results/terminal", "{video}", "{suite}"], "env": {"WEBNP2_E2E_CLK": "8"}}
     ]
   },
   "video": {
